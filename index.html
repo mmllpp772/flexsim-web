@@ -268,6 +268,22 @@
   .plan-target { margin: 0; width: 180px; }
   .check { display: inline-flex; align-items: center; gap: 8px; height: 44px; font-weight: 600; font-size: 15px; cursor: pointer; }
   .check input { width: 18px; height: 18px; accent-color: var(--blue); }
+  .plan-fill { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 12px 14px; margin: 0 0 16px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--steel); }
+  .plan-fill .fill-lbl { font-weight: 700; font-size: 14px; margin-right: 4px; }
+  .plan-fill .fill-or { color: var(--muted); font-size: 14px; }
+  .plan-fill .fill-each { display: inline-flex; align-items: center; gap: 8px; }
+  .plan-fill .fill-each label { font-size: 14px; color: var(--muted); }
+  .plan-fill input[type=number] { width: 96px; height: 36px; text-align: right; padding: 0 10px; border: 1px solid var(--line);
+    border-radius: 6px; background: var(--panel); font-variant-numeric: tabular-nums; }
+  .plan-fill input[type=number]:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+  .fill-btn { height: 36px; padding: 0 14px; border: 1px solid var(--blue); border-radius: 6px; background: var(--panel);
+    color: var(--blue); font-weight: 600; font-size: 14px; cursor: pointer; }
+  .fill-btn:hover { background: var(--blue-soft); }
+  .fill-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .plan-fill .fill-only { height: 36px; font-size: 14px; font-weight: 500; margin-left: auto; }
+  .plan-fill .fill-msg { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--muted); }
+  .plan-fill .fill-msg:empty { display: none; }
   .plan-stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0 0 10px; }
   .plan-stats div { min-width: 0; }
   .plan-stats dt { color: var(--muted); font-size: 13px; }
@@ -517,6 +533,18 @@
             <div class="spacer"></div>
             <button type="button" class="link" id="planClear" data-i18n="planClear"></button>
           </div>
+          <div class="plan-fill" role="group" aria-labelledby="fillLbl">
+            <span class="fill-lbl" id="fillLbl" data-i18n="fillTitle"></span>
+            <button type="button" class="fill-btn" id="fillSpread" data-i18n="fillSpread"></button>
+            <span class="fill-or" data-i18n="fillOr"></span>
+            <span class="fill-each">
+              <label for="fillEach" data-i18n="fillEachLbl"></label>
+              <input id="fillEach" type="number" inputmode="numeric" min="0" step="1">
+              <button type="button" class="fill-btn" id="fillEachBtn" data-i18n="fillEachBtn"></button>
+            </span>
+            <label class="check fill-only"><input type="checkbox" id="fillOnlyEmpty"> <span data-i18n="fillOnlyEmpty"></span></label>
+            <p class="fill-msg" id="fillMsg" role="status" aria-live="polite"></p>
+          </div>
           <dl class="plan-stats" id="planStats"></dl>
           <p class="plan-hol" id="planHolidays"></p>
           <div class="err-box warn" id="planWarn" hidden></div>
@@ -705,6 +733,12 @@
       adminBad: "Wrong admin code.", adminLocked: "Too many wrong codes. Try again in 15 minutes.", adminOff: "No admin code is set on the simulator PC (config.json → admin_code).",
       adminBusy: "A run is in progress. Clear the history after it finishes.", adminTimeout: "No reply from the simulator PC yet. Check that it's online.",
       planTitle: "Daily input plan", target: "Target", satOff: "Saturdays off", sunOff: "Sundays off", planClear: "Clear inputs for this product",
+      fillTitle: "Quick fill", fillSpread: "Spread target evenly", fillOr: "or", fillEachLbl: "Every work day", fillEachBtn: "Fill",
+      fillOnlyEmpty: "Only fill empty days",
+      fillDoneSpread: "Spread {n} over {d} work days ({base} per day{extra}).", fillExtra: ", the first {r} days get 1 more",
+      fillDoneEach: "Filled {v} on {d} work days. Target updated to {total}.", fillNone: "There are no empty work days to fill.",
+      fillNothingLeft: "Nothing left to spread: planned input already reaches the target.", fillNeedValue: "Enter how many to start each work day.",
+      confirmOverwrite: "This replaces the {n} days already filled for {p}. Continue?",
       planHint: "Type how many to start each day, or paste a column from Excel. Days you leave empty share the rest of the target evenly. Holidays are locked.",
       sWorkDays: "Work days", sFilled: "Planned input", sRemain: "Left to plan", sPerDay: "Suggested per open day",
       fedHol: "US federal holidays in this period: {list}", noFedHol: "No US federal holidays in this period.",
@@ -801,6 +835,12 @@
       adminBad: "管理代碼錯誤。", adminLocked: "錯誤次數太多，請 15 分鐘後再試。", adminOff: "模擬電腦還沒設定管理代碼（config.json 的 admin_code）。",
       adminBusy: "有模擬正在執行，請等它結束再清除。", adminTimeout: "模擬電腦還沒回應，請確認它在線上。",
       planTitle: "每日投產計畫", target: "目標量 Target", satOff: "週六休息", sunOff: "週日休息", planClear: "清除這個產品的投入量",
+      fillTitle: "快速填入", fillSpread: "平攤目標量", fillOr: "或", fillEachLbl: "每個工作日", fillEachBtn: "填入",
+      fillOnlyEmpty: "只填空白的日子",
+      fillDoneSpread: "已把 {n} 平攤到 {d} 個工作日（每天 {base}{extra}）。", fillExtra: "，前 {r} 天多 1 個",
+      fillDoneEach: "已在 {d} 個工作日各填入 {v}，目標量同步更新為 {total}。", fillNone: "沒有空白的工作日可以填。",
+      fillNothingLeft: "已填的投入量已達目標量，沒有剩餘可以平攤。", fillNeedValue: "請先輸入每個工作日要投產多少。",
+      confirmOverwrite: "{p} 已經填了 {n} 天，這會覆蓋它們。要繼續嗎？",
       planHint: "填入每天要投產的數量，也可以直接從 Excel 複製一整欄貼上。沒填的日子會平均分攤剩下的目標量。假日自動鎖定不能填。",
       sWorkDays: "工作天數", sFilled: "已填投入", sRemain: "尚未分配", sPerDay: "每個未填工作日建議",
       fedHol: "這段期間的美國聯邦假日：{list}", noFedHol: "這段期間沒有美國聯邦假日。",
@@ -1225,7 +1265,7 @@
     const prods = PD().products;
     if (!prods.find(p => p.name === planProduct)) planProduct = prods[0].name;
     $("planSeg").innerHTML = prods.map(p => `<button type="button" data-p="${esc(p.name)}" aria-pressed="${p.name === planProduct}">${esc(L(p, "label"))}</button>`).join("");
-    $("planSeg").querySelectorAll("button").forEach(b => b.onclick = () => { planProduct = b.dataset.p; store("simPlanProduct", planProduct); renderPlan(); });
+    $("planSeg").querySelectorAll("button").forEach(b => b.onclick = () => { planProduct = b.dataset.p; store("simPlanProduct", planProduct); $("fillMsg").textContent = ""; renderPlan(); });
     const pl = planFor(planProduct);
     if (document.activeElement !== $("planTarget")) $("planTarget").value = pl.target;
     $("planSat").checked = !!pl.sat_off; $("planSun").checked = !!pl.sun_off;
@@ -1292,6 +1332,46 @@
   $("planTarget").addEventListener("input", () => { const pl = planFor(planProduct); pl.target = $("planTarget").value === "" ? 0 : Number($("planTarget").value); savePlans(); refreshSuggest(); renderInNav(); });
   $("planSat").addEventListener("change", () => { planFor(planProduct).sat_off = $("planSat").checked; savePlans(); renderPlan(); });
   $("planSun").addEventListener("change", () => { planFor(planProduct).sun_off = $("planSun").checked; savePlans(); renderPlan(); });
+  // ---- quick fill: spread target evenly, or the same amount every work day ----
+  function quickFill(kind) {
+    const per = currentPeriod(); if (!per) return;
+    const pl = planFor(planProduct), c = computePlan(planProduct, per);
+    const onlyEmpty = $("fillOnlyEmpty").checked;
+    const work = c.rows.filter(r => !r.holiday);
+    const days = onlyEmpty ? work.filter(r => r.input <= 0) : work;
+    const msg = (k, v) => { $("fillMsg").textContent = t(k, v); };
+    if (!days.length) return msg("fillNone");
+    let each = null;
+    if (kind === "each") {
+      const v = $("fillEach").value.trim();
+      if (v === "" || !(Number(v) > 0)) { $("fillEach").focus(); return msg("fillNeedValue"); }
+      each = Math.round(Number(v));
+    }
+    const prior = work.filter(r => r.input > 0).length;
+    if (!onlyEmpty && prior) {
+      const p = PD().products.find(x => x.name === planProduct);
+      if (!confirm(t("confirmOverwrite", { n: prior, p: L(p, "label") }))) return;
+    }
+    if (!onlyEmpty) pl.inputs = {};
+    if (kind === "spread") {
+      const kept = onlyEmpty ? c.filled : 0;
+      const total = Math.round((Number(pl.target) || 0) - kept);
+      if (total <= 0) { savePlans(); renderPlan(); return msg("fillNothingLeft"); }
+      // whole units: everyone gets the base, the first few work days take the remainder
+      const base = Math.floor(total / days.length), r = total - base * days.length;
+      days.forEach((row, i) => { const v = base + (i < r ? 1 : 0); if (v > 0) pl.inputs[row.iso] = v; });
+      savePlans(); renderPlan(); renderInNav();
+      msg("fillDoneSpread", { n: fmt(total, 0), d: days.length, base: fmt(base, 0), extra: r ? t("fillExtra", { r }) : "" });
+    } else {
+      days.forEach(row => { pl.inputs[row.iso] = each; });
+      pl.target = computePlan(planProduct, per).filled;  // only days inside the period count
+      savePlans(); renderPlan(); renderInNav();
+      msg("fillDoneEach", { v: fmt(each, 0), d: days.length, total: fmt(pl.target, 0) });
+    }
+  }
+  $("fillSpread").addEventListener("click", () => quickFill("spread"));
+  $("fillEachBtn").addEventListener("click", () => quickFill("each"));
+  $("fillEach").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); quickFill("each"); } });
   $("planClear").addEventListener("click", () => {
     const p = PD().products.find(x => x.name === planProduct);
     if (!confirm(t("confirmClear", { p: L(p, "label") }))) return;
