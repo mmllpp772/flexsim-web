@@ -221,7 +221,7 @@ class Worker:
             if time.time() - last_write[0] < 10:  # 最多 10 秒寫一次，避免 OneDrive 一直同步
                 return
             last_write[0] = time.time()
-            dt = model_datetime(self.cfg, model_time)
+            dt = model_datetime(self.cfg, params, model_time)
             self.write_result(job_id, {**base, "status": "running", "started_at": started,
                                        "progress": round(fraction, 4),
                                        "progress_date": dt.strftime("%Y-%m-%d %H:%M") if dt else None})

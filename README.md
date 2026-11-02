@@ -143,7 +143,9 @@ python onedrive_worker.py
 | `flexsim.exe` | 留空會自動在 `C:/Program Files` 找；找不到時填完整路徑，斜線用 `/` |
 | `flexsim.model_path` | 模型檔，目前是 `D:/FlexSim_D1.fsm` |
 | `flexsim.max_run_seconds` | 單次模擬最多幾秒，超過就強制結束（預設 1800） |
-| `stop.model_start` | **要和 FlexSim 工具列 Run Time 左邊的開始日期時間一致**（目前 `2026-05-18 12:00`） |
+| `stop.set_model_start` | `true`（預設）：每次把 FlexSim 的模型開始時間改成使用者選的開始日，直接從開始日跑到結束日，不用暖機。`false`：用固定的 `model_start` |
+| `stop.start_time_of_day` | 模型從開始日的幾點開始，預設 `00:00` |
+| `stop.model_start` | 只在 `set_model_start` 為 `false` 時使用，要和 FlexSim 工具列 Run Time 左邊的開始日期時間一致 |
 | `stop.time_unit_seconds` | 模型時間單位：秒=1、分鐘=60、小時=3600 |
 | `parameters[].set_script` | 寫入模型的 FlexScript。`Table("WUS_year")[列][欄]`，第 1 欄是第一個產品；要同時寫第 2 欄就再加 `Table("WUS_year")[列][2] = {value};` |
 | `metrics[].script` | 跑完後讀取指標的 FlexScript，要回傳數字 |

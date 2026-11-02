@@ -21,6 +21,8 @@
   "run_length": null,
   "stop": {
     "type": "end_of_date",
+    "set_model_start": true,
+    "start_time_of_day": "00:00",
     "model_start": "2026-05-18 12:00",
     "time_unit_seconds": 1,
     "year_param": "year",
@@ -29,7 +31,7 @@
     "end_month_param": "ed_m",
     "end_day_param": "ed_d"
   },
-  "_stop說明": "模擬跑到「結束日當天 24:00」為止。model_start 要和 FlexSim 工具列 Run Time 左邊的開始日期時間一致；time_unit_seconds 是模型時間單位（秒=1、分鐘=60、小時=3600）。",
+  "_stop說明": "set_model_start=true：每次都把 FlexSim 的模型開始時間改成使用者選的開始日（start_time_of_day 那個時刻），從開始日直接跑到結束日當天 24:00，不用暖機。改成 false 則改回用固定的 model_start（要和 FlexSim 工具列 Run Time 左邊的日期一致）。time_unit_seconds 是模型時間單位（秒=1、分鐘=60、小時=3600）。",
   "parameters": [
     {
       "name": "year",

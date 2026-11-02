@@ -65,7 +65,7 @@ def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
     if di:
         out["date_inputs"] = dict(di)
         st = cfg.get("stop") or {}
-        if st.get("model_start"):
+        if st.get("model_start") and not st.get("set_model_start"):
             out["date_inputs"]["min"] = st["model_start"][:10]
     return out
 
@@ -123,12 +123,26 @@ def _date_from(params: dict[str, float], year_key: str, month_key: str, day_key:
         raise ValueError(f"{what} date is not a valid calendar date")
 
 
+def model_start_for(cfg: dict[str, Any], params: dict[str, float]) -> datetime | None:
+    """這次模擬的模型開始時間。
+    set_model_start=true：每次都把 FlexSim 的模型開始時間設成使用者選的開始日（不用從固定日期暖機）。
+    否則用 config 裡固定的 model_start。"""
+    st = cfg.get("stop") or {}
+    if st.get("set_model_start") and st.get("start_month_param"):
+        start = _date_from(params, st["year_param"], st["start_month_param"], st["start_day_param"], "Start")
+        hh, mm = (int(x) for x in str(st.get("start_time_of_day", "00:00")).split(":"))
+        return datetime.combine(start, datetime.min.time()).replace(hour=hh, minute=mm)
+    if st.get("model_start"):
+        return datetime.fromisoformat(st["model_start"])
+    return None
+
+
 def stop_time(cfg: dict[str, Any], params: dict[str, float], length: float | None) -> float:
     """算出要跑到的模型時間（模型時間單位）。"""
     st = cfg.get("stop", {"type": "run_length"})
     unit = float(st.get("time_unit_seconds", 1))
     if st["type"] == "end_of_date":
-        model_start = datetime.fromisoformat(st["model_start"])
+        model_start = model_start_for(cfg, params)
         y = st["year_param"]
         if st.get("start_month_param"):
             start = _date_from(params, y, st["start_month_param"], st["start_day_param"], "Start")
@@ -184,6 +198,15 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
         tmpl = p.get("set_script", "Model.parameters." + p["name"] + " = {value};")
         lines.append(tmpl.replace("{value}", repr(value)))
     lines += [
+    ]
+    st = cfg.get("stop") or {}
+    if st.get("set_model_start"):
+        ms = model_start_for(cfg, params)
+        lines += [
+            f'DateTime wr_start = DateTime("{ms:%m/%d/%Y %H:%M:%S}", "%m/%d/%Y %H:%M:%S");',
+            'function_s(getmodelunit(START_TIME_NODE), "setDateTime", wr_start);',
+        ]
+    lines += [
         "resetmodel();",
         f"double wr_end = {end_time!r};",
         "double wr_last = -1;",
@@ -238,11 +261,12 @@ class Cancelled(Exception):
     """工作被取消（網頁按 Cancel，或模擬電腦按 Ctrl+C）。"""
 
 
-def model_datetime(cfg: dict[str, Any], model_time: float) -> datetime | None:
+def model_datetime(cfg: dict[str, Any], params: dict[str, float], model_time: float) -> datetime | None:
     st = cfg.get("stop") or {}
-    if not st.get("model_start"):
+    start = model_start_for(cfg, params)
+    if not start:
         return None
-    return datetime.fromisoformat(st["model_start"]) + timedelta(seconds=model_time * float(st.get("time_unit_seconds", 1)))
+    return start + timedelta(seconds=model_time * float(st.get("time_unit_seconds", 1)))
 
 
 class FlexSimRunner:
