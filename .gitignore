@@ -10,3 +10,4 @@ __pycache__/
 *.fsx
 *.pyd
 worker.log
+runs/

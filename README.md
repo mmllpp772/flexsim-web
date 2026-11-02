@@ -16,10 +16,12 @@ FlexSim 跑在你的桌機上，美國同事在網頁輸入參數 → 按 Run �
 |---|---|
 | `config.json` | **唯一要改的檔案**：模型路徑、開放的參數、要讀的指標 |
 | `onedrive_worker.py` | 主程式：監看共用資料夾、跑 FlexSim、寫回結果 |
-| `runner.py` | 核心：檢查參數、呼叫 FlexSim、讀指標 |
+| `runner.py` | 核心：檢查參數、用命令列開 FlexSim 跑模擬、讀指標 |
+| `check_flexsim.py` | 連線檢查：確認這台電腦能用命令列控制 FlexSim |
 | `index.html` | 網頁（英文介面），啟動時自動複製到共用資料夾成為 `Simulator.html` |
 | `start.bat` | 正式上線用：雙擊啟動，不用開 VS Code |
 | `worker.log` | 執行紀錄（自動產生），出問題先看這裡 |
+| `runs/` | 每次模擬產生的腳本和結果（自動產生，保留最近 30 次），出問題時用來除錯 |
 
 ## 事前準備
 
@@ -44,9 +46,18 @@ FlexSim 跑在你的桌機上，美國同事在網頁輸入參數 → 按 Run �
 
 > ⚠️ 專案資料夾**不要**放在 OneDrive 共用資料夾裡面，兩者分開放。
 
-## 第一步：啟動（Demo 模式）
+## 第一步：檢查 FlexSim，然後啟動
 
-在 VS Code 按 `` Ctrl + ` ``（Esc 下面那個鍵）開啟下方終端機，輸入：
+在 VS Code 按 `` Ctrl + ` ``（Esc 下面那個鍵）開啟下方終端機。
+
+**1. 先做連線檢查**（第一次、或改過 config.json 後）：
+```
+python check_flexsim.py
+```
+它會自動找 flexsim.exe、在背景開啟模型、讀 `WUS_year`、再用預設日期完整跑一次模擬。每一步都打勾就沒問題。
+只想快速確認能不能開 FlexSim（不跑完整模擬）：`python check_flexsim.py --quick`
+
+**2. 啟動主程式：**
 ```
 python onedrive_worker.py
 ```
@@ -54,7 +65,7 @@ python onedrive_worker.py
 
 - 程式會自動在公司 OneDrive 裡建立 `FlexSimShare` 資料夾，**不用填路徑**
 - 終端機要一直開著，按 `Ctrl + C` 停止（停止後網頁會顯示 offline）
-- `config.json` 裡 `"mock_mode": true` 時完全不會碰 FlexSim，用假資料跑，網頁上方會有黃色 Demo 提示
+- 想先不開 FlexSim、只測網頁流程：把 `config.json` 的 `"mock_mode"` 改成 `true`（用假資料，網頁上方會有黃色 Demo 提示）
 
 `FlexSimShare` 裡會自動出現：
 
@@ -96,33 +107,43 @@ python onedrive_worker.py
 3. 第一次會出現 **Choose shared folder** → 選 `FlexSimShare` → 允許「檢視和編輯」
 4. 之後就能輸入參數、按 Run。下次開啟時可能要按一次 **Reconnect** 重新授權（瀏覽器的安全規定）
 
-## 第四步：接上 FlexSim
+## FlexSim 怎麼被控制
 
-### 1. 安裝 FlexSimPy
-FlexSimPy 是 FlexSim 官方的 Python 控制模組，要自己用 Visual Studio 編譯成 `.pyd`：
-- 原始碼：https://github.com/flexsim/FlexSimPy
-- 依 README 選對應 Python 版本的組態編譯，把產生的 `FlexSimPy.pyd` 放到這個專案資料夾
-- 測試：在 VS Code 終端機輸入 `python -c "import FlexSimPy"`，沒有錯誤訊息就成功
+不需要 FlexSimPy、不需要編譯。每次有工作時，程式會：
+1. 產生一個 FlexScript 腳本（在 `runs/` 資料夾裡）：
+   - 把同事填的日期寫進 `WUS_year` 的第 1 欄（第 1～5 列：year、st_m、st_d、ed_m、ed_d）
+   - `resetmodel()`
+   - 一步一步執行到「結束日當天 24:00」
+   - 把指標寫成文字檔，然後關閉 FlexSim
+2. 用命令列在背景開啟 FlexSim 執行這個腳本：
+   `flexsim.exe 模型.fsm /maintenance nogui_disablemsg_runscript /scriptpath 腳本`
+3. 讀回指標，寫到 OneDrive 給網頁顯示
 
-### 2. 整理模型
-- 要讓美國同事調的值，在 FlexSim 裡做成 **Model Parameters**，名稱要和 `config.json` 的 `name` 一模一樣
-- 每個指標寫一段回傳數字的 FlexScript，先在 FlexSim 的 **Script Console** 測過
-- 比較難直接算的指標（例如利用率），建議在模型的 OnRunStop 把結果寫進 Global Table `WebResults`，再用 `Table("WebResults")[1][1]` 讀出來
+**模型檔不會被修改或存檔。** 每次都會重新開啟 FlexSim，所以每次會多花十幾秒到一分鐘的開啟時間。
 
-### 3. 修改 config.json
+### config.json 重點設定
+
+| 設定 | 說明 |
+|---|---|
+| `flexsim.exe` | 留空會自動在 `C:/Program Files` 找；找不到時填完整路徑，斜線用 `/` |
+| `flexsim.model_path` | 模型檔，目前是 `D:/FlexSim_D1.fsm` |
+| `flexsim.max_run_seconds` | 單次模擬最多幾秒，超過就強制結束（預設 1800） |
+| `stop.model_start` | **要和 FlexSim 工具列 Run Time 左邊的開始日期時間一致**（目前 `2026-05-18 12:00`） |
+| `stop.time_unit_seconds` | 模型時間單位：秒=1、分鐘=60、小時=3600 |
+| `parameters[].set_script` | 寫入模型的 FlexScript。`Table("WUS_year")[列][欄]`，第 1 欄是第一個產品；要同時寫第 2 欄就再加 `Table("WUS_year")[列][2] = {value};` |
+| `metrics[].script` | 跑完後讀取指標的 FlexScript，要回傳數字 |
+
+### 新增指標
+
+在 `metrics` 加一筆，例如：
 ```json
-"mock_mode": false,
-"flexsim": {
-  "program_dir": "C:/Program Files/FlexSim 2025/program/",
-  "model_path":  "C:/FlexSimModels/MyLine.fsm",
-  "launch_kwargs": { "showGUI": false }
-}
+{ "name": "smt_output", "label": "SMT output", "unit": "pcs", "decimals": 0,
+  "script": "Table(\"Result\")[1][2]" }
 ```
-- `launch_kwargs` 會直接傳給 `FlexSimPy.launch()`。不同版本的參數名稱可能不同，若啟動失敗請看 FlexSimPy 原始碼裡 `launch` 接受哪些參數再調整
-- 第一次測試可以先設 `"showGUI": true`，看得到 FlexSim 視窗比較好除錯
-- 模型檔 (.fsm) **不要**放進 OneDrive 共用資料夾，放在你電腦的其他位置即可
-
-### 4. 重新啟動，按一次 Run 確認數字和你在 FlexSim 手動跑的一致
+- `name`：英文代號（不能重複、不能有空格）
+- `script`：先在 FlexSim 的 **Script Console** 輸入 `return Table("Result")[1][2];` 測試，有回傳正確數字再貼進來
+- 字串裡的 `"` 要寫成 `\"`
+- 改完執行 `python check_flexsim.py` 確認，再重新啟動 `onedrive_worker.py`
 
 ## 改檔案後要做什麼
 
@@ -139,8 +160,7 @@ FlexSimPy 是 FlexSim 官方的 Python 控制模組，要自己用 Visual Studio
 
 ## 運作方式
 - 同一時間只跑一個模擬，其他人排隊，網頁會顯示排隊順位
-- FlexSim 只啟動一次並保持開著，每次只做：寫參數 → reset → 全速跑到結束 → 讀指標
-- 某次執行出錯時會自動重開 FlexSim，下一次照常
+- 每個工作都在背景重新開一次 FlexSim，跑完自動關閉；某次出錯不影響下一次
 - 單次執行超過 `max_run_seconds`（預設 1800 秒）會視為失敗
 - 參數只接受 config 裡列出的項目和範圍，工作檔無法執行任意 FlexScript
 - 只有被分享資料夾的人能使用
@@ -159,8 +179,12 @@ FlexSimPy 是 FlexSim 官方的 Python 控制模組，要自己用 Visual Studio
 | 網頁顯示 config.json was not found | 選錯資料夾，或你的電腦還沒啟動過 `onedrive_worker.py` |
 | 網頁一直停在 Sent | 你的電腦沒在跑、或 OneDrive 同步卡住（看工作列 OneDrive 圖示） |
 | 網頁顯示 Simulator offline | `onedrive_worker.py` 沒在執行，或你的電腦睡眠／關機 |
+| `Could not find flexsim.exe` | 在 config.json 的 `flexsim.exe` 填完整路徑 |
+| `FlexSim closed without writing results` | 腳本中途出錯。到 `runs/` 最新的資料夾打開 `script.txt`，複製內容到 FlexSim 的 Script Console 執行，看哪一行報錯 |
+| `did not finish within ... s` | 模擬太久或 FlexSim 卡在對話框；加大 `max_run_seconds`，或看工作管理員有沒有殘留的 flexsim.exe |
+| 指標數字和日期對不上 | 模型可能在 reset 時把 `WUS_year` 蓋掉（例如從 Excel 重新匯入），告訴我改成 reset 後才寫入 |
 | 某個指標顯示「—」 | 該指標的 FlexScript 回傳錯誤，到 Script Console 測試 |
-| 狀態 Failed | 看專案資料夾裡的 `worker.log` |
+| 狀態 Failed | 看網頁上的錯誤訊息，以及專案資料夾裡的 `worker.log` |
 
 ## 授權提醒
 FlexSim 授權屬於公司，公司內部同仁使用一般沒問題；若使用者是外部客戶，請先向代理商確認授權條款。

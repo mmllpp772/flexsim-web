@@ -1,104 +1,111 @@
 {
-  "_說明": "這個檔案是唯一需要依你的模型修改的地方。改完重新啟動 start.bat 即可。",
-  "mock_mode": true,
-  "_mock_mode說明": "true = 不呼叫 FlexSim，用假資料測試網頁流程；接上 FlexSim 後改成 false",
+  "_說明": "這個檔案是唯一需要依你的模型修改的地方。改完重新啟動 onedrive_worker.py 即可。",
+  "mock_mode": false,
+  "_mock_mode說明": "true = 不開 FlexSim，用假資料測網頁；false = 真的開 FlexSim 跑模擬",
   "flexsim": {
-    "program_dir": "C:/Program Files/FlexSim 2025/program/",
-    "model_path": "C:/FlexSimModels/MyLine.fsm",
-    "launch_kwargs": {
-      "showGUI": false
-    },
-    "_launch_kwargs說明": "直接傳給 FlexSimPy.launch()，依你編譯的 FlexSimPy 版本調整（例如授權伺服器參數）",
+    "exe": "",
+    "model_path": "D:/FlexSim_D1.fsm",
     "max_run_seconds": 1800
   },
+  "_flexsim說明": "exe 留空會自動在 C:/Program Files 找 flexsim.exe；找不到時填完整路徑，例如 C:/Program Files/FlexSim 2025 Update 2/program/flexsim.exe。max_run_seconds：單次模擬最多跑幾秒，超過就強制結束。",
   "onedrive": {
     "share_dir": "%OneDriveCommercial%/FlexSimShare",
     "poll_seconds": 3,
     "heartbeat_seconds": 30
   },
-  "_onedrive說明": "OneDrive 中轉模式用。預設 %OneDriveCommercial%/FlexSimShare 會自動指到公司 OneDrive 裡的 FlexSimShare 資料夾（不存在會自動建立），通常不用改。找不到時再改成完整路徑，例如 C:/Users/工號/OneDrive - 公司名稱/FlexSimShare（斜線用 /）",
-  "title": "Production Line Simulator",
-  "subtitle": "Enter scenario parameters and run the FlexSim model",
-  "run_length": {
-    "label": "Simulated time",
-    "unit": "hours",
-    "default": 8,
-    "min": 1,
-    "max": 720,
-    "seconds_per_unit": 3600
+  "_onedrive說明": "預設會自動指到公司 OneDrive 裡的 FlexSimShare 資料夾，通常不用改。",
+  "title": "Production Simulator",
+  "subtitle": "Enter the simulation period and run the FlexSim model",
+  "run_length": null,
+  "stop": {
+    "type": "end_of_date",
+    "model_start": "2026-05-18 12:00",
+    "time_unit_seconds": 1,
+    "year_param": "year",
+    "start_month_param": "st_m",
+    "start_day_param": "st_d",
+    "end_month_param": "ed_m",
+    "end_day_param": "ed_d"
   },
+  "_stop說明": "模擬跑到「結束日當天 24:00」為止。model_start 要和 FlexSim 工具列 Run Time 左邊的開始日期時間一致；time_unit_seconds 是模型時間單位（秒=1、分鐘=60、小時=3600）。",
   "parameters": [
     {
-      "name": "ArrivalInterval",
-      "label": "Arrival interval",
-      "unit": "sec",
-      "type": "number",
-      "default": 30,
-      "min": 1,
-      "max": 600,
+      "name": "year",
+      "label": "Year",
+      "unit": "",
+      "type": "integer",
+      "default": 2026,
+      "min": 2024,
+      "max": 2035,
       "step": 1,
-      "help": "Average time between incoming parts"
+      "help": "Simulation year",
+      "set_script": "Table(\"WUS_year\")[1][1] = {value};"
     },
     {
-      "name": "ProcessTime",
-      "label": "Process time",
-      "unit": "sec",
-      "type": "number",
-      "default": 25,
+      "name": "st_m",
+      "label": "Start month",
+      "unit": "",
+      "type": "integer",
+      "default": 11,
       "min": 1,
-      "max": 600,
+      "max": 12,
       "step": 1,
-      "help": "Average processing time per part"
+      "help": "Month the simulation period starts",
+      "set_script": "Table(\"WUS_year\")[2][1] = {value};"
     },
     {
-      "name": "NumOperators",
-      "label": "Operators",
+      "name": "st_d",
+      "label": "Start day",
       "unit": "",
       "type": "integer",
       "default": 2,
       "min": 1,
-      "max": 20,
+      "max": 31,
       "step": 1,
-      "help": "Number of operators on the line"
+      "help": "Day the simulation period starts",
+      "set_script": "Table(\"WUS_year\")[3][1] = {value};"
+    },
+    {
+      "name": "ed_m",
+      "label": "End month",
+      "unit": "",
+      "type": "integer",
+      "default": 12,
+      "min": 1,
+      "max": 12,
+      "step": 1,
+      "help": "Month the simulation period ends",
+      "set_script": "Table(\"WUS_year\")[4][1] = {value};"
+    },
+    {
+      "name": "ed_d",
+      "label": "End day",
+      "unit": "",
+      "type": "integer",
+      "default": 31,
+      "min": 1,
+      "max": 31,
+      "step": 1,
+      "help": "Day the simulation period ends",
+      "set_script": "Table(\"WUS_year\")[5][1] = {value};"
     }
   ],
-  "_parameters說明": "name 必須和 FlexSim 模型裡 Model Parameters 的名稱完全一樣。預設用 Model.parameters.<name> = <value>; 寫入，如需特殊寫法可加 \"set_script\": \"... {value} ...\"",
+  "_parameters說明": "set_script 是寫入模型的 FlexScript：Table(\"WUS_year\")[列][欄]，第 1 欄是第一個產品。要同時寫第 2 欄就在後面加上 Table(\"WUS_year\")[列][2] = {value};",
   "metrics": [
     {
-      "name": "throughput",
-      "label": "Throughput",
-      "unit": "parts",
+      "name": "total_day",
+      "label": "Total days",
+      "unit": "days",
       "decimals": 0,
-      "script": "Model.find(\"Sink1\").stats.input.value"
+      "script": "Table(\"WUS_year\")[9][1]"
     },
     {
-      "name": "throughput_per_hour",
-      "label": "Throughput / hour",
-      "unit": "parts/h",
-      "decimals": 1,
-      "script": "Model.find(\"Sink1\").stats.input.value / (Model.time / 3600)"
-    },
-    {
-      "name": "avg_wait",
-      "label": "Avg. queue wait",
-      "unit": "sec",
-      "decimals": 1,
-      "script": "Model.find(\"Queue1\").stats.staytime.average"
-    },
-    {
-      "name": "avg_queue",
-      "label": "Avg. queue length",
-      "unit": "parts",
-      "decimals": 2,
-      "script": "Model.find(\"Queue1\").stats.content.average"
-    },
-    {
-      "name": "utilization",
-      "label": "Processor utilization",
-      "unit": "%",
-      "decimals": 1,
-      "script": "Table(\"WebResults\")[1][1]"
+      "name": "total_work_day",
+      "label": "Total work days",
+      "unit": "days",
+      "decimals": 0,
+      "script": "Table(\"WUS_year\")[10][1]"
     }
   ],
-  "_metrics說明": "每個指標是一段回傳數字的 FlexScript。請先在 FlexSim 的 Script Console 測試能正確回傳。不好直接算的指標（例如利用率），建議在模型 OnRunStop 時寫進 Global Table「WebResults」，這裡再讀出來。"
+  "_metrics說明": "每個指標是一段回傳數字的 FlexScript，跑完模擬後讀取。請先在 FlexSim 的 Script Console 測試，例如輸入 return Table(\"WUS_year\")[9][1]; 看結果對不對。"
 }

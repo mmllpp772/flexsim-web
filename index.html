@@ -314,9 +314,9 @@
   // =====================================================================
   let T = null, CFG = null, history = [], selectedId = null, pollTimer = null;
 
-  function fmt(v, decimals = 1) {
+  function fmt(v, decimals = 1, group = true) {
     if (v === null || v === undefined || Number.isNaN(Number(v))) return "—";
-    return Number(v).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    return Number(v).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: group });
   }
   function fmtTime(iso) {
     if (!iso) return "";
@@ -333,7 +333,8 @@
 
   function buildForm() {
     const rl = CFG.run_length;
-    const items = [...CFG.parameters, { name: "__run_length", label: rl.label, unit: rl.unit, default: rl.default, min: rl.min, max: rl.max, step: "any", help: "Length of the simulated period" }];
+    const items = [...CFG.parameters];
+    if (rl) items.push({ name: "__run_length", label: rl.label, unit: rl.unit, default: rl.default, min: rl.min, max: rl.max, step: "any", help: "Length of the simulated period" });
     let saved = {};
     try { saved = JSON.parse(load("simLastParams") || "{}"); } catch (e) {}
     $("fields").innerHTML = items.map(p => `
@@ -369,7 +370,7 @@
     const { __run_length, ...parameters } = vals;
     $("runBtn").disabled = true;
     try {
-      const job = await T.submit({ parameters, run_length: __run_length, label: $("f_label").value.trim() || null, submitted_by: who || null });
+      const job = await T.submit({ parameters, run_length: __run_length ?? null, label: $("f_label").value.trim() || null, submitted_by: who || null });
       selectedId = job.id;
       renderStatus(job);
       await refreshHistory();
@@ -455,7 +456,7 @@
       history.map(h => `<tr class="clickable ${h.id === selectedId ? "selected" : ""}" data-id="${esc(h.id)}">
         <td>${esc(runName(h))}</td><td>${esc(h.submitted_by || "")}</td>
         <td><span class="pill ${pillCls[h.status] || "error"}">${esc(h.status === "submitted" ? "sent" : h.status)}</span></td>
-        ${cols.map(c => `<td>${fmt(c.k === "p" ? h.parameters?.[c.name] : h.metrics?.[c.name], c.d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+        ${cols.map(c => `<td>${c.k === "p" ? fmt(h.parameters?.[c.name], c.d, false) : fmt(h.metrics?.[c.name], c.d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
     document.querySelectorAll("#hist tr.clickable").forEach(tr => tr.addEventListener("click", () => {
       const j = history.find(h => h.id === tr.dataset.id);
       if (!j) return;

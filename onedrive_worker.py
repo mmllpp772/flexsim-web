@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from runner import (BASE_DIR, FlexSimRunner, load_config, log, make_runner, now_iso,
+from runner import (BASE_DIR, load_config, log, make_runner, now_iso,
                     public_config, setup_logging, validate_params)
 
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -101,7 +101,10 @@ class Worker:
         self.results_dir = self.share / "results"
         self.jobs_dir.mkdir(exist_ok=True)
         self.results_dir.mkdir(exist_ok=True)
-        self.runner = make_runner(self.cfg)
+        try:
+            self.runner = make_runner(self.cfg)
+        except RuntimeError as e:
+            raise SystemExit(f"無法啟動 FlexSim：{e}")
         self.bad_seen: dict[str, float] = {}  # 讀不到的檔案第一次出現的時間
         self.queue: list[str] = []
         self.running: str | None = None
@@ -188,8 +191,7 @@ class Worker:
             log.exception("Job %s failed", job_id)
             self.write_result(job_id, {**base, "status": "error", "started_at": started,
                                        "finished_at": now_iso(), "error": str(e)})
-            if isinstance(self.runner, FlexSimRunner):  # 出錯就重開 FlexSim
-                self.runner = make_runner(self.cfg)
+
         finally:
             self.running = None
 
