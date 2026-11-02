@@ -46,7 +46,7 @@
       "step": 1,
       "help": "Simulation year",
       "help_zh": "模擬年份",
-      "set_script": "Table(\"WUS_year\")[1][1] = {value};"
+      "set_script": "Table(\"WUS_year\")[1][1] = {value}; Table(\"WUS_year\")[1][2] = {value};"
     },
     {
       "name": "st_m",
@@ -60,7 +60,7 @@
       "step": 1,
       "help": "Month the simulation period starts",
       "help_zh": "模擬期間開始的月份",
-      "set_script": "Table(\"WUS_year\")[2][1] = {value};"
+      "set_script": "Table(\"WUS_year\")[2][1] = {value}; Table(\"WUS_year\")[2][2] = {value};"
     },
     {
       "name": "st_d",
@@ -74,7 +74,7 @@
       "step": 1,
       "help": "Day the simulation period starts",
       "help_zh": "模擬期間開始的日期",
-      "set_script": "Table(\"WUS_year\")[3][1] = {value};"
+      "set_script": "Table(\"WUS_year\")[3][1] = {value}; Table(\"WUS_year\")[3][2] = {value};"
     },
     {
       "name": "ed_m",
@@ -88,7 +88,7 @@
       "step": 1,
       "help": "Month the simulation period ends",
       "help_zh": "模擬期間結束的月份",
-      "set_script": "Table(\"WUS_year\")[4][1] = {value};"
+      "set_script": "Table(\"WUS_year\")[4][1] = {value}; Table(\"WUS_year\")[4][2] = {value};"
     },
     {
       "name": "ed_d",
@@ -102,10 +102,10 @@
       "step": 1,
       "help": "Day the simulation period ends",
       "help_zh": "模擬期間結束的日期",
-      "set_script": "Table(\"WUS_year\")[5][1] = {value};"
+      "set_script": "Table(\"WUS_year\")[5][1] = {value}; Table(\"WUS_year\")[5][2] = {value};"
     }
   ],
-  "_parameters說明": "set_script 是寫入模型的 FlexScript：Table(\"WUS_year\")[列][欄]，第 1 欄是第一個產品。要同時寫第 2 欄就在後面加上 Table(\"WUS_year\")[列][2] = {value};",
+  "_parameters說明": "set_script 是寫入模型的 FlexScript：Table(\"WUS_year\")[列][欄]。第 1 欄 Bianca、第 2 欄 Strata，兩個產品使用同一個期間，所以兩欄都寫。",
   "date_inputs": {
     "year": "year",
     "start_month": "st_m",

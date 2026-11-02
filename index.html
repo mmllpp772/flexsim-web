@@ -319,6 +319,87 @@
     .bar-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
     .bar-row .name { grid-column: 1 / -1; }
   }
+
+  /* ================= visual refinement ================= */
+  :root { --steel: #eef1f5; --line: #e1e6ed; --bar: #142030; --shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 12px rgba(16,24,40,.05); }
+  @media (prefers-color-scheme: dark) { :root { --steel: #121a22; --line: #2b3845; --bar: #0b121a; --shadow: 0 1px 2px rgba(0,0,0,.4); } }
+  section.panel { border: 1px solid rgba(16,24,40,.06); box-shadow: var(--shadow); border-radius: 14px; padding: 24px; }
+  h2 { font-size: 18px; letter-spacing: -0.005em; }
+
+  /* app bar: header + tabs on one dark band, full bleed */
+  header.top, nav.tabs { background: var(--bar); box-shadow: 0 0 0 100vmax var(--bar); clip-path: inset(0 -100vmax); }
+  header.top { padding: 26px 0 16px; }
+  header.top h1 { color: #fff; font-size: 26px; }
+  header.top p { color: #93a4b6; }
+  nav.tabs { border-bottom: 0; margin: 0 0 30px; gap: 4px; }
+  nav.tabs button { color: #93a4b6; padding: 12px 18px 14px; border-bottom-width: 3px; }
+  nav.tabs button:hover { color: #fff; }
+  nav.tabs button[aria-selected="true"] { color: #fff; border-bottom-color: var(--amber); }
+  .tabs .count { background: rgba(255,255,255,.1); border-color: transparent; color: #dbe6f1; }
+  .sim-status { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); color: #c9d4df; }
+  .sim-status.on .dot { box-shadow: 0 0 0 3px rgba(43,138,87,.25); }
+  .lang { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
+  .lang button { color: #c9d4df; }
+  .lang button[aria-pressed="true"] { background: var(--amber); color: var(--amber-ink); }
+  .demo { margin-top: -10px; }
+
+  /* category menu: quiet list with an amber marker */
+  .cat-nav { background: transparent; border: 0; box-shadow: none; padding: 0; gap: 2px; }
+  .cat-nav .grp { padding: 0 14px 6px; }
+  .cat-nav button { border-left: 3px solid transparent; border-radius: 0 10px 10px 0; padding: 11px 14px; }
+  .cat-nav button:hover { background: rgba(20,32,48,.05); }
+  .cat-nav button[aria-current="true"] { background: var(--panel); color: var(--ink); border-left-color: var(--amber); box-shadow: var(--shadow); }
+  .cat-nav button[aria-current="true"] small { color: var(--muted); }
+
+  /* metric cards */
+  .kpis { border-top: 0; gap: 12px; }
+  .kpi { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .kpi .v { font-size: 38px; }
+  .run-inputs .ri { border-color: var(--line); border-radius: 12px; }
+
+  /* station tiles */
+  .hint.tight { margin: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .tile { display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0;
+    border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 14px 16px 12px; cursor: pointer;
+    transition: border-color .15s, box-shadow .15s; }
+  .tile:hover { border-color: #b7c4d4; }
+  .tile[aria-pressed="true"] { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+  .tile .nm { font: 600 14px var(--display); color: var(--muted); }
+  .tile[aria-pressed="true"] .nm { color: var(--blue); }
+  .tile .tv { font: 600 30px/1.1 var(--cond); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tile .av { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .tile .spark { width: 100%; max-width: none; height: 28px; margin-top: 8px; }
+  .tile .spark polyline { stroke: #9db8d8; }
+  .tile[aria-pressed="true"] .spark polyline { stroke: var(--blue); }
+  .out-grid { grid-template-columns: minmax(0, 1fr); }
+
+  /* chart */
+  .legend { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+  .legend .lg-bar { width: 12px; height: 12px; border-radius: 3px; background: var(--blue); }
+  .legend .lg-avg { width: 18px; height: 0; border-top: 2px dashed var(--amber); margin-left: 12px; }
+  .chart .avg { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 6 5; }
+  .chart .grid line { stroke: var(--line); }
+
+  /* tables */
+  table.daily th, table.plan th { font-weight: 600; }
+  table.daily td { padding: 9px 12px; }
+  .cat-body > div > * { min-width: 0; }
+
+  /* metrics header: one compact bar instead of two empty panels */
+  section.panel.out-head { display: flex; align-items: center; gap: 10px 20px; flex-wrap: wrap; padding: 16px 22px; }
+  .out-head .results-meta { margin: 0; }
+  .run-pick select { height: 40px; font-weight: 600; }
+  section.panel.view-head { background: transparent; border: 0; box-shadow: none; padding: 4px 0 0; }
+  .view-head h2 { font-size: 22px; }
+
+  @media (max-width: 900px) {
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    nav.tabs { overflow-x: auto; }
+    nav.tabs button { padding: 10px 12px 12px; font-size: 15px; white-space: nowrap; flex: none; }
+    .tile .tv { font-size: 24px; }
+    section.panel { padding: 18px; }
+  }
 </style>
 </head>
 <body>
@@ -505,14 +586,17 @@
           <div id="outBody">
             <div class="out-grid">
               <section class="panel">
-                <h2 data-i18n="totals"></h2>
-                <p class="hint" data-i18n="totalsHint"></p>
-                <div id="totals" class="bars"></div>
+                <div class="panel-head">
+                  <h2 data-i18n="totals"></h2>
+                  <p class="hint tight" data-i18n="totalsHint2"></p>
+                </div>
+                <div id="totals" class="tiles"></div>
               </section>
               <section class="panel">
                 <div class="panel-head">
-                  <h2 data-i18n="daily"></h2>
-                  <div class="chips" id="stationChips" role="group" data-i18n-aria="station"></div>
+                  <h2 id="chartTitle"></h2>
+                  <div class="legend" id="chartLegend"></div>
+                  <div class="chips" id="stationChips" role="group" data-i18n-aria="station" hidden></div>
                 </div>
                 <div class="chart" id="dailyChart"></div>
               </section>
@@ -637,7 +721,9 @@
       outEmpty: "No finished runs yet. Set a period on the Parameters page and press Run.",
       noRunOpt: "No finished runs yet", noData: "No data yet. It appears here when a run finishes.",
       totals: "Total output by station", totalsHint: "Sum over the whole period.",
-      daily: "Daily output", dailyTable: "Daily detail", tableCsv: "Download table (CSV)",
+      daily: "Daily output", dailyTable: "Daily detail",
+      chartTitle: "{s}, daily output", avgWork: "Work-day average {v}", avgShort: "{v} per work day", lgDaily: "Daily output",
+      totalsHint2: "Total over the period. Click a station to chart it.", tableCsv: "Download table (CSV)",
       noTables: "This run has no output tables. It may have been run with an older version, or the export failed on the simulator PC.",
       viewOutput: "View metrics", tookRun: "Took {s} s.", days: "{n} days",
       results: "Results", resultsEmpty: "Results appear here when a run finishes.",
@@ -731,7 +817,9 @@
       outEmpty: "還沒有完成的模擬。到「參數調整」頁設定期間，然後按「執行」。",
       noRunOpt: "還沒有完成的模擬", noData: "還沒有資料，模擬完成後會顯示在這裡。",
       totals: "各站總產出", totalsHint: "整個期間的加總。",
-      daily: "每日產出", dailyTable: "每日明細", tableCsv: "下載這張表（CSV）",
+      daily: "每日產出", dailyTable: "每日明細",
+      chartTitle: "{s} 每日產出", avgWork: "工作日平均 {v}", avgShort: "工作日平均 {v}", lgDaily: "每日產出",
+      totalsHint2: "整個期間的加總，點選站別查看每日變化。", tableCsv: "下載這張表（CSV）",
       noTables: "這次模擬沒有輸出表格，可能是用舊版程式跑的，或模擬電腦匯出時失敗。",
       viewOutput: "查看指標", tookRun: "花了 {s} 秒。", days: "{n} 天",
       results: "模擬結果", resultsEmpty: "模擬完成後，結果會顯示在這裡。",
@@ -936,7 +1024,7 @@
   // =====================================================================
   let T = null, CFG = null, DI = null, history = [], selectedId = null, activeId = null, pollTimer = null;
   let shownJob = null, stateMode = "idle", activeJob = null, pending = null;
-  let TAB = "input", outRunId = null, outTable = load("simOutTable"), outStation = null;
+  let TAB = "input", outRunId = null, outTable = load("simOutTable"), outStation = load("simOutStation");
 
   // ---------- formatting ----------
   const pad = (n) => String(n).padStart(2, "0");
@@ -1503,6 +1591,7 @@
     const pts = (series || []).map(p => p.m?.[name]).filter(v => v != null && !Number.isNaN(Number(v))).map(Number);
     if (pts.length < 2) return "";
     const lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1;
+    if (hi === lo) return "";
     const xy = pts.map((v, i) => [i / (pts.length - 1) * 100, 30 - (v - lo) / span * 26]);
     return `<svg class="spark" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
       <polyline points="${xy.map(p => p[0].toFixed(2) + "," + p[1].toFixed(2)).join(" ")}"/></svg>`;
@@ -1751,18 +1840,27 @@
   }
   $("runSel").addEventListener("change", (e) => { outRunId = e.target.value; renderOutput(); });
 
+  function sparkVals(vals) {
+    if (vals.length < 2) return "";
+    const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+    const pts = vals.map((v, i) => `${(i / (vals.length - 1) * 100).toFixed(2)},${(26 - (v - lo) / span * 22).toFixed(2)}`).join(" ");
+    return `<svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+  }
   function renderTotals(tb, def) {
     const cols = numericCols(tb, def);
     const empty = !tb.rows.length;
-    const sums = cols.map(({ c, i }) => ({ c, v: tb.rows.reduce((a, r) => a + r.values[i], 0) }));
-    const max = Math.max(...sums.map(s => Math.abs(s.v)), 1e-9);
-    $("totals").innerHTML = sums.map(s => `
-      <div class="bar-row ${s.c === outStation ? "current" : ""}" data-s="${esc(s.c)}" style="cursor:pointer">
-        <div class="name">${esc(s.c)}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${empty ? 0 : Math.max(0.5, Math.abs(s.v) / max * 100)}%"></div></div>
-        <div class="val">${empty ? "—" : fmt(s.v, 0)}</div>
-      </div>`).join("");
-    $("totals").querySelectorAll(".bar-row").forEach(r => r.onclick = () => { outStation = r.dataset.s; renderOutput(); });
+    const workRows = tb.rows.filter(r => cols.some(({ i }) => r.values[i] > 0));
+    $("totals").innerHTML = cols.map(({ c, i }) => {
+      const total = tb.rows.reduce((a, r) => a + r.values[i], 0);
+      const avg = workRows.length ? total / workRows.length : 0;
+      return `<button type="button" class="tile" data-s="${esc(c)}" aria-pressed="${c === outStation}">
+        <span class="nm">${esc(c)}</span>
+        <span class="tv">${empty ? "—" : fmt(total, 0)}</span>
+        <span class="av">${empty ? "&nbsp;" : esc(t("avgShort", { v: fmt(avg, 0) }))}</span>
+        ${empty ? "" : sparkVals(workRows.map(r => r.values[i]))}
+      </button>`;
+    }).join("");
+    $("totals").querySelectorAll(".tile").forEach(b => b.onclick = () => { outStation = b.dataset.s; store("simOutStation", outStation); renderOutput(); });
   }
 
   function renderStations(tb, def) {
@@ -1783,6 +1881,7 @@
     const box = $("dailyChart");
     if (!col) { box.innerHTML = ""; return; }
     if (!tb.rows.length) {
+      $("chartTitle").textContent = t("chartTitle", { s: col.c }); $("chartLegend").innerHTML = "";
       const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 46, r: 8, t: 10, b: 30 }, ph = H - m.t - m.b;
       let g = '<g class="grid">', ax = '<g class="axis">';
       for (let k = 0; k <= 4; k++) { const yy = m.t + ph - ph * k / 4; g += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}"/>`; ax += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end">—</text>`; }
@@ -1795,14 +1894,20 @@
     const data = tb.rows.map(r => ({ label: ki >= 0 ? String(r.values[ki]) : r.row, sub: wi >= 0 ? String(r.values[wi]) : "", v: r.values[col.i], row: r.row }));
     const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 46, r: 8, t: 10, b: 30 };
     const pw = W - m.l - m.r, ph = H - m.t - m.b;
-    const ymax = niceMax(Math.max(...data.map(d => d.v), 0));
+    const peak = Math.max(...data.map(d => d.v), 0);
+    const rawStep = peak > 0 ? peak / 4 : 1, mag = Math.pow(10, Math.floor(Math.log10(rawStep))), n = rawStep / mag;
+    const stepY = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+    const ymax = Math.max(stepY, Math.ceil(peak / stepY) * stepY);
+    const work = data.filter(d => d.v > 0), avg = work.length ? work.reduce((a, d) => a + d.v, 0) / work.length : 0;
+    $("chartTitle").textContent = t("chartTitle", { s: col.c });
+    $("chartLegend").innerHTML = `<span class="lg-bar"></span>${esc(t("lgDaily"))}<span class="lg-avg"></span>${esc(t("avgWork", { v: fmt(avg, 0) }))}`;
     const y = (v) => m.t + ph - (v / ymax) * ph;
     const step = pw / data.length, bw = Math.max(1, Math.min(28, step - 2));
     let g = '<g class="grid">', ax = '<g class="axis">';
-    for (let k = 0; k <= 4; k++) {
-      const v = ymax * k / 4, yy = y(v);
+    for (let v = 0; v <= ymax + 1e-9; v += stepY) {
+      const yy = y(v);
       g += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}"/>`;
-      ax += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end">${fmt(v, v >= 10 || v === 0 ? 0 : 1)}</text>`;
+      ax += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end">${fmt(v, stepY >= 1 ? 0 : 1)}</text>`;
     }
     g += "</g>";
     const every = Math.max(1, Math.ceil(data.length / Math.floor(pw / 64)));
@@ -1819,7 +1924,9 @@
       }
       hits += `<rect class="hit" data-i="${i}" x="${m.l + step * i}" y="${m.t}" width="${step}" height="${ph}"/>`;
     });
-    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("daily"))}: ${esc(col.c)}">${g}${ax}${bars}${hits}</svg>`;
+    const ay = y(avg);
+    const avgLine = avg > 0 ? `<line class="avg" x1="${m.l}" x2="${W - m.r}" y1="${ay}" y2="${ay}"/>` : "";
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("chartTitle", { s: col.c }))}">${g}${ax}${bars}${avgLine}${hits}</svg>`;
     const tip = $("tip");
     box.querySelectorAll(".hit").forEach(h => {
       h.addEventListener("mousemove", (e) => {
