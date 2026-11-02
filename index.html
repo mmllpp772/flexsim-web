@@ -667,7 +667,10 @@
         <div data-ocat="view">
           <section class="panel view-head">
             <h2 id="viewTitle"></h2>
-            <div class="seg" id="productSeg" role="group" data-i18n-aria="product"></div>
+            <div class="util-segs">
+              <div class="seg" id="granSeg" role="group" data-i18n-aria="granAria"></div>
+              <div class="seg" id="productSeg" role="group" data-i18n-aria="product"></div>
+            </div>
           </section>
           <p class="panel empty-panel" id="viewEmpty" hidden></p>
           <div id="outBody">
@@ -690,7 +693,7 @@
             </div>
             <section class="panel" id="detailPanel">
               <div class="panel-head">
-                <h2 data-i18n="dailyTable"></h2>
+                <h2 id="detailTitle"></h2>
                 <button class="link" id="tableCsvBtn" type="button" data-i18n="tableCsv"></button>
               </div>
               <div class="table-wrap"><table id="dailyTable" class="daily"></table></div>
@@ -823,6 +826,12 @@
       totals: "Total output by station", totalsHint: "Sum over the whole period.",
       daily: "Daily output", dailyTable: "Daily detail",
       chartTitle: "{s}, daily output", avgWork: "Work-day average {v}", avgShort: "{v} per work day", lgDaily: "Daily output",
+      granAria: "Group by", g_day: "Day", g_week: "Week", g_month: "Month", g_quarter: "Quarter",
+      ct_week: "{s}, weekly output", ct_month: "{s}, monthly output", ct_quarter: "{s}, quarterly output",
+      lg_week: "Weekly output", lg_month: "Monthly output", lg_quarter: "Quarterly output",
+      av_week: "Weekly average {v}", av_month: "Monthly average {v}", av_quarter: "Quarterly average {v}",
+      dt_day: "Daily detail", dt_week: "Weekly detail", dt_month: "Monthly detail", dt_quarter: "Quarterly detail",
+      colDates: "Dates", colWorkDays: "Work days", weekN: "Week {n}", workDaysN: "{n} work days",
       totalsHint2: "Total over the period. Click a station to chart it.", tableCsv: "Download table (CSV)",
       noTables: "This run has no output tables. It may have been run with an older version, or the export failed on the simulator PC.",
       viewOutput: "View metrics", tookRun: "Took {s} s.", days: "{n} days",
@@ -932,6 +941,12 @@
       totals: "各站總產出", totalsHint: "整個期間的加總。",
       daily: "每日產出", dailyTable: "每日明細",
       chartTitle: "{s} 每日產出", avgWork: "工作日平均 {v}", avgShort: "工作日平均 {v}", lgDaily: "每日產出",
+      granAria: "統計單位", g_day: "日", g_week: "週", g_month: "月", g_quarter: "季",
+      ct_week: "{s} 每週產出", ct_month: "{s} 每月產出", ct_quarter: "{s} 每季產出",
+      lg_week: "每週產出", lg_month: "每月產出", lg_quarter: "每季產出",
+      av_week: "每週平均 {v}", av_month: "每月平均 {v}", av_quarter: "每季平均 {v}",
+      dt_day: "每日明細", dt_week: "每週明細", dt_month: "每月明細", dt_quarter: "每季明細",
+      colDates: "日期區間", colWorkDays: "工作天數", weekN: "第 {n} 週", workDaysN: "{n} 個工作日",
       totalsHint2: "整個期間的加總，點選站別查看每日變化。", tableCsv: "下載這張表（CSV）",
       noTables: "這次模擬沒有輸出表格，可能是用舊版程式跑的，或模擬電腦匯出時失敗。",
       viewOutput: "查看指標", tookRun: "花了 {s} 秒。", days: "{n} 天",
@@ -1997,7 +2012,12 @@
       if (!ok) tb = { columns: def?.columns || [], rows: [] };  // 沒有資料：照設定的欄位畫空的版面
       $("viewEmpty").hidden = !(job && !ok); $("viewEmpty").textContent = t("noTables");
       $("outBody").hidden = false;
-      renderStations(tb, def); renderTotals(tb, def); renderDaily(tb, def); renderDailyTable(tb, def);
+      renderGranSeg();
+      renderStations(tb, def); renderTotals(tb, def);
+      const ag = aggregate(job, tb, def);
+      viewTb = ag.tb;
+      $("detailTitle").textContent = t("dt_" + outGran);
+      renderDaily(ag.tb, ag.def); renderDailyTable(ag.tb, ag.def);
     }
     renderTable();
   }
@@ -2091,6 +2111,70 @@
     const pts = vals.map((v, i) => `${(i / (vals.length - 1) * 100).toFixed(2)},${(26 - (v - lo) / span * 22).toFixed(2)}`).join(" ");
     return `<svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}"/></svg>`;
   }
+  // ---------- day / week / month / quarter ----------
+  const GRANS = ["day", "week", "month", "quarter"];
+  let outGran = GRANS.includes(load("simOutGran")) ? load("simOutGran") : "day";
+  let viewTb = null;  // what the chart and table show (for the CSV button)
+  const MON_IDX = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+  // real date of each daily row: parse "Nov 2" with the run's year; fall back to start date + row index
+  function rowDates(job, tb, def) {
+    const di = tb.columns.findIndex(c => /date/i.test(c));
+    const p = periodOf(job?.parameters || {});
+    let year = p?.start ? p.start.getFullYear() : new Date().getFullYear(), lastM = -1;
+    return tb.rows.map((r, i) => {
+      const m = di >= 0 ? String(r.values[di]).trim().match(/^([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2})/) : null;
+      if (m && MON_IDX[m[1].toLowerCase()] != null) {
+        const mi = MON_IDX[m[1].toLowerCase()];
+        if (lastM > mi) year++;  // Dec -> Jan
+        lastM = mi;
+        return new Date(year, mi, +m[2]);
+      }
+      if (p?.start) { const d = new Date(p.start); d.setDate(d.getDate() + i); return d; }
+      return null;
+    });
+  }
+  const md = (d) => LANG === "zh" ? `${d.getMonth() + 1}/${d.getDate()}` : `${MON3[d.getMonth()]} ${d.getDate()}`;
+  function rangeText(a, b) {
+    if (+a === +b) return md(a);
+    if (LANG !== "zh" && a.getMonth() === b.getMonth()) return `${md(a)}–${b.getDate()}`;
+    return `${md(a)}–${md(b)}`;
+  }
+  function aggregate(job, tb, def) {
+    if (outGran === "day" || !tb.rows.length) return { tb, def };
+    const cols = numericCols(tb, def), dates = rowDates(job, tb, def);
+    if (dates.some(d => !d)) return { tb, def };
+    const groups = [];
+    let cur = null, wk = 0;
+    tb.rows.forEach((r, i) => {
+      const d = dates[i];
+      const key = outGran === "week" ? wk : outGran === "month" ? `${d.getFullYear()}-${d.getMonth()}` : `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+      if (!cur || cur.key !== key) { cur = { key, from: d, to: d, sums: cols.map(() => 0), work: 0 }; groups.push(cur); }
+      cur.to = d;
+      cols.forEach(({ i: ci }, k) => cur.sums[k] += Number(r.values[ci]) || 0);
+      if (cols.some(({ i: ci }) => Number(r.values[ci]) > 0)) cur.work++;
+      if (outGran === "week" && d.getDay() === 0) wk++;  // weeks end on Sunday, like the model's weekly summary
+    });
+    const cD = t("colDates"), cW = t("colWorkDays");
+    const rows = groups.map((g, n) => {
+      const range = rangeText(g.from, g.to);
+      let row, label;
+      if (outGran === "week") { row = t("weekN", { n: n + 1 }); label = range; }
+      else if (outGran === "month") {
+        row = LANG === "zh" ? `${g.from.getFullYear()}年${g.from.getMonth() + 1}月` : `${MON3[g.from.getMonth()]} ${g.from.getFullYear()}`;
+        label = LANG === "zh" ? `${g.from.getMonth() + 1}月` : MON3[g.from.getMonth()];
+      } else {
+        const q = Math.floor(g.from.getMonth() / 3) + 1;
+        row = `${g.from.getFullYear()} Q${q}`; label = `Q${q}`;
+      }
+      return { row, label, sub: `${outGran === "week" ? "" : range + "  "}${t("workDaysN", { n: g.work })}`, values: [range, g.work, ...g.sums] };
+    });
+    return { tb: { columns: [cD, cW, ...cols.map(c => c.c)], rows }, def: { ...def, key_columns: [cD, cW] } };
+  }
+  function renderGranSeg() {
+    $("granSeg").innerHTML = GRANS.map(g => `<button type="button" data-g="${g}" aria-pressed="${g === outGran}">${esc(t("g_" + g))}</button>`).join("");
+    $("granSeg").querySelectorAll("button").forEach(b => b.onclick = () => { outGran = b.dataset.g; store("simOutGran", outGran); renderOutput(); });
+  }
+
   function renderTotals(tb, def) {
     const cols = numericCols(tb, def);
     const empty = !tb.rows.length;
@@ -2126,7 +2210,7 @@
     const box = $("dailyChart");
     if (!col) { box.innerHTML = ""; return; }
     if (!tb.rows.length) {
-      $("chartTitle").textContent = t("chartTitle", { s: col.c }); $("chartLegend").innerHTML = "";
+      $("chartTitle").textContent = t(outGran === "day" ? "chartTitle" : "ct_" + outGran, { s: col.c }); $("chartLegend").innerHTML = "";
       const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 46, r: 8, t: 10, b: 30 }, ph = H - m.t - m.b;
       let g = '<g class="grid">', ax = '<g class="axis">';
       for (let k = 0; k <= 4; k++) { const yy = m.t + ph - ph * k / 4; g += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}"/>`; ax += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end">—</text>`; }
@@ -2136,7 +2220,7 @@
     }
     const ki = keyIdx(tb, def);
     const wi = tb.columns.findIndex((c, i) => i !== ki && (def?.key_columns || []).includes(c));
-    const data = tb.rows.map(r => ({ label: ki >= 0 ? String(r.values[ki]) : r.row, sub: wi >= 0 ? String(r.values[wi]) : "", v: r.values[col.i], row: r.row }));
+    const data = tb.rows.map(r => ({ label: r.label ?? (ki >= 0 ? String(r.values[ki]) : r.row), sub: r.sub ?? (wi >= 0 ? String(r.values[wi]) : ""), v: r.values[col.i], row: r.row }));
     const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 46, r: 8, t: 10, b: 30 };
     const pw = W - m.l - m.r, ph = H - m.t - m.b;
     const peak = Math.max(...data.map(d => d.v), 0);
@@ -2144,8 +2228,9 @@
     const stepY = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
     const ymax = Math.max(stepY, Math.ceil(peak / stepY) * stepY);
     const work = data.filter(d => d.v > 0), avg = work.length ? work.reduce((a, d) => a + d.v, 0) / work.length : 0;
-    $("chartTitle").textContent = t("chartTitle", { s: col.c });
-    $("chartLegend").innerHTML = `<span class="lg-bar"></span>${esc(t("lgDaily"))}<span class="lg-avg"></span>${esc(t("avgWork", { v: fmt(avg, 0) }))}`;
+    const day = outGran === "day";
+    $("chartTitle").textContent = t(day ? "chartTitle" : "ct_" + outGran, { s: col.c });
+    $("chartLegend").innerHTML = `<span class="lg-bar"></span>${esc(t(day ? "lgDaily" : "lg_" + outGran))}<span class="lg-avg"></span>${esc(t(day ? "avgWork" : "av_" + outGran, { v: fmt(avg, 0) }))}`;
     const y = (v) => m.t + ph - (v / ymax) * ph;
     const step = pw / data.length, bw = Math.max(1, Math.min(28, step - 2));
     let g = '<g class="grid">', ax = '<g class="axis">';
@@ -2177,7 +2262,7 @@
       h.addEventListener("mousemove", (e) => {
         const d = data[+h.dataset.i];
         box.querySelectorAll(".bar").forEach(b => b.classList.toggle("hot", b.dataset.i === h.dataset.i));
-        tip.innerHTML = `${esc(d.label)}${d.sub ? ` ${esc(d.sub)}` : ""}<br><b>${fmt(d.v, 0)}</b> ${esc(col.c)}`;
+        tip.innerHTML = `${esc(d.row && outGran !== "day" ? d.row + "  " : "")}${esc(d.label)}${d.sub ? `<br>${esc(d.sub)}` : ""}<br><b>${fmt(d.v, 0)}</b> ${esc(col.c)}`;
         tip.hidden = false;
         const tw = tip.offsetWidth;
         tip.style.left = Math.min(window.innerWidth - tw - 8, e.clientX + 14) + "px";
@@ -2206,13 +2291,13 @@
   }
 
   $("tableCsvBtn").addEventListener("click", () => {
-    const job = doneRuns().find(r => r.id === outRunId); const tb = job?.tables?.[outTable];
-    if (!tb || !tb.rows.length) return;
+    const job = doneRuns().find(r => r.id === outRunId); const tb = viewTb;
+    if (!job || !tb || !tb.rows.length) return;
     const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [["", ...tb.columns].map(q).join(","), ...tb.rows.map(r => [r.row, ...r.values].map(q).join(","))];
     const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = `${outTable}_${(job.label || job.id).replace(/[^\w\u4e00-\u9fff-]+/g, "_")}.csv`; a.click();
+    a.href = URL.createObjectURL(blob); a.download = `${outTable}_${outGran}_${(job.label || job.id).replace(/[^\w\u4e00-\u9fff-]+/g, "_")}.csv`; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 
