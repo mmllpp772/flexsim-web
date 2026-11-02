@@ -1,0 +1,107 @@
+{
+  "_說明": "這個檔案是唯一需要依你的模型修改的地方。改完重新啟動 start.bat 即可。",
+
+  "mock_mode": true,
+  "_mock_mode說明": "true = 不呼叫 FlexSim，用假資料測試網頁流程；接上 FlexSim 後改成 false",
+
+  "flexsim": {
+    "program_dir": "C:/Program Files/FlexSim 2025/program/",
+    "model_path": "C:/FlexSimModels/MyLine.fsm",
+    "launch_kwargs": { "showGUI": false },
+    "_launch_kwargs說明": "直接傳給 FlexSimPy.launch()，依你編譯的 FlexSimPy 版本調整（例如授權伺服器參數）",
+    "max_run_seconds": 1800
+  },
+
+  "title": "Production Line Simulator",
+  "subtitle": "Enter scenario parameters and run the FlexSim model",
+
+  "run_length": {
+    "label": "Simulated time",
+    "unit": "hours",
+    "default": 8,
+    "min": 1,
+    "max": 720,
+    "seconds_per_unit": 3600
+  },
+
+  "parameters": [
+    {
+      "name": "ArrivalInterval",
+      "label": "Arrival interval",
+      "unit": "sec",
+      "type": "number",
+      "default": 30,
+      "min": 1,
+      "max": 600,
+      "step": 1,
+      "help": "Average time between incoming parts"
+    },
+    {
+      "name": "ProcessTime",
+      "label": "Process time",
+      "unit": "sec",
+      "type": "number",
+      "default": 25,
+      "min": 1,
+      "max": 600,
+      "step": 1,
+      "help": "Average processing time per part"
+    },
+    {
+      "name": "NumOperators",
+      "label": "Operators",
+      "unit": "",
+      "type": "integer",
+      "default": 2,
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "help": "Number of operators on the line"
+    }
+  ],
+  "_parameters說明": "name 必須和 FlexSim 模型裡 Model Parameters 的名稱完全一樣。預設用 Model.parameters.<name> = <value>; 寫入，如需特殊寫法可加 \"set_script\": \"... {value} ...\"",
+
+  "metrics": [
+    {
+      "name": "throughput",
+      "label": "Throughput",
+      "unit": "parts",
+      "decimals": 0,
+      "script": "Model.find(\"Sink1\").stats.input.value"
+    },
+    {
+      "name": "throughput_per_hour",
+      "label": "Throughput / hour",
+      "unit": "parts/h",
+      "decimals": 1,
+      "script": "Model.find(\"Sink1\").stats.input.value / (Model.time / 3600)"
+    },
+    {
+      "name": "avg_wait",
+      "label": "Avg. queue wait",
+      "unit": "sec",
+      "decimals": 1,
+      "script": "Model.find(\"Queue1\").stats.staytime.average"
+    },
+    {
+      "name": "avg_queue",
+      "label": "Avg. queue length",
+      "unit": "parts",
+      "decimals": 2,
+      "script": "Model.find(\"Queue1\").stats.content.average"
+    },
+    {
+      "name": "utilization",
+      "label": "Processor utilization",
+      "unit": "%",
+      "decimals": 1,
+      "script": "Table(\"WebResults\")[1][1]"
+    }
+  ],
+  "_metrics說明": "每個指標是一段回傳數字的 FlexScript。請先在 FlexSim 的 Script Console 測試能正確回傳。不好直接算的指標（例如利用率），建議在模型 OnRunStop 時寫進 Global Table「WebResults」，這裡再讀出來。",
+
+  "access_key": "",
+  "_access_key說明": "留空 = 不需要密碼。填入字串後，使用者第一次開網頁要輸入這組 key。",
+
+  "history_size": 50
+}

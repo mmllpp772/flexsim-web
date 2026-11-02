@@ -1,0 +1,11 @@
+# 執行時產生的檔案
+results/
+server.log
+__pycache__/
+*.pyc
+.venv/
+
+# FlexSim 模型與編譯好的模組（視公司規定決定是否上傳）
+*.fsm
+*.fsx
+*.pyd

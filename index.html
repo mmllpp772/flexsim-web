@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulation Runner</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1b1f24; --muted: #5d6673; --line: #e3e6ea;
+    --accent: #2563eb; --accent-ink: #ffffff; --accent-soft: #e8efff;
+    --ok: #15803d; --ok-soft: #e7f6ec; --warn: #b45309; --warn-soft: #fdf3e3;
+    --err: #b91c1c; --err-soft: #fdecec; --bar: #93b4f7; --bar-hi: #2563eb;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418; --panel: #1a1e24; --ink: #e8ebef; --muted: #9aa3ae; --line: #2a3038;
+      --accent: #5b8def; --accent-ink: #0d1117; --accent-soft: #1f2a40;
+      --ok: #4ade80; --ok-soft: #14291c; --warn: #fbbf24; --warn-soft: #2d2412;
+      --err: #f87171; --err-soft: #2d1616; --bar: #34507f; --bar-hi: #5b8def;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 22px 24px 8px; max-width: 1240px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  .banner { max-width: 1240px; margin: 10px auto 0; padding: 0 24px; }
+  .banner div { background: var(--warn-soft); color: var(--warn); border-radius: var(--radius);
+    padding: 8px 12px; font-size: 13px; }
+  main { max-width: 1240px; margin: 0 auto; padding: 16px 24px 40px;
+    display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 16px; } header, .banner { padding-left: 16px; padding-right: 16px; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .card h2 { margin: 0 0 14px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .field { margin-bottom: 14px; }
+  .field label { display: flex; justify-content: space-between; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .field label span { font-weight: 400; color: var(--muted); }
+  .field input { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--ink); font: inherit; }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .field small { color: var(--muted); font-size: 12px; }
+  .field.invalid input { border-color: var(--err); }
+  .divider { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink); padding: 8px 12px; }
+  button.primary { width: 100%; background: var(--accent); color: var(--accent-ink); border: 0;
+    padding: 12px; font-weight: 600; font-size: 15px; }
+  button.primary:disabled { opacity: .55; cursor: not-allowed; }
+  button.link { border: 0; background: none; color: var(--accent); padding: 0; }
+  .right { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
+  .right > * { min-width: 0; }
+  .status { display: flex; align-items: center; gap: 12px; }
+  .pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .pill.queued { background: var(--warn-soft); color: var(--warn); }
+  .pill.running { background: var(--accent-soft); color: var(--accent); }
+  .pill.done { background: var(--ok-soft); color: var(--ok); }
+  .pill.error { background: var(--err-soft); color: var(--err); }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .kpi { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+  .kpi .k { color: var(--muted); font-size: 13px; }
+  .kpi .v { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .kpi .v small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 4px; }
+  .kpi .d { font-size: 12px; margin-top: 2px; color: var(--muted); }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; grid-column: 1 / -1; }
+  .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .chart-head h2 { margin: 0; }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .bars { display: grid; gap: 8px; }
+  .bar-row { display: grid; grid-template-columns: minmax(80px, 160px) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+  .bar-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .bar-track { background: var(--bg); border-radius: 4px; height: 18px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--bar); border-radius: 4px; transition: width .4s; }
+  .bar-row.latest .bar-fill { background: var(--bar-hi); }
+  .bar-row.latest .name { color: var(--ink); font-weight: 600; }
+  .bar-row .val { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  tr.clickable { cursor: pointer; } tr.clickable:hover td { background: var(--bg); }
+  tr.selected td { background: var(--accent-soft); }
+  .err-box { background: var(--err-soft); color: var(--err); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Simulation Runner</h1>
+  <p id="subtitle">Loading…</p>
+</header>
+<div class="banner" id="mockBanner" hidden><div>Demo mode — results are generated test data, not FlexSim output.</div></div>
+
+<main>
+  <section class="card">
+    <h2>Scenario</h2>
+    <form id="form" novalidate>
+      <div id="fields"></div>
+      <hr class="divider">
+      <div class="field">
+        <label for="f_label">Scenario name <span>optional</span></label>
+        <input id="f_label" maxlength="60" placeholder="e.g. 3 operators, peak demand">
+      </div>
+      <div class="field">
+        <label for="f_who">Your name <span>optional</span></label>
+        <input id="f_who" maxlength="60">
+      </div>
+      <button class="primary" id="runBtn" type="submit">Run simulation</button>
+      <div id="formError" class="err-box" hidden></div>
+    </form>
+  </section>
+
+  <div class="right">
+    <section class="card">
+      <div class="status" id="statusLine"><span class="pill done" style="visibility:hidden">—</span><span class="muted">No run yet.</span></div>
+    </section>
+
+    <section class="card">
+      <h2 id="resultsTitle">Results</h2>
+      <div id="kpis" class="kpis"><div class="empty">Run a scenario to see results.</div></div>
+    </section>
+
+    <section class="card">
+      <div class="chart-head">
+        <h2>Compare scenarios</h2>
+        <select id="metricSel" aria-label="Metric to compare"></select>
+      </div>
+      <div id="bars" class="bars"><div class="empty">Completed runs will appear here.</div></div>
+    </section>
+
+    <section class="card">
+      <div class="chart-head">
+        <h2>Run history</h2>
+        <button class="link" id="csvBtn" type="button">Download CSV</button>
+      </div>
+      <div class="table-wrap"><table id="hist"></table></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  let CFG = null;
+  let accessKey = "";
+  let history = [];
+  let selectedId = null;
+  let pollTimer = null;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+  function store(k, v) { try { v === undefined ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+  function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  async function api(path, opts = {}) {
+    const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+    if (accessKey) headers["X-Access-Key"] = accessKey;
+    const res = await fetch(path, { ...opts, headers });
+    if (res.status === 401) {
+      store("simKey");
+      accessKey = prompt("Access key:") || "";
+      if (accessKey) { store("simKey", accessKey); return api(path, opts); }
+      throw new Error("Access key required");
+    }
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.detail || `Server error (${res.status})`);
+    return body;
+  }
+
+  function fmt(v, decimals = 1) {
+    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    return Number(v).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+  function fmtTime(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
+  function runName(j) { return j.label || `Run ${fmtTime(j.submitted_at)}`; }
+
+  // ---------- form ----------
+  function buildForm() {
+    const rl = CFG.run_length;
+    const items = [...CFG.parameters, { name: "__run_length", label: rl.label, unit: rl.unit, default: rl.default, min: rl.min, max: rl.max, step: "any", help: "Length of the simulated period" }];
+    const saved = JSON.parse(load("simLastParams") || "{}");
+    $("fields").innerHTML = items.map(p => `
+      <div class="field" data-name="${esc(p.name)}">
+        <label for="p_${esc(p.name)}">${esc(p.label)} ${p.unit ? `<span>${esc(p.unit)}</span>` : ""}</label>
+        <input id="p_${esc(p.name)}" type="number" inputmode="decimal"
+          value="${esc(saved[p.name] ?? p.default)}" min="${esc(p.min)}" max="${esc(p.max)}" step="${esc(p.step ?? "any")}">
+        <small>${esc(p.help || "")}${p.min !== undefined ? ` · range ${esc(p.min)}–${esc(p.max)}` : ""}</small>
+      </div>`).join("");
+  }
+
+  function readForm() {
+    const vals = {}; let ok = true;
+    document.querySelectorAll("#fields .field").forEach(f => {
+      const inp = f.querySelector("input");
+      const v = Number(inp.value);
+      const bad = inp.value === "" || Number.isNaN(v) || (inp.min !== "" && v < Number(inp.min)) || (inp.max !== "" && v > Number(inp.max));
+      f.classList.toggle("invalid", bad);
+      if (bad) ok = false;
+      vals[f.dataset.name] = v;
+    });
+    return ok ? vals : null;
+  }
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("formError").hidden = true;
+    const vals = readForm();
+    if (!vals) { showFormError("Please fix the highlighted values."); return; }
+    store("simLastParams", JSON.stringify(vals));
+    const who = $("f_who").value.trim();
+    if (who) store("simWho", who);
+    const { __run_length, ...parameters } = vals;
+    $("runBtn").disabled = true;
+    try {
+      const job = await api("/api/run", { method: "POST", body: JSON.stringify({
+        parameters, run_length: __run_length, label: $("f_label").value.trim() || null, submitted_by: who || null }) });
+      selectedId = job.id;
+      renderStatus(job);
+      poll(job.id);
+    } catch (err) {
+      showFormError(err.message);
+      $("runBtn").disabled = false;
+    }
+  });
+
+  function showFormError(msg) { $("formError").textContent = msg; $("formError").hidden = false; }
+
+  // ---------- polling ----------
+  function poll(id) {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(async () => {
+      try {
+        const job = await api(`/api/jobs/${id}`);
+        renderStatus(job);
+        if (job.status === "queued" || job.status === "running") return poll(id);
+        $("runBtn").disabled = false;
+        await refreshHistory();
+        if (job.status === "done") showResult(job);
+      } catch (err) {
+        renderStatus({ status: "error", error: err.message });
+        $("runBtn").disabled = false;
+      }
+    }, 1500);
+  }
+
+  function renderStatus(job) {
+    const map = {
+      queued: ["queued", "Queued", `Waiting for the simulator${job.queue_position ? ` · position ${job.queue_position} in line` : ""}…`],
+      running: ["running", "Running", "FlexSim is running your scenario…"],
+      done: ["done", "Complete", `Finished ${fmtTime(job.finished_at)}${job.wall_seconds ? ` · took ${fmt(job.wall_seconds, 1)} s` : ""}`],
+      error: ["error", "Failed", job.error || "Unknown error"],
+    };
+    const [cls, label, text] = map[job.status] || map.error;
+    const spin = (job.status === "queued" || job.status === "running") ? '<div class="spinner" aria-hidden="true"></div>' : "";
+    $("statusLine").innerHTML = `${spin}<span class="pill ${cls}">${label}</span><span>${esc(text)}</span>`;
+  }
+
+  // ---------- results ----------
+  function showResult(job) {
+    selectedId = job.id;
+    $("resultsTitle").textContent = `Results · ${runName(job)}`;
+    const prev = history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
+    $("kpis").innerHTML = CFG.metrics.map(m => {
+      const v = job.metrics?.[m.name];
+      let delta = "";
+      if (prev && v != null && prev.metrics?.[m.name] != null && prev.metrics[m.name] !== 0) {
+        const pct = (v - prev.metrics[m.name]) / Math.abs(prev.metrics[m.name]) * 100;
+        delta = `${pct >= 0 ? "▲" : "▼"} ${fmt(Math.abs(pct), 1)}% vs previous run`;
+      }
+      return `<div class="kpi"><div class="k">${esc(m.label)}</div>
+        <div class="v">${fmt(v, m.decimals ?? 1)}<small>${esc(m.unit || "")}</small></div>
+        <div class="d">${delta || "&nbsp;"}</div></div>`;
+    }).join("");
+    renderBars(); renderTable();
+  }
+
+  function renderBars() {
+    const done = history.filter(h => h.status === "done").slice(0, 12);
+    if (!done.length) return;
+    const m = CFG.metrics.find(x => x.name === $("metricSel").value) || CFG.metrics[0];
+    const vals = done.map(h => h.metrics?.[m.name] ?? 0);
+    const max = Math.max(...vals.map(Math.abs), 1e-9);
+    $("bars").innerHTML = done.map((h, i) => `
+      <div class="bar-row ${h.id === selectedId ? "latest" : ""}" title="${esc(runName(h))}">
+        <div class="name">${esc(runName(h))}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(1, Math.abs(vals[i]) / max * 100)}%"></div></div>
+        <div class="val">${fmt(vals[i], m.decimals ?? 1)} ${esc(m.unit || "")}</div>
+      </div>`).join("");
+  }
+
+  function renderTable() {
+    const cols = [
+      ...CFG.parameters.map(p => ({ k: "p", name: p.name, label: p.label + (p.unit ? ` (${p.unit})` : ""), d: p.type === "integer" ? 0 : 1 })),
+      ...CFG.metrics.map(m => ({ k: "m", name: m.name, label: m.label + (m.unit ? ` (${m.unit})` : ""), d: m.decimals ?? 1 })),
+    ];
+    if (!history.length) { $("hist").innerHTML = `<tr><td class="empty" colspan="99">No runs yet.</td></tr>`; return; }
+    $("hist").innerHTML = `<thead><tr><th>Scenario</th><th>By</th><th>Status</th>${cols.map(c => `<th>${esc(c.label)}</th>`).join("")}</tr></thead><tbody>` +
+      history.map(h => `<tr class="clickable ${h.id === selectedId ? "selected" : ""}" data-id="${esc(h.id)}">
+        <td>${esc(runName(h))}</td><td>${esc(h.submitted_by || "")}</td>
+        <td><span class="pill ${esc(h.status)}">${esc(h.status)}</span></td>
+        ${cols.map(c => `<td>${fmt(c.k === "p" ? h.parameters?.[c.name] : h.metrics?.[c.name], c.d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+    document.querySelectorAll("#hist tr.clickable").forEach(tr => tr.addEventListener("click", () => {
+      const j = history.find(h => h.id === tr.dataset.id);
+      if (j && j.status === "done") showResult(j);
+    }));
+  }
+
+  async function refreshHistory() {
+    history = await api("/api/history");
+    renderBars(); renderTable();
+  }
+
+  $("metricSel").addEventListener("change", renderBars);
+
+  $("csvBtn").addEventListener("click", () => {
+    const head = ["scenario", "submitted_by", "submitted_at", "status", "run_length",
+      ...CFG.parameters.map(p => p.name), ...CFG.metrics.map(m => m.name)];
+    const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = history.map(h => [runName(h), h.submitted_by, h.submitted_at, h.status, h.run_length,
+      ...CFG.parameters.map(p => h.parameters?.[p.name]), ...CFG.metrics.map(m => h.metrics?.[m.name])].map(q).join(","));
+    const blob = new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "simulation_runs.csv"; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // ---------- init ----------
+  (async function init() {
+    try {
+      accessKey = load("simKey") || "";
+      CFG = await api("/api/config");
+      document.title = CFG.title;
+      $("title").textContent = CFG.title;
+      $("subtitle").textContent = CFG.subtitle || "";
+      $("mockBanner").hidden = !CFG.mock_mode;
+      $("f_who").value = load("simWho") || "";
+      $("metricSel").innerHTML = CFG.metrics.map(m => `<option value="${esc(m.name)}">${esc(m.label)}</option>`).join("");
+      buildForm();
+      await refreshHistory();
+      const active = history.find(h => h.status === "queued" || h.status === "running");
+      const lastDone = history.find(h => h.status === "done");
+      if (lastDone) { showResult(lastDone); if (!active) renderStatus(lastDone); }
+      if (active) { $("runBtn").disabled = true; renderStatus(active); poll(active.id); }
+    } catch (err) {
+      $("subtitle").textContent = "Cannot reach the simulation server: " + err.message;
+    }
+  })();
+})();
+</script>
+</body>
+</html>
