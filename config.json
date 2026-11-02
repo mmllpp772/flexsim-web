@@ -23,7 +23,7 @@
   "stop": {
     "type": "end_of_date",
     "set_model_start": true,
-    "start_time_of_day": "00:00",
+    "start_time_of_day": "12:00",
     "model_start": "2026-05-18 12:00",
     "time_unit_seconds": 1,
     "year_param": "year",

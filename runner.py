@@ -183,7 +183,9 @@ def stop_time(cfg: dict[str, Any], params: dict[str, float], length: float | Non
         end = _date_from(params, y, st["end_month_param"], st["end_day_param"], "End")
         if start and end < start:
             raise ValueError("End date must be on or after the start date")
-        end_dt = datetime.combine(end + timedelta(days=1), datetime.min.time())  # 結束日當天跑完
+        # 跑到結束日的隔天、和開始同一個時刻（模型自己的 Apply 是 12:00 開始、跑到結束日隔天 12:00）
+        hh, mm = (int(x) for x in str(st.get("start_time_of_day", "00:00")).split(":"))
+        end_dt = datetime.combine(end + timedelta(days=1), datetime.min.time()).replace(hour=hh, minute=mm)
         seconds = (end_dt - model_start).total_seconds()
         if seconds <= 0:
             raise ValueError(f"End date must be after the model start ({model_start:%Y-%m-%d %H:%M})")
