@@ -178,6 +178,11 @@
     color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
   .tabs button:hover { color: var(--ink); }
   .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--amber); }
+  .tabs .count { font: 600 12px var(--cond); color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; margin-left: 4px; }
+  .tabs .count:empty { display: none; }
+  .panel-head .hist-hint { margin: 6px 0 0; }
+  td.who b { font-weight: 600; }
+  td.who small, td.dev small { display: block; color: var(--muted); font-size: 12px; }
   .tabs button .badge { display: inline-block; min-width: 8px; height: 8px; border-radius: 50%; background: var(--amber); margin-left: 8px; vertical-align: 2px; }
 
   /* ---------- output page ---------- */
@@ -272,6 +277,7 @@
   <nav class="tabs" id="tabs" role="tablist" hidden>
     <button type="button" role="tab" id="tabInput" data-tab="input" aria-controls="app" data-i18n="tabInput"></button>
     <button type="button" role="tab" id="tabOutput" data-tab="output" aria-controls="pageOutput" data-i18n="tabOutput"></button>
+    <button type="button" role="tab" id="tabHistory" data-tab="history" aria-controls="pageHistory"><span data-i18n="tabHistory"></span> <span class="count" id="histCount"></span></button>
   </nav>
 
   <main class="grid" id="app" role="tabpanel" aria-labelledby="tabInput" hidden>
@@ -286,8 +292,9 @@
           <input id="f_label" maxlength="60" data-i18n-placeholder="scenarioPh">
         </div>
         <div class="field">
-          <label for="f_who"><span data-i18n="yourName"></span> <span class="opt" data-i18n="optional"></span></label>
-          <input id="f_who" maxlength="60">
+          <label for="f_who"><span data-i18n="yourName"></span></label>
+          <input id="f_who" maxlength="60" autocomplete="name" required>
+          <small data-i18n="nameHelp"></small>
         </div>
         <div id="formError" class="err-box" hidden></div>
       </form>
@@ -327,14 +334,6 @@
         <h2 id="resultsTitle"></h2>
         <div class="results-meta" id="resultsMeta" hidden></div>
         <div id="kpis" class="kpis"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h2 data-i18n="history"></h2>
-          <button class="link" id="csvBtn" type="button" data-i18n="csv"></button>
-        </div>
-        <div class="table-wrap"><table id="hist"></table></div>
       </section>
     </div>
   </main>
@@ -383,6 +382,19 @@
         <select id="metricSel" data-i18n-aria="metricAria"></select>
       </div>
       <div id="bars" class="bars"></div>
+    </section>
+  </main>
+
+  <main class="out" id="pageHistory" role="tabpanel" aria-labelledby="tabHistory" hidden>
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 data-i18n="history"></h2>
+          <p class="hint hist-hint" data-i18n="historyHint"></p>
+        </div>
+        <button class="link" id="csvBtn" type="button" data-i18n="csv"></button>
+      </div>
+      <div class="table-wrap"><table id="hist"></table></div>
     </section>
   </main>
 </div>
@@ -443,13 +455,18 @@
       stopping: "Stopping", stoppingMsg: "Sending the stop request.", stoppingSub: "It takes effect once OneDrive syncs.",
       confirmStop: "Stop this run? FlexSim will be closed and no results will be saved.",
       startLbl: "Start", endLbl: "End",
-      tabInput: "Input", tabOutput: "Output",
+      tabInput: "Parameters", tabOutput: "Metrics", tabHistory: "Run history",
+      historyHint: "Every run sent from this page, with who sent it and from which device. Click a finished run to see its metrics.",
+      nameHelp: "Required, so others can see who ran each scenario. Remembered on this browser.",
+      eName: "Enter your name.",
+      thDevice: "Device", thTz: "Time zone", thSent: "Sent", thDuration: "Run time", thMode: "Mode",
+      modeRun: "Run", modeFast: "Fast forward",
       outRun: "Run", product: "Product", station: "Station",
-      outEmpty: "No finished runs yet. Set a period on the Input page and press Run.",
+      outEmpty: "No finished runs yet. Set a period on the Parameters page and press Run.",
       totals: "Total output by station", totalsHint: "Sum over the whole period.",
       daily: "Daily output", dailyTable: "Daily detail", tableCsv: "Download table (CSV)",
       noTables: "This run has no output tables. It may have been run with an older version, or the export failed on the simulator PC.",
-      viewOutput: "View output", tookRun: "Took {s} s.", days: "{n} days",
+      viewOutput: "View metrics", tookRun: "Took {s} s.", days: "{n} days",
       results: "Results", resultsEmpty: "Results appear here when a run finishes.",
       liveTag: "Live", liveMeta: "Live values, simulated through {date}. Updates about every 10 seconds.", liveWait: "Live values appear once the model has run for a moment.",
       runBy: ", run by {who}",
@@ -508,13 +525,18 @@
       stopping: "停止中", stoppingMsg: "正在送出停止要求。", stoppingSub: "OneDrive 同步後生效。",
       confirmStop: "要停止這次模擬嗎？FlexSim 會被關閉，不會保留結果。",
       startLbl: "開始", endLbl: "結束",
-      tabInput: "輸入", tabOutput: "輸出",
+      tabInput: "參數調整", tabOutput: "指標呈現", tabHistory: "執行紀錄",
+      historyHint: "所有從這個網頁送出的模擬，包含誰送的、用哪台裝置。點一下已完成的紀錄可以看它的指標。",
+      nameHelp: "必填，讓大家知道每個情境是誰跑的。瀏覽器會記住。",
+      eName: "請輸入你的名字。",
+      thDevice: "裝置", thTz: "時區", thSent: "送出時間", thDuration: "執行時間", thMode: "模式",
+      modeRun: "執行", modeFast: "快轉",
       outRun: "模擬", product: "產品", station: "站別",
-      outEmpty: "還沒有完成的模擬。到「輸入」頁設定期間，然後按「執行」。",
+      outEmpty: "還沒有完成的模擬。到「參數調整」頁設定期間，然後按「執行」。",
       totals: "各站總產出", totalsHint: "整個期間的加總。",
       daily: "每日產出", dailyTable: "每日明細", tableCsv: "下載這張表（CSV）",
       noTables: "這次模擬沒有輸出表格，可能是用舊版程式跑的，或模擬電腦匯出時失敗。",
-      viewOutput: "查看輸出", tookRun: "花了 {s} 秒。", days: "{n} 天",
+      viewOutput: "查看指標", tookRun: "花了 {s} 秒。", days: "{n} 天",
       results: "模擬結果", resultsEmpty: "模擬完成後，結果會顯示在這裡。",
       liveTag: "即時", liveMeta: "即時數值，已模擬到 {date}，大約每 10 秒更新一次。", liveWait: "模型跑一小段之後，這裡會開始顯示即時數值。",
       runBy: "，執行者：{who}",
@@ -931,16 +953,32 @@
     $("btnStop").disabled = !busy;
   }
 
+  // ---------- who / which device (no IP is available to a page opened from a file) ----------
+  function clientInfo() {
+    let id = load("simDevice");
+    if (!id) { id = Array.from(crypto.getRandomValues(new Uint8Array(3)), b => b.toString(16).padStart(2, "0")).join("").toUpperCase(); store("simDevice", id); }
+    const ua = navigator.userAgent || "";
+    const os = /Windows/.test(ua) ? "Windows" : /Mac OS X/.test(ua) ? "macOS" : /Android/.test(ua) ? "Android" : /iPhone|iPad/.test(ua) ? "iOS" : /Linux/.test(ua) ? "Linux" : "Other";
+    const br = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "Browser";
+    let tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) {}
+    const off = -new Date().getTimezoneOffset();
+    const utc = `UTC${off >= 0 ? "+" : "−"}${Math.floor(Math.abs(off) / 60)}${Math.abs(off) % 60 ? ":" + pad(Math.abs(off) % 60) : ""}`;
+    return { device_id: id, os, browser: br, timezone: tz, utc_offset: utc, language: navigator.language || "", local_time: new Date().toString().slice(0, 24) };
+  }
+
   // ---------- actions ----------
   async function submit(mode) {
     $("formError").hidden = true;
     const { params, error } = readForm();
     if (error) { $("formError").textContent = error; $("formError").hidden = false; return; }
+    const who = $("f_who").value.trim();
+    if (!who) { $("f_who").closest(".field").classList.add("invalid"); $("formError").textContent = t("eName"); $("formError").hidden = false; $("f_who").focus(); return; }
+    $("f_who").closest(".field").classList.remove("invalid");
     store("simLastParams", JSON.stringify(params));
-    const who = $("f_who").value.trim(); if (who) store("simWho", who);
+    store("simWho", who);
     $("btnRun").disabled = $("btnFast").disabled = true;
     try {
-      const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who || null });
+      const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who, client: clientInfo() });
       activeId = selectedId = job.id; activeJob = job; pending = null;
       renderJob(job);
       if (mode !== "fast") showLive(job);
@@ -1073,6 +1111,7 @@
   }
 
   function renderTable() {
+    $("histCount").textContent = history.length ? String(history.length) : "";
     if (!history.length) { $("hist").innerHTML = `<tbody><tr><td class="l empty" colspan="99">${esc(t("noRuns"))}</td></tr></tbody>`; return; }
     const head = (o) => L(o, "label") + (L(o, "unit") ? ` (${L(o, "unit")})` : "");
     const pcols = otherParams().map(p => ({ name: p.name, label: head(p), d: p.type === "integer" ? 0 : 1 }));
@@ -1081,21 +1120,33 @@
       const map = { submitted: ["wait", "pSent"], queued: ["wait", "pQueued"], running: h.paused ? ["wait", "pPaused"] : ["running", "pRunning"], done: ["done", "pDone"],
                     error: isStopped(h) ? ["wait", "pStopped"] : ["error", "pFailed"] };
       const [c, k] = map[h.status] || ["error", "pFailed"];
-      return `<span class="pill ${c}">${esc(t(k))}</span>`;
+      return `<span class="pill ${c}"${h.error ? ` title="${esc(errText(h.error))}"` : ""}>${esc(t(k))}</span>`;
     };
-    $("hist").innerHTML = `<thead><tr><th class="l">${esc(t("thScenario"))}</th><th class="l">${esc(t("thBy"))}</th><th class="l">${esc(t("thStatus"))}</th>${DI ? `<th class="l">${esc(t("thPeriod"))}</th>` : ""}` +
+    const dev = (c) => c ? `${esc(c.os || "")}${c.browser ? ", " + esc(c.browser) : ""}<small>#${esc(c.device_id || "?")}</small>` : "—";
+    const tz = (c) => c ? `${esc(c.utc_offset || "")}<small>${esc(c.timezone || "")}</small>` : "—";
+    const th = (k, l) => `<th class="${l ? "l" : ""}">${esc(t(k))}</th>`;
+    $("hist").innerHTML = `<thead><tr>${th("thScenario", 1)}${th("thStatus", 1)}${DI ? th("thPeriod", 1) : ""}${th("thBy", 1)}${th("thDevice", 1)}${th("thTz", 1)}${th("thSent", 1)}${th("thMode", 1)}${th("thDuration")}` +
       pcols.map(c => `<th>${esc(c.label)}</th>`).join("") + mcols.map(c => `<th>${esc(c.label)}</th>`).join("") + "</tr></thead><tbody>" +
       history.map(h => `<tr class="${h.id === selectedId ? "selected" : ""}" data-id="${esc(h.id)}" tabindex="0">
-        <td class="l">${esc(runName(h))}${h.mode === "fast" ? ` <span class="pill running">${esc(t("ffTag"))}</span>` : ""}</td>
-        <td class="l">${esc(h.submitted_by || "")}</td><td class="l">${pill(h)}</td>
+        <td class="l">${esc(runName(h))}</td>
+        <td class="l">${pill(h)}</td>
         ${DI ? `<td class="l">${esc(periodLabel(h.parameters))}</td>` : ""}
+        <td class="l who"><b>${esc(h.submitted_by || "—")}</b></td>
+        <td class="l dev">${dev(h.client)}</td>
+        <td class="l dev">${tz(h.client)}</td>
+        <td class="l">${esc(when(h.submitted_at))}</td>
+        <td class="l">${esc(t(h.mode === "fast" ? "modeFast" : "modeRun"))}</td>
+        <td>${h.wall_seconds != null ? esc(t("tookRun", { s: fmt(h.wall_seconds, 0) }).replace(/[。.]$/, "")) : "—"}</td>
         ${pcols.map(c => `<td>${fmt(h.parameters?.[c.name], c.d, false)}</td>`).join("")}
         ${mcols.map(c => `<td>${fmt(h.metrics?.[c.name], c.d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
     document.querySelectorAll("#hist tbody tr[data-id]").forEach(tr => {
       const open = () => {
         const j = history.find(h => h.id === tr.dataset.id); if (!j) return;
         if (j.status === "done") { showResult(j); if (!activeId) renderJob(j); outRunId = j.id; showTab("output"); return; }
-        else { selectedId = j.id; if (!activeId) renderJob(j); renderTable(); }
+        selectedId = j.id;
+        if (ACTIVE.includes(j.status)) { showTab("input"); return; }
+        if (!activeId) renderJob(j);
+        renderTable();
       };
       tr.addEventListener("click", open);
       tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
@@ -1138,21 +1189,22 @@
   }
 
   // ---------- tabs ----------
+  const TABS = ["input", "output", "history"];
+  const TAB_IDS = { input: ["tabInput", "app"], output: ["tabOutput", "pageOutput"], history: ["tabHistory", "pageHistory"] };
   function showTab(tab, push = true) {
-    TAB = tab === "output" ? "output" : "input";
-    $("tabInput").setAttribute("aria-selected", String(TAB === "input"));
-    $("tabOutput").setAttribute("aria-selected", String(TAB === "output"));
-    $("app").hidden = TAB !== "input";
-    $("pageOutput").hidden = TAB !== "output";
+    TAB = TABS.includes(tab) ? tab : "input";
+    TABS.forEach(k => { $(TAB_IDS[k][0]).setAttribute("aria-selected", String(k === TAB)); $(TAB_IDS[k][1]).hidden = k !== TAB; });
     if (push) { try { history_replace(TAB); } catch (e) {} }
     if (TAB === "output") renderOutput();
+    if (TAB === "history") renderTable();
     window.scrollTo(0, 0);
   }
   function history_replace(tab) { if (location.hash !== "#" + tab) window.history.replaceState(null, "", "#" + tab); }
   document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
   $("tabs").addEventListener("keydown", (e) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-    const next = TAB === "input" ? "output" : "input"; showTab(next); $(next === "input" ? "tabInput" : "tabOutput").focus();
+    const i = TABS.indexOf(TAB), next = TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length];
+    showTab(next); $(TAB_IDS[next][0]).focus();
   });
 
   // ---------- output page ----------
@@ -1329,10 +1381,11 @@
   $("metricSel").addEventListener("change", renderBars);
 
   $("csvBtn").addEventListener("click", () => {
-    const head = ["scenario", "submitted_by", "submitted_at", "status", "mode", ...(DI ? ["period"] : []),
+    const head = ["scenario", "submitted_by", "device_id", "os", "browser", "timezone", "utc_offset", "submitted_at", "status", "mode", "run_seconds", ...(DI ? ["period"] : []),
       ...CFG.parameters.map(p => p.name), ...CFG.metrics.map(m => m.name)];
     const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = history.map(h => [runName(h), h.submitted_by, h.submitted_at, h.status, h.mode || "run", ...(DI ? [periodLabel(h.parameters)] : []),
+    const rows = history.map(h => [runName(h), h.submitted_by, h.client?.device_id, h.client?.os, h.client?.browser, h.client?.timezone, h.client?.utc_offset,
+      h.submitted_at, h.status, h.mode || "run", h.wall_seconds, ...(DI ? [periodLabel(h.parameters)] : []),
       ...CFG.parameters.map(p => h.parameters?.[p.name]), ...CFG.metrics.map(m => h.metrics?.[m.name])].map(q).join(","));
     const blob = new Blob(["﻿" + [head.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
@@ -1354,7 +1407,7 @@
       buildForm(saved || defaults());
       clearResults(); setIdle();
       $("tabs").hidden = false;
-      showTab(location.hash === "#output" ? "output" : "input", false);
+      showTab((location.hash || "").slice(1), false);
       await refreshSimStatus();
       await refreshHistory();
       const active = history.find(h => ACTIVE.includes(h.status));

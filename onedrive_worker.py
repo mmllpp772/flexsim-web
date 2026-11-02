@@ -165,7 +165,16 @@ class Worker:
             "submitted_by": str(job.get("submitted_by") or "")[:60] or None,
             "submitted_at": job.get("submitted_at"),
             "mode": "fast" if job.get("mode") == "fast" else "run",
+            "client": Worker.client_info(job.get("client")),
         }
+
+    @staticmethod
+    def client_info(c: Any) -> dict[str, str] | None:
+        """送出者的裝置資訊（網頁直接開檔案，拿不到 IP；只保留這幾個欄位，並限制長度）。"""
+        if not isinstance(c, dict):
+            return None
+        keys = ("device_id", "os", "browser", "timezone", "utc_offset", "language", "local_time")
+        return {k: str(c.get(k))[:60] for k in keys if c.get(k) is not None}
 
     def recover_interrupted(self) -> None:
         """上次程式中斷時正在跑的工作：標記為中斷，不要自動重跑。"""
