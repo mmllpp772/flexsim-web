@@ -44,12 +44,12 @@ FlexSim 跑在你的桌機上，美國同事用瀏覽器打開 `http://你的電
    ```
 3. 啟動伺服器：
    ```
-   python -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
+   python -m uvicorn server:app --host 0.0.0.0 --port 8000 --reload
    ```
-   看到 `Uvicorn running on http://127.0.0.1:8000` 就成功了。終端機要一直開著，按 `Ctrl + C` 停止
+   看到 `Uvicorn running on http://0.0.0.0:8000` 就成功了。終端機要一直開著，按 `Ctrl + C` 停止
 
-   > 用 `127.0.0.1` 只有自己這台電腦連得到，所以 **Windows 防火牆不會跳出詢問**。開發、測試時都用這個。
-   > 要讓美國同事連進來時，才改成 `--host 0.0.0.0`（見「第三步」）。
+   > `0.0.0.0` 代表接受其他電腦連進來，所以 **Windows 防火牆會跳出詢問，這是正常的**（見「第三步」）。
+   > 如果只想在自己電腦測試、不想跳防火牆，可改用 `--host 127.0.0.1`，但這樣只有本機連得到。
 4. 瀏覽器開 `http://localhost:8000`，按 **Run simulation**，幾秒後會看到假資料的指標
 
 `config.json` 裡 `"mock_mode": true` 時完全不會碰 FlexSim，網頁上方會有黃色 Demo 提示。
