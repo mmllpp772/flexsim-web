@@ -284,6 +284,78 @@
     }
   ],
   "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。 columns 是這張表應有的欄位，還沒有資料時網頁用它畫出空的版面。",
-  "admin_code": "",
-  "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。"
+  "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。",
+  "utilization": {
+    "_help": "Equipment utilization. groups = one chart each (like the FlexSim dashboard). Objects are model object names. utilized_states count as working time; excluded_states (e.g. Off shift) are left out of the total. States are FlexSim state numbers.",
+    "max_state": 50,
+    "utilized_states": [
+      2
+    ],
+    "excluded_states": [
+      30
+    ],
+    "state_names": {},
+    "groups": [
+      {
+        "name": "smt",
+        "label": "SMT",
+        "label_zh": "SMT",
+        "objects": [
+          "WUS_SMT1_Board feeder",
+          "WUS_SMT1_Sticky roller1",
+          "WUS_SMT1_GKG5",
+          "WUS_High_Speed_Mounter_1",
+          "WUS_High_Speed_Mounter_2",
+          "WUS_High_Speed_Mounter_3",
+          "WUS_High_Speed_Mounter_4",
+          "WUS_High_Speed_Mounter_5",
+          "WUS_High_Speed_Mounter_6",
+          "WUS_High_Speed_Mounter_7",
+          "WUS_High_Speed_Mounter_8",
+          "WUS_High_Speed_Mounter_9",
+          "WUS_High_Speed_Mounter_10",
+          "WUS_TOP_High_Speed_Mounter_1",
+          "WUS_TOP_High_Speed_Mounter_2",
+          "WUS_TOP_High_Speed_Mounter_3",
+          "WUS_TOP_High_Speed_Mounter_4",
+          "WUS_TOP_High_Speed_Mounter_5",
+          "WUS_Multi_function_Mounter_1",
+          "WUS_Multi_function_Mounter_2",
+          "WUS_Multi_function_Mounter_3",
+          "WUS_Multi_function_Mounter_4",
+          "WUS_SMT1_Glue dispenser1",
+          "WUS_SMT1_SPI1",
+          "WUS_BOT_Pre_AOI",
+          "SMT1_reflow1",
+          "WUS_BOT_Post_AOI",
+          "WUS_SMT1_Board flipper1",
+          "WUS_SMT1_Sticky roller2",
+          "WUS_SMT1_GKG2",
+          "WUS_SMT1_Glue dispenser2",
+          "WUS_SMT1_SPI2",
+          "WUS_Top_Multi_function_Mounter_1",
+          "WUS_Top_Multi_function_Mounter_2",
+          "WUS_Top_Multi_function_Mounter_3",
+          "WUS_SMT1_3D AOI",
+          "WUS_Top_Pre_AOI",
+          "SMT1_reflow2",
+          "WUS_Top_Post_AOI",
+          "WUS_SMT1_AXI1",
+          "WUS_SMT1_AXI2"
+        ]
+      },
+      {
+        "name": "dip",
+        "label": "DIP",
+        "label_zh": "DIP",
+        "objects": [
+          "WUS_D01_MDA_buffer1",
+          "WUS_D01_MDA1",
+          "WUS_D01_MDA2",
+          "WUS_D01_AOI"
+        ]
+      }
+    ]
+  },
+  "admin_code": ""
 }

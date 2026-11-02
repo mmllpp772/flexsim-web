@@ -252,6 +252,40 @@
   .chart .bar.hot { fill: #1f4f86; }
   .chart .hit { fill: transparent; cursor: crosshair; }
   .chart .zero { fill: var(--line); }
+  /* equipment utilization */
+  :root { --st-proc: #2f6db0; --st-setup: #2a9d8f; --st-op: #c8463c; --st-tr: #7d5bbf; --st-block: #c98516;
+          --st-down: #a0582c; --st-idle: #c3cbd4; --st-other: #7c8a99; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --st-proc: #5b95d6; --st-setup: #1aa591; --st-op: #e65f70; --st-tr: #9b7fd6; --st-block: #c28418;
+    --st-down: #c47a48; --st-idle: #46535f; --st-other: #8090a0; } }
+  :root[data-theme="dark"] { --st-proc: #5b95d6; --st-setup: #1aa591; --st-op: #e65f70; --st-tr: #9b7fd6; --st-block: #c28418;
+    --st-down: #c47a48; --st-idle: #46535f; --st-other: #8090a0; }
+  .util-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
+  .util-stats { display: flex; flex-wrap: wrap; gap: 8px 32px; margin: 0; }
+  .util-stats dt { color: var(--muted); font-size: 13px; }
+  .util-stats dd { margin: 0; font: 600 26px/1.15 var(--cond); font-variant-numeric: tabular-nums; }
+  .util-stats dd small { display: block; font: 500 13px var(--display); color: var(--muted); max-width: 260px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .util-sort { height: 36px; font-size: 14px; font-weight: 500; }
+  .util-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 18px 0 6px; font-size: 13px; color: var(--muted); }
+  .util-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .util-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .util-list { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr) 64px; align-items: center; gap: 6px 14px; margin-top: 14px; }
+  .util-list .head { font-size: 12px; color: var(--faint); padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+  .util-list .head.r, .util-list .pct { text-align: right; }
+  .util-list .nm { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .util-list .pct { font: 600 16px var(--cond); font-variant-numeric: tabular-nums; }
+  .util-list .pct.na { color: var(--faint); font-weight: 500; }
+  .ubar { display: flex; gap: 2px; height: 22px; border-radius: 4px; overflow: hidden; background: var(--panel); }
+  .ubar.empty { background: var(--steel); }
+  .ubar span { display: block; height: 100%; min-width: 2px; cursor: default; }
+  .ubar span:hover { filter: brightness(1.12); }
+  .util-missing { margin: 14px 0 0; font-size: 13px; color: var(--hold); }
+  @media (max-width: 640px) {
+    .util-list { grid-template-columns: minmax(0, 1fr) 56px; }
+    .util-list .nm { grid-column: 1 / -1; margin-top: 6px; }
+    .util-list .head.nmh { display: none; }
+  }
   .tip { position: fixed; z-index: 10; pointer-events: none; background: var(--console); color: var(--console-ink); border-radius: 8px;
     padding: 8px 10px; font-size: 13px; line-height: 1.4; box-shadow: 0 4px 14px rgba(0,0,0,.18); white-space: nowrap; }
   .tip b { font: 600 18px var(--cond); }
@@ -605,6 +639,24 @@
           </section>
         </div>
 
+        <div data-ocat="util" hidden>
+          <section class="panel view-head">
+            <h2 data-i18n="catUtil"></h2>
+            <div class="seg" id="utilSeg" role="group" data-i18n-aria="utilGroups"></div>
+          </section>
+          <p class="panel empty-panel" id="utilEmpty" hidden></p>
+          <section class="panel">
+            <div class="util-top">
+              <dl class="util-stats" id="utilStats"></dl>
+              <label class="check util-sort"><input type="checkbox" id="utilSort"> <span data-i18n="utilSort"></span></label>
+            </div>
+            <div class="util-legend" id="utilLegend"></div>
+            <p class="hint tight" id="utilHint"></p>
+            <div class="util-list" id="utilList"></div>
+            <p class="util-missing" id="utilMissing" hidden></p>
+          </section>
+        </div>
+
         <div data-ocat="view">
           <section class="panel view-head">
             <h2 id="viewTitle"></h2>
@@ -721,6 +773,11 @@
       tabInput: "Parameters", tabOutput: "Metrics", tabHistory: "Run history",
       inputCats: "Input categories", outputCats: "Metric categories", grpInputs: "Inputs", grpOutputs: "Metrics",
       catBasic: "Period and run info", catPlan: "Daily input plan", catShift: "Shifts", catOverview: "Overview",
+      catUtil: "Equipment utilization", utilGroups: "Equipment group", utilSort: "Sort by utilization",
+      utilAvg: "Average utilization", utilHi: "Highest", utilLo: "Lowest", utilCol: "Utilization", utilEquip: "Equipment",
+      utilStates: "Time in each state", utilHint: "Share of each machine's time by state. {ex} time is left out, the same as the FlexSim dashboard.",
+      utilHintNoEx: "Share of each machine's time by state.", utilNone: "This run has no utilization data. Runs made before this update don't include it.",
+      utilMissing: "Not found in the model, so not shown: {list}", utilTipH: "{h} h", utilWorking: "Utilization counts: {list}.",
       needPeriod: "Choose a start and end date under Period and run info first.",
       kpiTitle: "Key metrics", runInputs: "Inputs used in this run",
       sumShift: "{p}: {n} shift(s)", sumTarget: "Target {v}",
@@ -823,6 +880,11 @@
       tabInput: "參數調整", tabOutput: "指標呈現", tabHistory: "執行紀錄",
       inputCats: "輸入類別", outputCats: "指標類別", grpInputs: "輸入", grpOutputs: "指標",
       catBasic: "期間與基本資料", catPlan: "每日投產計畫", catShift: "班別設定", catOverview: "總覽",
+      catUtil: "設備使用率", utilGroups: "設備群組", utilSort: "依使用率排序",
+      utilAvg: "平均使用率", utilHi: "最高", utilLo: "最低", utilCol: "使用率", utilEquip: "設備",
+      utilStates: "各狀態時間比例", utilHint: "每台設備在各狀態的時間比例。和 FlexSim 儀表板一樣，已扣除 {ex} 時間。",
+      utilHintNoEx: "每台設備在各狀態的時間比例。", utilNone: "這次模擬沒有使用率資料。更新之前跑的模擬不會有。",
+      utilMissing: "模型裡找不到這些設備，所以沒有顯示：{list}", utilTipH: "{h} 小時", utilWorking: "使用率計算：{list}。",
       needPeriod: "請先到「期間與基本資料」選擇開始和結束日期。",
       kpiTitle: "主要指標", runInputs: "這次模擬用的輸入",
       sumShift: "{p} {n} 班", sumTarget: "Target {v}",
@@ -1843,13 +1905,15 @@
   const outViews = () => CFG.output_views || [];
   function renderOutNav(job) {
     const cats = [{ k: "overview", label: t("catOverview"), sub: "" },
-      ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", ") }))];
+      ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", ") })),
+      ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: CFG.utilization.groups.map(g => L(g, "label")).join(", ") }] : [])];
     if (!cats.find(c => c.k === OUT_CAT)) OUT_CAT = "overview";
     $("outNav").innerHTML = `<div class="grp">${esc(t("grpOutputs"))}</div>` + cats.map(c =>
       `<button type="button" data-k="${esc(c.k)}" aria-current="${c.k === OUT_CAT}"><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`).join("");
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
-    document.querySelector('[data-ocat="view"]').hidden = OUT_CAT === "overview";
+    document.querySelector('[data-ocat="view"]').hidden = OUT_CAT === "overview" || OUT_CAT === "util";
+    document.querySelector('[data-ocat="util"]').hidden = OUT_CAT !== "util";
   }
 
   function renderRunInputs(job) {
@@ -1900,6 +1964,8 @@
       $("outKpis").innerHTML = kpiTiles(job ? job.metrics : null, job ? job.series : null, prev);
       if (job) renderRunInputs(job); else $("runInputs").innerHTML = `<p class="empty">${esc(t("noData"))}</p>`;
       renderBars();
+    } else if (OUT_CAT === "util") {
+      renderUtil(job);
     } else {
       const view = outViews().find(v => v.name === OUT_CAT);
       $("viewTitle").textContent = L(view, "label");
@@ -1919,6 +1985,74 @@
     renderTable();
   }
   $("runSel").addEventListener("change", (e) => { outRunId = e.target.value; renderOutput(); });
+
+  // ---------- equipment utilization ----------
+  const ST_VAR = { 2: "proc", 21: "setup", 31: "setup", 9: "op", 10: "tr", 4: "block", 26: "block", 11: "down", 20: "down", 12: "down", 1: "idle", 6: "idle", 29: "idle" };
+  const stColor = (n) => `var(--st-${ST_VAR[n] || "other"})`;
+  let utilGroup = load("simUtilGroup");
+  let utilSorted = load("simUtilSort") === "1";
+  function utilRows(job, g) {
+    const U = CFG.utilization, ex = new Set(U.excluded_states.map(String)), used = new Set(U.utilized_states.map(String));
+    const data = job?.utilization?.objects;
+    return g.objects.filter(o => !data || data[o]).map(o => {
+      const st = data?.[o];
+      if (!st) return { name: o, segs: [], util: null };
+      const keep = Object.entries(st).filter(([k, v]) => !ex.has(k) && v > 0);
+      const denom = keep.reduce((a, [, v]) => a + v, 0);
+      const work = keep.filter(([k]) => used.has(k)).reduce((a, [, v]) => a + v, 0);
+      // working states first, then the rest in a fixed order, idle-like last
+      const rank = (k) => used.has(k) ? -1000 + +k : (ST_VAR[k] === "idle" ? 1000 + +k : +k);
+      const segs = keep.sort((a, b) => rank(a[0]) - rank(b[0])).map(([k, v]) => ({ k, v, p: denom ? v / denom : 0 }));
+      return { name: o, segs, util: denom ? work / denom : null };
+    });
+  }
+  function renderUtil(job) {
+    const U = CFG.utilization, groups = U.groups;
+    if (!groups.find(g => g.name === utilGroup)) utilGroup = groups[0]?.name;
+    $("utilSeg").innerHTML = groups.map(g => `<button type="button" data-g="${esc(g.name)}" aria-pressed="${g.name === utilGroup}">${esc(L(g, "label"))}</button>`).join("");
+    $("utilSeg").hidden = groups.length < 2;
+    $("utilSeg").querySelectorAll("button").forEach(b => b.onclick = () => { utilGroup = b.dataset.g; store("simUtilGroup", utilGroup); renderOutput(); });
+    $("utilSort").checked = utilSorted;
+    const g = groups.find(x => x.name === utilGroup);
+    const has = !!job?.utilization?.objects;
+    $("utilEmpty").hidden = !(job && !has); $("utilEmpty").textContent = t("utilNone");
+    const name = (n) => U.state_names[n] || `State ${n}`;
+    const exNames = U.excluded_states.map(name);
+    $("utilHint").textContent = (exNames.length ? t("utilHint", { ex: exNames.join(" / ") }) : t("utilHintNoEx")) + " " +
+      t("utilWorking", { list: U.utilized_states.map(name).join(" + ") });
+    let rows = utilRows(has ? job : null, g);
+    if (utilSorted && has) rows = [...rows].sort((a, b) => (b.util ?? -1) - (a.util ?? -1));
+    const vals = rows.filter(r => r.util != null);
+    const pc = (v) => v == null ? "—" : fmt(v * 100, 1) + "%";
+    const hi = vals.reduce((m, r) => !m || r.util > m.util ? r : m, null), lo = vals.reduce((m, r) => !m || r.util < m.util ? r : m, null);
+    const avg = vals.length ? vals.reduce((a, r) => a + r.util, 0) / vals.length : null;
+    $("utilStats").innerHTML = [["utilAvg", pc(avg), ""], ["utilHi", pc(hi?.util), hi?.name || ""], ["utilLo", pc(lo?.util), lo?.name || ""]]
+      .map(([k, v, sub]) => `<div><dt>${esc(t(k))}</dt><dd>${v}${sub ? `<small title="${esc(sub)}">${esc(sub)}</small>` : ""}</dd></div>`).join("");
+    const seen = []; rows.forEach(r => r.segs.forEach(sg => { if (!seen.includes(sg.k)) seen.push(sg.k); }));
+    const order = (rows.find(r => r.segs.length)?.segs || []).map(x => x.k);
+    seen.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+    $("utilLegend").innerHTML = seen.map(k => `<span><i style="background:${stColor(+k)}"></i>${esc(name(k))}</span>`).join("");
+    $("utilLegend").hidden = !seen.length;
+    $("utilList").innerHTML = `<div class="head nmh">${esc(t("utilEquip"))}</div><div class="head">${esc(t("utilStates"))}</div><div class="head r">${esc(t("utilCol"))}</div>` +
+      rows.map((r, ri) => `<div class="nm" title="${esc(r.name)}">${esc(r.name)}</div>
+        <div class="ubar${r.segs.length ? "" : " empty"}" data-r="${ri}">${r.segs.map((sg, si) =>
+          `<span data-s="${si}" style="flex:${sg.p.toFixed(5)} 1 0;background:${stColor(+sg.k)}"></span>`).join("")}</div>
+        <div class="pct${r.util == null ? " na" : ""}">${pc(r.util)}</div>`).join("");
+    const miss = job?.utilization?.missing?.filter(o => g.objects.includes(o)) || [];
+    $("utilMissing").hidden = !miss.length; $("utilMissing").textContent = t("utilMissing", { list: miss.join(", ") });
+    const tip = $("tip");
+    $("utilList").querySelectorAll(".ubar span").forEach(sp => {
+      sp.addEventListener("mousemove", (e) => {
+        const r = rows[+sp.parentNode.dataset.r], sg = r.segs[+sp.dataset.s];
+        tip.innerHTML = `${esc(r.name)}<br>${esc(name(sg.k))}: <b>${fmt(sg.p * 100, 1)}%</b> &nbsp;${esc(t("utilTipH", { h: fmt(sg.v / 3600, 1) }))}`;
+        tip.hidden = false;
+        tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + "px";
+        tip.style.top = (e.clientY - 58) + "px";
+      });
+      sp.addEventListener("mouseleave", () => { tip.hidden = true; });
+    });
+  }
+  $("utilSort").addEventListener("change", () => { utilSorted = $("utilSort").checked; store("simUtilSort", utilSorted ? "1" : "0"); renderOutput(); });
 
   function sparkVals(vals) {
     if (vals.length < 2) return "";

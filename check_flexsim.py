@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 
 from runner import (RUNS_DIR, FlexSimRunner, _fs_str, find_flexsim_exe, load_config, parse_results, parse_tables,
-                    table_export_lines, validate_params)
+                    parse_util, table_export_lines, util_export_lines, util_objects, validate_params)
 
 
 def main() -> None:
@@ -46,6 +46,9 @@ def main() -> None:
         f'fpt("sched_{p["name"]}\\t" + numtostring(wq{i}.numCols, 0, 0)); fpr();\n'
         for i, p in enumerate(di["products"], 1)) if di else ""
     export = "\n".join(table_export_lines(cfg.get("tables", []), tables)) + "\n" if cfg.get("tables") else ""
+    util = run_dir / "utilization.txt"
+    if util_objects(cfg):  # 先跑一小段時間，狀態時間才不會全是 0
+        export += "resetmodel();\nwhile (Model.time < 3600) step();\n" + "\n".join(util_export_lines(cfg, util)) + "\n"
     script.write_text(
         f'fileopen({_fs_str(str(result))}, "w");\n'
         'fpt("model_time\\t" + numtostring(Model.time, 0, 6)); fpr();\n'
@@ -92,6 +95,19 @@ def main() -> None:
             print(f"  ✓ {name}: {len(tb['rows'])} 列，欄位 {', '.join(tb['columns'])}")
             if first:
                 print(f"      第一列 {first['row']}: {first['values']}")
+
+    if util_objects(cfg):
+        print("\n== 3c. 設備使用率 ==")
+        text = util.read_text(encoding="utf-8", errors="replace") if util.exists() else ""
+        if "@done" not in text:
+            sys.exit(f"  ✗ 使用率沒有完整匯出。請把 {script} 最後一段（utilization）貼到 Script Console 執行，看哪一行出錯，拍照給我。")
+        u = parse_util(util)
+        print(f"  ✓ 讀到 {len(u['objects'])} 台設備的狀態時間（模型先跑 1 小時）")
+        if u["missing"]:
+            print(f"  ! 模型裡找不到：{', '.join(u['missing'])}（請檢查 config.json 的 utilization 設備名稱）")
+        first = next(iter(u["objects"].items()), None)
+        if first:
+            print(f"      {first[0]}: " + ", ".join(f"狀態{k}={v:g}" for k, v in first[1].items()))
 
     if "--quick" in sys.argv:
         print("\n快速檢查完成。可以執行 python onedrive_worker.py")
