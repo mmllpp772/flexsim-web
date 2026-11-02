@@ -256,6 +256,9 @@
           <button type="button" class="ctl" id="btnFast" data-i18n-title="fastTip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 5.2v13.6a.8.8 0 0 0 1.25.66L12 13.6v5.2a.8.8 0 0 0 1.25.66l9.4-6.8a.8.8 0 0 0 0-1.32l-9.4-6.8A.8.8 0 0 0 12 5.2v5.2L3.75 4.54A.8.8 0 0 0 2.5 5.2z"/></svg>
             <span data-i18n="fast"></span></button>
+          <button type="button" class="ctl" id="btnPause" data-i18n-title="pauseTip" disabled>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1.2"/><rect x="14" y="4" width="5" height="16" rx="1.2"/></svg>
+            <span data-i18n="pause"></span></button>
           <div class="spacer"></div>
           <button type="button" class="ctl stop" id="btnStop" data-i18n-title="stopTip" disabled>
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
@@ -328,11 +331,17 @@
       scenarioName: "Scenario name", yourName: "Your name", optional: "(optional)", scenarioPh: "e.g. Q4 peak season",
       range: "Range {min} to {max}.",
       controlsAria: "Simulation controls",
-      reset: "Reset", run: "Run", fast: "Fast forward", stop: "Stop",
+      reset: "Reset", run: "Run", fast: "Fast forward", stop: "Stop", pause: "Pause",
+      pauseTip: "Freeze the run where it is. Press Run or Fast forward to continue.",
+      paused: "Paused", pausedMsg: "Paused at {date}. Press Run or Fast forward to continue.", pausedMsgNoDate: "Paused. Press Run or Fast forward to continue.",
+      pausedSub: "FlexSim waits here without using CPU. It stops automatically after {n} minutes.",
+      pausing: "Pausing", pausingMsg: "Sending the pause request.", resuming: "Resuming", resumingMsg: "Sending the request to continue.",
+      switching: "Switching", toFast: "Switching to fast forward.", toRun: "Switching to normal run with progress.",
+      syncSub: "It takes effect once OneDrive syncs.", pPaused: "Paused",
       resetTip: "Restore the default inputs and clear the results view",
       runTip: "Run the simulation and show progress",
       fastTip: "Run straight to the end without progress updates",
-      stopTip: "Stop the run in progress",
+      stopTip: "Stop the run in progress. FlexSim is closed and no results are kept.",
       idle: "Idle", idleMsg: "Set the period and press Run.", resetMsg: "Inputs restored to defaults.",
       sent: "Sent", sentMsg: "Waiting for OneDrive to deliver the request.", sentSub: "Usually under a minute.",
       queued: "Queued", queuePos: "Position {n} in line.", queueNext: "Next in line.",
@@ -380,11 +389,17 @@
       scenarioName: "情境名稱", yourName: "你的名字", optional: "（選填）", scenarioPh: "例如：第四季旺季",
       range: "範圍 {min} 到 {max}。",
       controlsAria: "模擬控制",
-      reset: "重設", run: "執行", fast: "快轉", stop: "停止",
+      reset: "重設", run: "執行", fast: "快轉", stop: "停止", pause: "暫停",
+      pauseTip: "讓模擬停在目前的位置，按「執行」或「快轉」繼續。",
+      paused: "已暫停", pausedMsg: "停在 {date}。按「執行」或「快轉」繼續。", pausedMsgNoDate: "已暫停。按「執行」或「快轉」繼續。",
+      pausedSub: "FlexSim 停在這裡等待，不佔用 CPU；暫停超過 {n} 分鐘會自動停止。",
+      pausing: "暫停中", pausingMsg: "正在送出暫停要求。", resuming: "繼續中", resumingMsg: "正在送出繼續要求。",
+      switching: "切換中", toFast: "切換成快轉。", toRun: "切換成一般執行，顯示進度。",
+      syncSub: "OneDrive 同步後生效。", pPaused: "已暫停",
       resetTip: "把輸入恢復成預設值，並清除畫面上的結果",
       runTip: "執行模擬並顯示進度",
       fastTip: "直接跑到結束，中途不回報進度",
-      stopTip: "停止執行中的模擬",
+      stopTip: "停止這次模擬，FlexSim 會被關閉，不保留結果。",
       idle: "待命", idleMsg: "設定期間後按「執行」。", resetMsg: "已恢復預設值。",
       sent: "已送出", sentMsg: "等待 OneDrive 把需求送到模擬電腦。", sentSub: "通常不到一分鐘。",
       queued: "排隊中", queuePos: "排在第 {n} 位。", queueNext: "下一個就輪到你。",
@@ -537,6 +552,7 @@
       },
       async getJob(id) { await status(); return (await merge(id)) || { id, status: "submitted" }; },
       async cancel(id) { await writeJson("cancel", `${id}.json`, { id, cancelled_at: new Date().toISOString() }); },
+      async control(id, action) { await writeJson("control", `${id}.json`, { id, action, at: new Date().toISOString() }); },
       async history() {
         await status();
         const ids = (await listIds("jobs")).sort().reverse().slice(0, 50);
@@ -594,7 +610,7 @@
   // UI
   // =====================================================================
   let T = null, CFG = null, DI = null, history = [], selectedId = null, activeId = null, pollTimer = null;
-  let shownJob = null, stateMode = "idle";
+  let shownJob = null, stateMode = "idle", activeJob = null, pending = null;
 
   // ---------- formatting ----------
   const pad = (n) => String(n).padStart(2, "0");
@@ -753,6 +769,26 @@
         setState("wait", t("queued"), job.queue_position > 1 ? t("queuePos", { n: job.queue_position }) : t("queueNext"), "", true);
         drawTimeline(p?.start, p?.end, null, "wait"); break;
       case "running": {
+        if (job.id === activeId) activeJob = job;
+        if (pending && job.id === activeId) {
+          const done = (pending === "pause" && job.paused) || (pending !== "pause" && !job.paused && job.mode === pending);
+          if (done) pending = null;
+        }
+        const at0 = job.progress_date ? parseDay(job.progress_date) : null;
+        if (pending && job.id === activeId) {
+          const msg = pending === "pause" ? ["pausing", "pausingMsg"] : job.paused ? ["resuming", "resumingMsg"] : ["switching", pending === "fast" ? "toFast" : "toRun"];
+          setState("wait", t(msg[0]), t(msg[1]), t("syncSub"), true);
+          drawTimeline(p?.start, p?.end, at0, "run");
+          if (job.mode !== "fast") showLive(job);
+          break;
+        }
+        if (job.paused) {
+          setState("wait", t("paused"), at0 ? t("pausedMsg", { date: dayFmt(at0) }) : t("pausedMsgNoDate"),
+            t("pausedSub", { n: (CFG && CFG.max_pause_minutes) || 60 }), false);
+          drawTimeline(p?.start, p?.end, at0, "run");
+          if (job.mode !== "fast" && job.id === activeId) showLive(job);
+          break;
+        }
         if (job.mode === "fast") { setState("running", t("fast"), t("ffMsg"), t("ffSub"), true); drawTimeline(p?.start, p?.end, null, "run"); break; }
         if (job.progress == null) { setState("running", t("running"), t("starting"), "", true); drawTimeline(p?.start, p?.end, null, "run"); break; }
         const at = job.progress_date ? parseDay(job.progress_date) : null;
@@ -775,8 +811,17 @@
 
   function syncButtons() {
     const busy = !!activeId;
-    $("btnRun").disabled = busy;
-    $("btnFast").disabled = busy;
+    const j = busy ? activeJob : null;
+    const running = j && j.status === "running";
+    const paused = running && j.paused;
+    if (!busy) {
+      $("btnRun").disabled = false; $("btnFast").disabled = false;
+    } else {
+      // 執行中：可以在「執行／快轉」之間切換；暫停中：兩個都能用來繼續
+      $("btnRun").disabled = !running || (!paused && j.mode !== "fast") || !!pending;
+      $("btnFast").disabled = !running || (!paused && j.mode === "fast") || !!pending;
+    }
+    $("btnPause").disabled = !running || paused || !!pending;
     $("btnStop").disabled = !busy;
   }
 
@@ -790,7 +835,7 @@
     $("btnRun").disabled = $("btnFast").disabled = true;
     try {
       const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who || null });
-      activeId = selectedId = job.id;
+      activeId = selectedId = job.id; activeJob = job; pending = null;
       renderJob(job);
       if (mode !== "fast") showLive(job);
       await refreshHistory();
@@ -800,13 +845,22 @@
       activeId = null; syncButtons();
     }
   }
-  $("btnRun").addEventListener("click", () => submit("run"));
-  $("btnFast").addEventListener("click", () => submit("fast"));
+  async function sendControl(action) {
+    if (!activeId) return;
+    pending = action;
+    if (activeJob) renderJob(activeJob);
+    syncButtons();
+    try { await T.control(activeId, action); }
+    catch (e) { pending = null; syncButtons(); alert(e.message); }
+  }
+  $("btnRun").addEventListener("click", () => activeId ? sendControl("run") : submit("run"));
+  $("btnFast").addEventListener("click", () => activeId ? sendControl("fast") : submit("fast"));
+  $("btnPause").addEventListener("click", () => sendControl("pause"));
   $("form").addEventListener("submit", (e) => { e.preventDefault(); submit("run"); });
 
   $("btnStop").addEventListener("click", async () => {
     if (!activeId || !confirm(t("confirmStop"))) return;
-    $("btnStop").disabled = true;
+    $("btnStop").disabled = true; pending = null;
     setState("wait", t("stopping"), t("stoppingMsg"), t("stoppingSub"), true);
     try { await T.cancel(activeId); } catch (e) { $("btnStop").disabled = false; alert(e.message); }
   });
@@ -829,8 +883,8 @@
     pollTimer = setTimeout(async () => {
       try {
         const job = await T.getJob(id);
-        if (ACTIVE.includes(job.status)) { renderJob(job); return poll(id); }
-        activeId = null;
+        if (ACTIVE.includes(job.status)) { activeJob = job; renderJob(job); return poll(id); }
+        activeId = null; activeJob = null; pending = null;
         renderJob(job);
         await refreshHistory();
         refreshSimStatus().catch(() => {});
@@ -918,7 +972,7 @@
     const pcols = otherParams().map(p => ({ name: p.name, label: head(p), d: p.type === "integer" ? 0 : 1 }));
     const mcols = CFG.metrics.map(m => ({ name: m.name, label: head(m), d: m.decimals ?? 1 }));
     const pill = (h) => {
-      const map = { submitted: ["wait", "pSent"], queued: ["wait", "pQueued"], running: ["running", "pRunning"], done: ["done", "pDone"],
+      const map = { submitted: ["wait", "pSent"], queued: ["wait", "pQueued"], running: h.paused ? ["wait", "pPaused"] : ["running", "pRunning"], done: ["done", "pDone"],
                     error: isStopped(h) ? ["wait", "pStopped"] : ["error", "pFailed"] };
       const [c, k] = map[h.status] || ["error", "pFailed"];
       return `<span class="pill ${c}">${esc(t(k))}</span>`;
@@ -1025,7 +1079,7 @@
       const active = history.find(h => ACTIVE.includes(h.status));
       const lastDone = history.find(h => h.status === "done");
       if (lastDone) { showResult(lastDone); if (!active) renderJob(lastDone); }
-      if (active) { activeId = selectedId = active.id; if (active.mode !== "fast") showLive(active); renderJob(active); poll(active.id); }
+      if (active) { activeId = selectedId = active.id; activeJob = active; if (active.mode !== "fast") showLive(active); renderJob(active); poll(active.id); }
       syncButtons();
       setInterval(() => refreshSimStatus().catch(() => {}), 10000);
       setInterval(() => { if (!activeId) refreshHistory().catch(() => {}); }, 30000);

@@ -61,6 +61,7 @@ def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
     out["parameters"] = [{k: v for k, v in p.items() if k != "set_script"} for p in cfg["parameters"]]
     out["metrics"] = [{k: v for k, v in m.items() if k != "script"} for m in cfg["metrics"]]
     out["mock_mode"] = bool(cfg.get("mock_mode"))
+    out["max_pause_minutes"] = cfg.get("flexsim", {}).get("max_pause_minutes", 60)
     di = cfg.get("date_inputs")
     if di:
         out["date_inputs"] = dict(di)
@@ -268,6 +269,26 @@ def parse_results(path: Path) -> dict[str, float | None]:
     return out
 
 
+def set_suspended(pid: int, suspended: bool) -> None:
+    """凍結 / 恢復整個 FlexSim 程式（真正的暫停：停在當下、不吃 CPU，恢復後從原處繼續）。"""
+    if os.name == "nt":
+        import ctypes
+        PROCESS_SUSPEND_RESUME = 0x0800
+        k32, ntdll = ctypes.windll.kernel32, ctypes.windll.ntdll
+        h = k32.OpenProcess(PROCESS_SUSPEND_RESUME, False, pid)
+        if not h:
+            raise RuntimeError("Could not access the FlexSim process to pause/resume it")
+        try:
+            status = (ntdll.NtSuspendProcess if suspended else ntdll.NtResumeProcess)(h)
+            if status != 0:
+                raise RuntimeError(f"Pause/resume failed (status {status:#x})")
+        finally:
+            k32.CloseHandle(h)
+    else:
+        import signal as _signal
+        os.kill(pid, _signal.SIGSTOP if suspended else _signal.SIGCONT)
+
+
 class Cancelled(Exception):
     """工作被取消（網頁按 Cancel，或模擬電腦按 Ctrl+C）。"""
 
@@ -295,15 +316,17 @@ class FlexSimRunner:
 
     def run(self, params: dict[str, float], length: float | None,
             should_cancel: Callable[[], str | None] | None = None,
-            on_progress: Callable[[float, float, dict[str, float | None]], None] | None = None) -> dict[str, Any]:
+            on_progress: Callable[[float, float, dict[str, float | None]], None] | None = None,
+            want_pause: Callable[[], bool] | None = None,
+            on_pause: Callable[[bool], None] | None = None) -> dict[str, Any]:
         end_time = stop_time(self.cfg, params, length)
         run_dir = RUNS_DIR / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         run_dir.mkdir(parents=True)
         script = run_dir / "script.txt"
         result = run_dir / "result.txt"
         progress = run_dir / "progress.txt"
-        script.write_text(build_script(self.cfg, params, end_time, result, progress if on_progress else None),
-                          encoding="utf-8")
+        script.write_text(build_script(self.cfg, params, end_time, result, progress), encoding="utf-8")
+        max_pause = float(self.cfg["flexsim"].get("max_pause_minutes", 60)) * 60
 
         cmd = [str(self.exe), str(self.model), "/maintenance", "nogui_disablemsg_runscript",
                "/scriptpath", str(script)]
@@ -313,13 +336,34 @@ class FlexSimRunner:
         with open(run_dir / "flexsim_output.txt", "wb") as out:
             proc = subprocess.Popen(cmd, cwd=str(run_dir), stdout=out, stderr=subprocess.STDOUT)
             last_progress = None
+            paused_since: float | None = None
+            paused_total = 0.0
             try:
                 while proc.poll() is None:
                     time.sleep(1)
                     reason = should_cancel() if should_cancel else None
                     if reason:
                         raise Cancelled(reason)
-                    if time.time() - t0 > limit:
+                    # ----- 暫停 / 繼續 -----
+                    pause = bool(want_pause and want_pause())
+                    if pause and paused_since is None:
+                        set_suspended(proc.pid, True)
+                        paused_since = time.time()
+                        log.info("FlexSim paused")
+                        if on_pause:
+                            on_pause(True)
+                    elif not pause and paused_since is not None:
+                        set_suspended(proc.pid, False)
+                        paused_total += time.time() - paused_since
+                        paused_since = None
+                        log.info("FlexSim resumed")
+                        if on_pause:
+                            on_pause(False)
+                    if paused_since is not None:
+                        if time.time() - paused_since > max_pause:
+                            raise Cancelled(f"Stopped: paused for more than {max_pause / 60:.0f} minutes.")
+                        continue
+                    if time.time() - t0 - paused_total > limit:
                         raise RuntimeError(f"Simulation did not finish within {limit:.0f} s (see runs/{run_dir.name})")
                     if on_progress and progress.exists():
                         try:
@@ -336,12 +380,17 @@ class FlexSimRunner:
             finally:
                 if proc.poll() is None:  # 取消、逾時或程式被中斷：把背景的 FlexSim 關掉
                     log.warning("Stopping background FlexSim (pid %s)", proc.pid)
+                    if paused_since is not None:
+                        try:
+                            set_suspended(proc.pid, False)
+                        except Exception:
+                            pass
                     proc.kill()
                     try:
                         proc.wait(timeout=30)
                     except subprocess.TimeoutExpired:
                         pass
-        wall = round(time.time() - t0, 1)
+        wall = round(time.time() - t0 - paused_total, 1)
 
         if not result.exists():
             raise RuntimeError(f"FlexSim closed without writing results (see runs/{run_dir.name}). "
@@ -368,17 +417,29 @@ class MockRunner:
 
     def run(self, params: dict[str, float], length: float | None,
             should_cancel: Callable[[], str | None] | None = None,
-            on_progress: Callable[[float, float, dict[str, float | None]], None] | None = None) -> dict[str, Any]:
+            on_progress: Callable[[float, float, dict[str, float | None]], None] | None = None,
+            want_pause: Callable[[], bool] | None = None,
+            on_pause: Callable[[bool], None] | None = None) -> dict[str, Any]:
         end_time = stop_time(self.cfg, params, length)
         steps = int(self.cfg.get("mock_seconds", 3))
-        for i in range(steps):
+        paused = False
+        i = 0
+        while i < steps:
             time.sleep(1)
             reason = should_cancel() if should_cancel else None
             if reason:
                 raise Cancelled(reason)
+            p = bool(want_pause and want_pause())
+            if p != paused:
+                paused = p
+                if on_pause:
+                    on_pause(p)
+            if paused:
+                continue
             if on_progress:
                 f = (i + 1) / steps
                 on_progress(f, end_time * f, {m["name"]: round(random.uniform(10, 1000) * f, 2) for m in self.cfg["metrics"]})
+            i += 1
         metrics = {m["name"]: round(random.uniform(10, 1000), 2) for m in self.cfg["metrics"]}
         return {"metrics": metrics, "model_time": end_time, "wall_seconds": 3.0}
 

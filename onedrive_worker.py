@@ -100,7 +100,8 @@ class Worker:
         self.jobs_dir = self.share / "jobs"
         self.results_dir = self.share / "results"
         self.cancel_dir = self.share / "cancel"
-        for d in (self.jobs_dir, self.results_dir, self.cancel_dir):
+        self.control_dir = self.share / "control"
+        for d in (self.jobs_dir, self.results_dir, self.cancel_dir, self.control_dir):
             d.mkdir(exist_ok=True)
         try:
             self.runner = make_runner(self.cfg)
@@ -218,6 +219,8 @@ class Worker:
             return None
 
         series: list[dict[str, Any]] = []  # 執行中的指標變化，給網頁畫小折線圖
+        control_file = self.control_dir / f"{job_id}.json"
+        st = {"mode": base["mode"], "paused": False, "last": None}  # last = 最新的進度快照
 
         def add_point(model_time: float, metrics: dict[str, Any]) -> None:
             dt = model_datetime(self.cfg, params, model_time)
@@ -225,22 +228,48 @@ class Worker:
             if len(series) > 200:  # 太多點就隔一個刪一個
                 del series[1:-1:2]
 
+        def publish() -> None:
+            """把目前狀態寫給網頁。快轉模式只回報狀態，不回報進度和即時指標。"""
+            data = {**base, "mode": st["mode"], "status": "running", "started_at": started, "paused": st["paused"]}
+            snap = st["last"]
+            if snap and st["mode"] != "fast":
+                fraction, model_time, metrics = snap
+                dt = model_datetime(self.cfg, params, model_time)
+                data.update(progress=round(fraction, 4), progress_date=dt.strftime("%Y-%m-%d %H:%M") if dt else None,
+                            live_metrics=metrics or None, series=series)
+            self.write_result(job_id, data)
+            last_write[0] = time.time()
+
+        def want_pause() -> bool:
+            """讀網頁送來的控制指令：pause / run / fast"""
+            ctl = read_json(control_file) if control_file.exists() else None
+            action = (ctl or {}).get("action")
+            if action in ("run", "fast") and action != st["mode"]:
+                st["mode"] = action
+                log.info("Job %s: switched to %s", job_id, action)
+                if not st["paused"] or action:  # 恢復時也一併換模式
+                    publish()
+            return action == "pause"
+
+        def on_pause(paused: bool) -> None:
+            st["paused"] = paused
+            log.info("Job %s %s", job_id, "paused" if paused else "resumed")
+            publish()  # 狀態改變就馬上寫，不等 10 秒
+
         def on_progress(fraction: float, model_time: float, metrics: dict[str, Any]) -> None:
+            st["last"] = (fraction, model_time, metrics)
             if time.time() - last_write[0] < 10:  # 最多 10 秒寫一次，避免 OneDrive 一直同步
                 return
-            last_write[0] = time.time()
-            dt = model_datetime(self.cfg, params, model_time)
             if metrics:
                 add_point(model_time, metrics)
-            self.write_result(job_id, {**base, "status": "running", "started_at": started,
-                                       "progress": round(fraction, 4),
-                                       "progress_date": dt.strftime("%Y-%m-%d %H:%M") if dt else None,
-                                       "live_metrics": metrics or None, "series": series})
+            publish()
+            dt = model_datetime(self.cfg, params, model_time)
             log.info("Job %s: %.0f%%%s", job_id, fraction * 100, f" (simulated to {dt:%Y-%m-%d})" if dt else "")
 
         try:
-            result = self.runner.run(params, length, should_cancel=should_cancel,
-                                     on_progress=None if base["mode"] == "fast" else on_progress)
+            result = self.runner.run(params, length, should_cancel=should_cancel, on_progress=on_progress,
+                                     want_pause=want_pause, on_pause=on_pause)
+            base["mode"] = st["mode"]
             if series and result.get("model_time") is not None:
                 add_point(result["model_time"], result["metrics"])
             self.write_result(job_id, {**base, "status": "done", "started_at": started,

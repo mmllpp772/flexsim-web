@@ -5,9 +5,10 @@
   "flexsim": {
     "exe": "",
     "model_path": "D:/FlexSim_D1.fsm",
-    "max_run_seconds": 1800
+    "max_run_seconds": 1800,
+    "max_pause_minutes": 60
   },
-  "_flexsim說明": "exe 留空會自動在 C:/Program Files 找 flexsim.exe；找不到時填完整路徑，例如 C:/Program Files/FlexSim 2025 Update 2/program/flexsim.exe。max_run_seconds：單次模擬最多跑幾秒，超過就強制結束。",
+  "_flexsim說明": "exe 留空會自動在 C:/Program Files 找 flexsim.exe；找不到時填完整路徑，例如 C:/Program Files/FlexSim 2025 Update 2/program/flexsim.exe。max_run_seconds：單次模擬最多跑幾秒，超過就強制結束。 max_pause_minutes：網頁按「暫停」後最多停幾分鐘，超過就自動停止，避免 FlexSim 一直佔著讓其他人排隊。",
   "onedrive": {
     "share_dir": "%OneDriveCommercial%/FlexSimShare",
     "poll_seconds": 3,

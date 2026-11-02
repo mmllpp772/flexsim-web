@@ -75,7 +75,12 @@ python onedrive_worker.py
 | **Reset 重設** | 把輸入恢復成預設值，清掉畫面上的結果（不會動到 FlexSim） |
 | **Run 執行** | 執行模擬，期間顯示進度、時間軸（模擬到哪一天），以及**即時指標**（約每 10 秒更新，附小折線圖） |
 | **Fast forward 快轉** | 直接跑到結束，中途不回報進度，結果稍微快一點出來 |
-| **Stop 停止** | 停止正在跑或排隊中的模擬，背景的 FlexSim 會被關閉（要等 OneDrive 同步，約幾十秒生效） |
+| **Pause 暫停** | 把背景的 FlexSim 整個凍結在當下（不吃 CPU、不丟進度）。暫停後按 **執行** 或 **快轉** 從原處繼續。暫停超過 `max_pause_minutes`（預設 60 分鐘）會自動停止 |
+| **Stop 停止** | 結束這次模擬，背景的 FlexSim 會被關閉，不保留結果 |
+
+- 執行中也可以直接在「執行」和「快轉」之間切換
+- 暫停、繼續、切換、停止都要等 OneDrive 同步，按下去後大約幾秒到幾十秒才生效
+- 暫停是用 Windows 的「凍結程式」功能，不需要改模型；如果你的 FlexSim 授權是網路授權，暫停太久可能會讓授權連線逾時
 
 - 右上角可以切換 **English / 中文**，選擇會記在瀏覽器裡。標題、指標名稱等來自 config.json 的文字，中文用 `title_zh`、`subtitle_zh`、`label_zh`、`unit_zh`、`help_zh`（沒填就顯示英文）
 - 日期用兩個日期選擇器輸入，送出時自動拆成 `year`、`st_m`、`st_d`、`ed_m`、`ed_d`（設定在 config.json 的 `date_inputs`）
@@ -89,7 +94,8 @@ python onedrive_worker.py
 | `config.json` | 網頁用的公開設定（**不含**模型路徑和 FlexScript） |
 | `status.json` | 讓網頁顯示「Simulator online / offline」 |
 | `jobs/` | 網頁送來的工作，一個工作一個檔案 |
-| `cancel/` | 網頁按 Cancel 時寫入的取消要求 |
+| `cancel/` | 網頁按「停止」時寫入的停止要求 |
+| `control/` | 網頁按「暫停／執行／快轉」時寫入的控制指令 |
 | `results/` | 模擬結果，一個工作一個檔案 |
 
 ### 共用資料夾的位置
