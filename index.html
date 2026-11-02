@@ -172,6 +172,50 @@
   .pill.running { background: var(--blue-soft); color: var(--blue); }
   .link { border: 0; background: none; color: var(--blue); padding: 0; cursor: pointer; font-weight: 600; font-size: 14px; }
 
+  /* ---------- tabs ---------- */
+  .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin: 0 0 22px; }
+  .tabs button { border: 0; background: none; cursor: pointer; padding: 10px 18px 12px; font: 600 17px var(--display);
+    color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+  .tabs button:hover { color: var(--ink); }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--amber); }
+  .tabs button .badge { display: inline-block; min-width: 8px; height: 8px; border-radius: 50%; background: var(--amber); margin-left: 8px; vertical-align: 2px; }
+
+  /* ---------- output page ---------- */
+  main.out { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; padding-bottom: 48px; }
+  main.out > * { min-width: 0; }
+  #detailPanel .table-wrap { max-height: 560px; overflow: auto; }
+  table.daily thead th { position: sticky; top: 0; background: var(--panel); z-index: 1; box-shadow: inset 0 -1px 0 var(--line); }
+  .out-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 22px; align-items: start; }
+  .out-grid > * { min-width: 0; }
+  .run-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .run-pick label { font: 600 15px var(--display); }
+  .run-pick select { max-width: 100%; min-width: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; padding: 3px; background: var(--steel); }
+  .seg button { border: 0; background: none; padding: 6px 16px; border-radius: 7px; cursor: pointer; font: 600 15px var(--display); color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(23,34,46,.12); }
+  .hint { color: var(--muted); font-size: 13px; margin: -10px 0 14px; }
+  .empty-panel { color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 14px; color: var(--muted); }
+  .chips button[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .chart .grid line { stroke: var(--line); stroke-width: 1; }
+  .chart .axis text { fill: var(--muted); font: 500 12px var(--cond); }
+  .chart .bar { fill: var(--blue); }
+  .chart .bar.hot { fill: #1f4f86; }
+  .chart .hit { fill: transparent; cursor: crosshair; }
+  .chart .zero { fill: var(--line); }
+  .tip { position: fixed; z-index: 10; pointer-events: none; background: var(--console); color: var(--console-ink); border-radius: 8px;
+    padding: 8px 10px; font-size: 13px; line-height: 1.4; box-shadow: 0 4px 14px rgba(0,0,0,.18); white-space: nowrap; }
+  .tip b { font: 600 18px var(--cond); }
+  table.daily td.k, table.daily th.k { text-align: left; }
+  table.daily td.off { color: var(--faint); }
+  table.daily tbody tr { cursor: default; }
+  .goto { margin-left: 12px; border: 1px solid #4a6079; background: none; color: var(--console-ink); border-radius: 7px; padding: 4px 12px; cursor: pointer; font: 600 14px var(--display); }
+  .goto:hover { background: var(--console-2); }
+  @media (max-width: 900px) { .out-grid { grid-template-columns: 1fr; } }
+
   /* ---------- connect ---------- */
   .connect { max-width: 560px; margin: 8px auto 60px; }
   .connect p, .connect ol { color: var(--muted); }
@@ -225,7 +269,12 @@
     <div id="connectError" class="err-box" hidden></div>
   </section>
 
-  <main class="grid" id="app" hidden>
+  <nav class="tabs" id="tabs" role="tablist" hidden>
+    <button type="button" role="tab" id="tabInput" data-tab="input" aria-controls="app" data-i18n="tabInput"></button>
+    <button type="button" role="tab" id="tabOutput" data-tab="output" aria-controls="pageOutput" data-i18n="tabOutput"></button>
+  </nav>
+
+  <main class="grid" id="app" role="tabpanel" aria-labelledby="tabInput" hidden>
     <section class="panel">
       <h2 data-i18n="scenario"></h2>
       <form id="form" novalidate>
@@ -282,14 +331,6 @@
 
       <section class="panel">
         <div class="panel-head">
-          <h2 data-i18n="compare"></h2>
-          <select id="metricSel" data-i18n-aria="metricAria"></select>
-        </div>
-        <div id="bars" class="bars"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
           <h2 data-i18n="history"></h2>
           <button class="link" id="csvBtn" type="button" data-i18n="csv"></button>
         </div>
@@ -297,7 +338,55 @@
       </section>
     </div>
   </main>
+
+  <main class="out" id="pageOutput" role="tabpanel" aria-labelledby="tabOutput" hidden>
+    <section class="panel out-head">
+      <div class="panel-head">
+        <div class="run-pick">
+          <label for="runSel" data-i18n="outRun"></label>
+          <select id="runSel"></select>
+        </div>
+        <div class="seg" id="productSeg" role="group" data-i18n-aria="product"></div>
+      </div>
+      <div class="results-meta" id="outMeta"></div>
+      <div id="outKpis" class="kpis"></div>
+    </section>
+
+    <div id="outEmpty" class="panel empty-panel" hidden></div>
+
+    <div class="out-grid" id="outBody">
+      <section class="panel">
+        <h2 data-i18n="totals"></h2>
+        <p class="hint" data-i18n="totalsHint"></p>
+        <div id="totals" class="bars"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head">
+          <h2 data-i18n="daily"></h2>
+          <div class="chips" id="stationChips" role="group" data-i18n-aria="station"></div>
+        </div>
+        <div class="chart" id="dailyChart"></div>
+      </section>
+    </div>
+
+    <section class="panel" id="detailPanel">
+      <div class="panel-head">
+        <h2 data-i18n="dailyTable"></h2>
+        <button class="link" id="tableCsvBtn" type="button" data-i18n="tableCsv"></button>
+      </div>
+      <div class="table-wrap"><table id="dailyTable" class="daily"></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="compare"></h2>
+        <select id="metricSel" data-i18n-aria="metricAria"></select>
+      </div>
+      <div id="bars" class="bars"></div>
+    </section>
+  </main>
 </div>
+<div class="tip" id="tip" hidden></div>
 
 <script>
 (() => {
@@ -354,6 +443,13 @@
       stopping: "Stopping", stoppingMsg: "Sending the stop request.", stoppingSub: "It takes effect once OneDrive syncs.",
       confirmStop: "Stop this run? FlexSim will be closed and no results will be saved.",
       startLbl: "Start", endLbl: "End",
+      tabInput: "Input", tabOutput: "Output",
+      outRun: "Run", product: "Product", station: "Station",
+      outEmpty: "No finished runs yet. Set a period on the Input page and press Run.",
+      totals: "Total output by station", totalsHint: "Sum over the whole period.",
+      daily: "Daily output", dailyTable: "Daily detail", tableCsv: "Download table (CSV)",
+      noTables: "This run has no output tables. It may have been run with an older version, or the export failed on the simulator PC.",
+      viewOutput: "View output", tookRun: "Took {s} s.", days: "{n} days",
       results: "Results", resultsEmpty: "Results appear here when a run finishes.",
       liveTag: "Live", liveMeta: "Live values, simulated through {date}. Updates about every 10 seconds.", liveWait: "Live values appear once the model has run for a moment.",
       runBy: ", run by {who}",
@@ -412,6 +508,13 @@
       stopping: "停止中", stoppingMsg: "正在送出停止要求。", stoppingSub: "OneDrive 同步後生效。",
       confirmStop: "要停止這次模擬嗎？FlexSim 會被關閉，不會保留結果。",
       startLbl: "開始", endLbl: "結束",
+      tabInput: "輸入", tabOutput: "輸出",
+      outRun: "模擬", product: "產品", station: "站別",
+      outEmpty: "還沒有完成的模擬。到「輸入」頁設定期間，然後按「執行」。",
+      totals: "各站總產出", totalsHint: "整個期間的加總。",
+      daily: "每日產出", dailyTable: "每日明細", tableCsv: "下載這張表（CSV）",
+      noTables: "這次模擬沒有輸出表格，可能是用舊版程式跑的，或模擬電腦匯出時失敗。",
+      viewOutput: "查看輸出", tookRun: "花了 {s} 秒。", days: "{n} 天",
       results: "模擬結果", resultsEmpty: "模擬完成後，結果會顯示在這裡。",
       liveTag: "即時", liveMeta: "即時數值，已模擬到 {date}，大約每 10 秒更新一次。", liveWait: "模型跑一小段之後，這裡會開始顯示即時數值。",
       runBy: "，執行者：{who}",
@@ -611,6 +714,7 @@
   // =====================================================================
   let T = null, CFG = null, DI = null, history = [], selectedId = null, activeId = null, pollTimer = null;
   let shownJob = null, stateMode = "idle", activeJob = null, pending = null;
+  let TAB = "input", outRunId = null, outTable = null, outStation = null;
 
   // ---------- formatting ----------
   const pad = (n) => String(n).padStart(2, "0");
@@ -801,6 +905,8 @@
       }
       case "done":
         setState("done", t("finished"), t("finishedMsg", { when: when(job.finished_at) }), job.wall_seconds ? t("took", { s: fmt(job.wall_seconds, 0) }) : "", false);
+        $("state").insertAdjacentHTML("beforeend", `<button type="button" class="goto" data-run="${esc(job.id)}">${esc(t("viewOutput"))}</button>`);
+        $("state").querySelector(".goto").onclick = (e) => { outRunId = e.currentTarget.dataset.run; showTab("output"); };
         drawTimeline(p?.start, p?.end, null, "done"); break;
       default:
         setState(isStopped(job) ? "wait" : "error", isStopped(job) ? t("stopped") : t("failed"), errText(job.error), "", false);
@@ -988,7 +1094,7 @@
     document.querySelectorAll("#hist tbody tr[data-id]").forEach(tr => {
       const open = () => {
         const j = history.find(h => h.id === tr.dataset.id); if (!j) return;
-        if (j.status === "done") { showResult(j); if (!activeId) renderJob(j); }
+        if (j.status === "done") { showResult(j); if (!activeId) renderJob(j); outRunId = j.id; showTab("output"); return; }
         else { selectedId = j.id; if (!activeId) renderJob(j); renderTable(); }
       };
       tr.addEventListener("click", open);
@@ -999,6 +1105,7 @@
   async function refreshHistory() {
     history = await T.history();
     renderBars(); renderTable();
+    if (TAB === "output") renderOutput();
   }
 
   let lastSim = undefined;
@@ -1030,6 +1137,178 @@
     if (cur) $("metricSel").value = cur;
   }
 
+  // ---------- tabs ----------
+  function showTab(tab, push = true) {
+    TAB = tab === "output" ? "output" : "input";
+    $("tabInput").setAttribute("aria-selected", String(TAB === "input"));
+    $("tabOutput").setAttribute("aria-selected", String(TAB === "output"));
+    $("app").hidden = TAB !== "input";
+    $("pageOutput").hidden = TAB !== "output";
+    if (push) { try { history_replace(TAB); } catch (e) {} }
+    if (TAB === "output") renderOutput();
+    window.scrollTo(0, 0);
+  }
+  function history_replace(tab) { if (location.hash !== "#" + tab) window.history.replaceState(null, "", "#" + tab); }
+  document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  $("tabs").addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const next = TAB === "input" ? "output" : "input"; showTab(next); $(next === "input" ? "tabInput" : "tabOutput").focus();
+  });
+
+  // ---------- output page ----------
+  const doneRuns = () => history.filter(h => h.status === "done");
+  const tableDefs = () => CFG.tables || [];
+
+  function numericCols(tb, def) {
+    const keys = new Set((def?.key_columns || []).map(String));
+    return tb.columns.map((c, i) => ({ c, i })).filter(({ c, i }) =>
+      !keys.has(c) && tb.rows.length && tb.rows.every(r => typeof r.values[i] === "number"));
+  }
+  const keyIdx = (tb, def) => tb.columns.findIndex(c => (def?.key_columns || []).includes(c));
+
+  function renderOutput() {
+    if (!CFG) return;
+    const runs = doneRuns();
+    if (!runs.length) {
+      $("outEmpty").hidden = false; $("outEmpty").textContent = t("outEmpty");
+      ["outBody", "detailPanel"].forEach(id => $(id).hidden = true);
+      document.querySelector(".out-head").hidden = true;
+      renderBars();
+      return;
+    }
+    document.querySelector(".out-head").hidden = false;
+    if (!runs.find(r => r.id === outRunId)) outRunId = runs[0].id;
+    $("runSel").innerHTML = runs.map(r => `<option value="${esc(r.id)}">${esc(runName(r))}, ${esc(periodLabel(r.parameters))}</option>`).join("");
+    $("runSel").value = outRunId;
+    const job = runs.find(r => r.id === outRunId);
+    selectedId = job.id;
+
+    const bits = [periodLabel(job.parameters)];
+    if (job.submitted_by) bits.push(t("runBy", { who: job.submitted_by }).replace(/^[,，]\s*/, ""));
+    if (job.wall_seconds) bits.push(t("tookRun", { s: fmt(job.wall_seconds, 0) }));
+    $("outMeta").textContent = bits.join(LANG === "zh" ? "，" : ", ");
+    const prev = history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
+    $("outKpis").innerHTML = kpiTiles(job.metrics, job.series, prev);
+
+    const defs = tableDefs();
+    if (!defs.find(d => d.name === outTable)) outTable = defs[0]?.name || null;
+    $("productSeg").innerHTML = defs.map(d => `<button type="button" data-t="${esc(d.name)}" aria-pressed="${d.name === outTable}">${esc(L(d, "label"))}</button>`).join("");
+    $("productSeg").hidden = defs.length < 2;
+    $("productSeg").querySelectorAll("button").forEach(b => b.onclick = () => { outTable = b.dataset.t; renderOutput(); });
+
+    const def = defs.find(d => d.name === outTable);
+    const tb = job.tables?.[outTable];
+    if (!tb || !tb.rows.length) {
+      $("outEmpty").hidden = false; $("outEmpty").textContent = t("noTables");
+      ["outBody", "detailPanel"].forEach(id => $(id).hidden = true);
+    } else {
+      $("outEmpty").hidden = true;
+      ["outBody", "detailPanel"].forEach(id => $(id).hidden = false);
+      renderStations(tb, def); renderTotals(tb, def); renderDaily(tb, def); renderDailyTable(tb, def);
+    }
+    renderBars(); renderTable();
+  }
+  $("runSel").addEventListener("change", (e) => { outRunId = e.target.value; renderOutput(); });
+
+  function renderTotals(tb, def) {
+    const cols = numericCols(tb, def);
+    const sums = cols.map(({ c, i }) => ({ c, v: tb.rows.reduce((a, r) => a + r.values[i], 0) }));
+    const max = Math.max(...sums.map(s => Math.abs(s.v)), 1e-9);
+    $("totals").innerHTML = sums.map(s => `
+      <div class="bar-row ${s.c === outStation ? "current" : ""}" data-s="${esc(s.c)}" style="cursor:pointer">
+        <div class="name">${esc(s.c)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(0.5, Math.abs(s.v) / max * 100)}%"></div></div>
+        <div class="val">${fmt(s.v, 0)}</div>
+      </div>`).join("");
+    $("totals").querySelectorAll(".bar-row").forEach(r => r.onclick = () => { outStation = r.dataset.s; renderOutput(); });
+  }
+
+  function renderStations(tb, def) {
+    const cols = numericCols(tb, def);
+    if (!cols.find(x => x.c === outStation)) outStation = cols[0]?.c || null;
+    $("stationChips").innerHTML = cols.map(({ c }) => `<button type="button" data-s="${esc(c)}" aria-pressed="${c === outStation}">${esc(c)}</button>`).join("");
+    $("stationChips").querySelectorAll("button").forEach(b => b.onclick = () => { outStation = b.dataset.s; renderOutput(); });
+  }
+
+  function niceMax(v) {
+    if (v <= 0) return 1;
+    const p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+  }
+
+  function renderDaily(tb, def) {
+    const col = numericCols(tb, def).find(x => x.c === outStation);
+    const box = $("dailyChart");
+    if (!col) { box.innerHTML = ""; return; }
+    const ki = keyIdx(tb, def);
+    const wi = tb.columns.findIndex((c, i) => i !== ki && (def?.key_columns || []).includes(c));
+    const data = tb.rows.map(r => ({ label: ki >= 0 ? String(r.values[ki]) : r.row, sub: wi >= 0 ? String(r.values[wi]) : "", v: r.values[col.i], row: r.row }));
+    const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 46, r: 8, t: 10, b: 30 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const ymax = niceMax(Math.max(...data.map(d => d.v), 0));
+    const y = (v) => m.t + ph - (v / ymax) * ph;
+    const step = pw / data.length, bw = Math.max(1, Math.min(28, step - 2));
+    let g = '<g class="grid">', ax = '<g class="axis">';
+    for (let k = 0; k <= 4; k++) {
+      const v = ymax * k / 4, yy = y(v);
+      g += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}"/>`;
+      ax += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end">${fmt(v, v >= 10 || v === 0 ? 0 : 1)}</text>`;
+    }
+    g += "</g>";
+    const every = Math.max(1, Math.ceil(data.length / Math.floor(pw / 64)));
+    data.forEach((d, i) => { if (i % every === 0) ax += `<text x="${m.l + step * i + step / 2}" y="${H - 8}" text-anchor="middle">${esc(d.label)}</text>`; });
+    ax += "</g>";
+    let bars = "", hits = "";
+    data.forEach((d, i) => {
+      const x = m.l + step * i + (step - bw) / 2;
+      if (d.v > 0) {
+        const h = Math.max(1, ph - (y(d.v) - m.t));
+        bars += `<path class="bar" data-i="${i}" d="M${x},${m.t + ph} v${-(h - Math.min(2, h))} q0,-2 2,-2 h${bw - 4} q2,0 2,2 v${h - Math.min(2, h)} z"/>`;
+      } else {
+        bars += `<rect class="zero" x="${x}" y="${m.t + ph - 1}" width="${bw}" height="1"/>`;
+      }
+      hits += `<rect class="hit" data-i="${i}" x="${m.l + step * i}" y="${m.t}" width="${step}" height="${ph}"/>`;
+    });
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("daily"))}: ${esc(col.c)}">${g}${ax}${bars}${hits}</svg>`;
+    const tip = $("tip");
+    box.querySelectorAll(".hit").forEach(h => {
+      h.addEventListener("mousemove", (e) => {
+        const d = data[+h.dataset.i];
+        box.querySelectorAll(".bar").forEach(b => b.classList.toggle("hot", b.dataset.i === h.dataset.i));
+        tip.innerHTML = `${esc(d.label)}${d.sub ? ` ${esc(d.sub)}` : ""}<br><b>${fmt(d.v, 0)}</b> ${esc(col.c)}`;
+        tip.hidden = false;
+        const tw = tip.offsetWidth;
+        tip.style.left = Math.min(window.innerWidth - tw - 8, e.clientX + 14) + "px";
+        tip.style.top = (e.clientY - 54) + "px";
+      });
+      h.addEventListener("mouseleave", () => { tip.hidden = true; box.querySelectorAll(".bar.hot").forEach(b => b.classList.remove("hot")); });
+    });
+  }
+  let rsz = null;
+  window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if (TAB === "output") renderOutput(); }, 150); });
+
+  function renderDailyTable(tb, def) {
+    const nums = new Set(numericCols(tb, def).map(x => x.i));
+    const cols = numericCols(tb, def);
+    $("dailyTable").innerHTML = `<thead><tr><th class="k"></th>${tb.columns.map((c, i) => `<th class="${nums.has(i) ? "" : "k"}">${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
+      tb.rows.map(r => {
+        const off = cols.length && cols.every(({ i }) => r.values[i] === 0);
+        return `<tr><td class="k${off ? " off" : ""}">${esc(r.row)}</td>${r.values.map((v, i) =>
+          `<td class="${nums.has(i) ? "" : "k"}${off ? " off" : ""}">${nums.has(i) ? fmt(v, Number.isInteger(v) ? 0 : 1) : esc(v)}</td>`).join("")}</tr>`;
+      }).join("") + "</tbody>";
+  }
+
+  $("tableCsvBtn").addEventListener("click", () => {
+    const job = doneRuns().find(r => r.id === outRunId); const tb = job?.tables?.[outTable];
+    if (!tb) return;
+    const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [["", ...tb.columns].map(q).join(","), ...tb.rows.map(r => [r.row, ...r.values].map(q).join(","))];
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `${outTable}_${(job.label || job.id).replace(/[^\w\u4e00-\u9fff-]+/g, "_")}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
   // ---------- language switch ----------
   function setLang(lang) {
     if (lang === LANG) return;
@@ -1043,6 +1322,7 @@
     if (sel) showResult(sel); else { clearResults(); renderBars(); renderTable(); }
     if (stateMode === "job" && shownJob) renderJob(shownJob); else setIdle();
     refreshSimStatus(true).catch(() => {});
+    if (TAB === "output") renderOutput();
   }
   document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
 
@@ -1073,7 +1353,8 @@
       try { saved = JSON.parse(load("simLastParams") || "null"); } catch (e) {}
       buildForm(saved || defaults());
       clearResults(); setIdle();
-      $("app").hidden = false;
+      $("tabs").hidden = false;
+      showTab(location.hash === "#output" ? "output" : "input", false);
       await refreshSimStatus();
       await refreshHistory();
       const active = history.find(h => ACTIVE.includes(h.status));

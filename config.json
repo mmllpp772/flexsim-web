@@ -134,5 +134,34 @@
       "script": "Table(\"WUS_year\")[10][1]"
     }
   ],
-  "_metrics說明": "每個指標是一段回傳數字的 FlexScript，跑完模擬後讀取。請先在 FlexSim 的 Script Console 測試，例如輸入 return Table(\"WUS_year\")[9][1]; 看結果對不對。 label_zh / unit_zh 是切換成中文時顯示的名稱和單位，可省略（省略就顯示英文）。"
+  "_metrics說明": "每個指標是一段回傳數字的 FlexScript，跑完模擬後讀取。請先在 FlexSim 的 Script Console 測試，例如輸入 return Table(\"WUS_year\")[9][1]; 看結果對不對。 label_zh / unit_zh 是切換成中文時顯示的名稱和單位，可省略（省略就顯示英文）。",
+  "tables": [
+    {
+      "name": "bianca",
+      "label": "Bianca",
+      "label_zh": "Bianca",
+      "table": "WUS_Daily_Record",
+      "skip_rows": [
+        "TOTAL"
+      ],
+      "key_columns": [
+        "Date",
+        "Weekday"
+      ]
+    },
+    {
+      "name": "strata",
+      "label": "Strata",
+      "label_zh": "Strata",
+      "table": "WUS_Daily_Record_Strara",
+      "skip_rows": [
+        "TOTAL"
+      ],
+      "key_columns": [
+        "Date",
+        "Weekday"
+      ]
+    }
+  ],
+  "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。"
 }

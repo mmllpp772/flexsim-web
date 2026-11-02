@@ -50,7 +50,7 @@ FlexSim 跑在你的桌機上，美國同事在網頁輸入參數 → 按 Run �
 
 在 VS Code 按 `` Ctrl + ` ``（Esc 下面那個鍵）開啟下方終端機。
 
-**1. 先做連線檢查**（第一次、或改過 config.json 後）：
+**1. 先做連線檢查**（第一次、或改過 config.json 後），它也會試著匯出輸出表格：
 ```
 python check_flexsim.py
 ```
@@ -67,6 +67,15 @@ python onedrive_worker.py
 - 終端機要一直開著。按 `Ctrl + C` 停止：如果正在跑模擬，會先關掉背景的 FlexSim 再結束（再按一次 `Ctrl + C` 立刻強制結束）。停止後網頁會顯示 offline
 - 程式中斷時正在跑的工作，下次啟動會標記為 Interrupted，**不會自動重跑**；還沒開始的工作則會照常執行
 - 想先不開 FlexSim、只測網頁流程：把 `config.json` 的 `"mock_mode"` 改成 `true`（用假資料，網頁上方會有黃色 Demo 提示）
+
+### 網頁分成兩頁
+
+- **輸入**：設定期間、控制按鈕（重設／執行／快轉／暫停／停止）、時間軸、執行中的即時數值、執行紀錄
+- **輸出**：選要看哪一次模擬、切換產品（Bianca／Strata）、各站總產出、每日產出長條圖（點站別切換，滑鼠移到長條上看數字）、每日明細表（可下載 CSV）、各次結果比較
+
+模擬完成後，按控制區的「查看輸出」，或在執行紀錄點一下那一筆，就會切到輸出頁。
+
+輸出頁的資料來自 `config.json` 的 `tables`：模擬跑完後，把 FlexSim 裡的 Global Table 整張匯出（目前是 `WUS_Daily_Record` 和 `WUS_Daily_Record_Strara`），`skip_rows` 裡的列（`TOTAL`）不顯示。數字欄會自動加總、畫圖；`key_columns`（Date、Weekday）當作文字欄顯示。
 
 ### 網頁功能
 

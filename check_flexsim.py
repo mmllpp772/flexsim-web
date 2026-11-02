@@ -18,7 +18,8 @@ import sys
 import time
 from datetime import datetime
 
-from runner import RUNS_DIR, FlexSimRunner, _fs_str, find_flexsim_exe, load_config, parse_results, validate_params
+from runner import (RUNS_DIR, FlexSimRunner, _fs_str, find_flexsim_exe, load_config, parse_results, parse_tables,
+                    table_export_lines, validate_params)
 
 
 def main() -> None:
@@ -38,13 +39,14 @@ def main() -> None:
     print("\n== 2. 背景開啟模型並執行小腳本 ==")
     run_dir = RUNS_DIR / ("check-" + datetime.now().strftime("%Y%m%d-%H%M%S"))
     run_dir.mkdir(parents=True)
-    script, result = run_dir / "script.txt", run_dir / "result.txt"
+    script, result, tables = run_dir / "script.txt", run_dir / "result.txt", run_dir / "tables.txt"
+    export = "\n".join(table_export_lines(cfg.get("tables", []), tables)) + "\n" if cfg.get("tables") else ""
     script.write_text(
         f'fileopen({_fs_str(str(result))}, "w");\n'
         'fpt("model_time\\t" + numtostring(Model.time, 0, 6)); fpr();\n'
         'fpt("wus_year_r1c1\\t" + numtostring(Table("WUS_year")[1][1], 0, 6)); fpr();\n'
         'fpt("__done\\t1"); fpr();\n'
-        "fileclose();\n"
+        "fileclose();\n" + export +
         "cmdexit();\n", encoding="utf-8")
     cmd = [str(exe), str(model), "/maintenance", "nogui_disablemsg_runscript", "/scriptpath", str(script)]
     print("  執行中（第一次開啟 FlexSim 可能要 10～60 秒）…")
@@ -66,6 +68,17 @@ def main() -> None:
     if v is None:
         sys.exit("  ✗ 讀不到 Table(\"WUS_year\")[1][1]")
     print(f"  ✓ WUS_year 第 1 列第 1 欄 = {v:g}（應該是年份，例如 2026）")
+
+    if cfg.get("tables"):
+        print("\n== 3b. 匯出輸出表格 ==")
+        text = tables.read_text(encoding="utf-8", errors="replace") if tables.exists() else ""
+        if "@done" not in text:
+            sys.exit(f"  ✗ 表格沒有完整匯出。請把 {script} 的內容貼到 FlexSim 的 Script Console 執行，看哪一行出錯，拍照給我。")
+        for name, tb in parse_tables(tables, cfg["tables"]).items():
+            first = tb["rows"][0] if tb["rows"] else None
+            print(f"  ✓ {name}: {len(tb['rows'])} 列，欄位 {', '.join(tb['columns'])}")
+            if first:
+                print(f"      第一列 {first['row']}: {first['values']}")
 
     if "--quick" in sys.argv:
         print("\n快速檢查完成。可以執行 python onedrive_worker.py")
