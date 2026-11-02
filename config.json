@@ -241,7 +241,19 @@
         "Weekday"
       ],
       "view": "daily_output",
-      "product_label": "Bianca"
+      "product_label": "Bianca",
+      "columns": [
+        "Date",
+        "Weekday",
+        "SMT",
+        "DIP",
+        "L1",
+        "L2",
+        "POD",
+        "L4",
+        "PK",
+        "Bonepile"
+      ]
     },
     {
       "name": "strata",
@@ -256,10 +268,22 @@
         "Weekday"
       ],
       "view": "daily_output",
-      "product_label": "Strata"
+      "product_label": "Strata",
+      "columns": [
+        "Date",
+        "Weekday",
+        "SMT",
+        "DIP",
+        "L1",
+        "L2",
+        "POD",
+        "L4",
+        "PK",
+        "Bonepile"
+      ]
     }
   ],
-  "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。",
+  "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。 columns 是這張表應有的欄位，還沒有資料時網頁用它畫出空的版面。",
   "admin_code": "",
   "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。"
 }

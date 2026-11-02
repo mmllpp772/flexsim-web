@@ -68,7 +68,7 @@ def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
     if di:
         out["daily_input"] = {"products": [{k: v for k, v in p.items() if k in ("name", "label", "label_zh")} for p in di["products"]],
                               "defaults": di.get("defaults", {}), "federal_holidays": di.get("federal_holidays", True)}
-    out["tables"] = [{k: v for k, v in tb.items() if k in ("name", "label", "label_zh", "key_columns", "view", "product_label", "product_label_zh")}
+    out["tables"] = [{k: v for k, v in tb.items() if k in ("name", "label", "label_zh", "key_columns", "view", "product_label", "product_label_zh", "columns")}
                      for tb in cfg.get("tables", [])]
     out["output_views"] = cfg.get("output_views", [])
     sh = cfg.get("shifts")
@@ -297,6 +297,8 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
         "double wr_last = -1;",
         "int wr_same = 0;",
         "int wr_n = 0;",
+        f"double wr_gap = {86400.0 / float((cfg.get('stop') or {}).get('time_unit_seconds', 1))!r};  // report progress every simulated day",
+        "double wr_next = wr_gap;",
     ]
     live = [m for m in cfg["metrics"] if m.get("live", True)]
 
@@ -318,7 +320,8 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
     if progress_path:
         lines += [
             "    wr_n++;",
-            "    if (wr_n % 20000 == 0) {",
+            "    if (wr_n % 20000 == 0 || Model.time >= wr_next) {",
+            "        while (wr_next <= Model.time) wr_next += wr_gap;",
             *snapshot("        "),
             "    }",
         ]

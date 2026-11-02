@@ -232,6 +232,7 @@
   .out-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 22px; align-items: start; }
   .out-grid > * { min-width: 0; }
   .out-head .results-meta { margin: 10px 0 0; }
+  #totals .bar-row { grid-template-columns: minmax(48px, 80px) minmax(0, 1fr) auto; }
   .run-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
   .run-pick label { font: 600 15px var(--display); }
   .run-pick select { max-width: 100%; min-width: 0; }
@@ -589,13 +590,15 @@
       syncSub: "It takes effect once OneDrive syncs.", pPaused: "Paused",
       resetTip: "Restore the default inputs and clear the results view",
       runTip: "Run the simulation and show progress",
-      fastTip: "Run straight to the end without progress updates",
+      fastTip: "Run to the end with progress only, no live metrics",
       stopTip: "Stop the run in progress. FlexSim is closed and no results are kept.",
       idle: "Idle", idleMsg: "Set the period and press Run.", resetMsg: "Inputs restored to defaults.",
       sent: "Sent", sentMsg: "Waiting for OneDrive to deliver the request.", sentSub: "Usually under a minute.",
       queued: "Queued", queuePos: "Position {n} in line.", queueNext: "Next in line.",
       running: "Running", starting: "Starting FlexSim.",
-      ffMsg: "Running to the end date.", ffSub: "No progress updates in this mode.",
+      ffMsg: "Fast-forwarding to the end date.", ffWait: "Starting FlexSim.",
+      ffThrough: "Fast-forwarding: simulated through {date}.", ffWarm: "Fast-forwarding: warming up, simulated through {date}.",
+      ffSub: "{p}% done. Live metrics are hidden in fast forward.",
       warming: "Warming up: simulated through {date}, before the period starts.",
       through: "Simulated through {date}.", pctModel: "{p}% of model time",
       finished: "Finished", finishedMsg: "Finished {when}.", took: "Took {s} s.",
@@ -632,6 +635,7 @@
       modeRun: "Run", modeFast: "Fast forward",
       outRun: "Run", product: "Product", station: "Station",
       outEmpty: "No finished runs yet. Set a period on the Parameters page and press Run.",
+      noRunOpt: "No finished runs yet", noData: "No data yet. It appears here when a run finishes.",
       totals: "Total output by station", totalsHint: "Sum over the whole period.",
       daily: "Daily output", dailyTable: "Daily detail", tableCsv: "Download table (CSV)",
       noTables: "This run has no output tables. It may have been run with an older version, or the export failed on the simulator PC.",
@@ -680,13 +684,15 @@
       syncSub: "OneDrive 同步後生效。", pPaused: "已暫停",
       resetTip: "把輸入恢復成預設值，並清除畫面上的結果",
       runTip: "執行模擬並顯示進度",
-      fastTip: "直接跑到結束，中途不回報進度",
+      fastTip: "直接跑到結束，只顯示進度，不顯示即時指標",
       stopTip: "停止這次模擬，FlexSim 會被關閉，不保留結果。",
       idle: "待命", idleMsg: "設定期間後按「執行」。", resetMsg: "已恢復預設值。",
       sent: "已送出", sentMsg: "等待 OneDrive 把需求送到模擬電腦。", sentSub: "通常不到一分鐘。",
       queued: "排隊中", queuePos: "排在第 {n} 位。", queueNext: "下一個就輪到你。",
       running: "執行中", starting: "正在啟動 FlexSim。",
-      ffMsg: "直接跑到結束日。", ffSub: "快轉模式不回報進度。",
+      ffMsg: "快轉到結束日。", ffWait: "正在啟動 FlexSim。",
+      ffThrough: "快轉中：已模擬到 {date}。", ffWarm: "快轉中：暖機，已模擬到 {date}。",
+      ffSub: "完成 {p}%，快轉不顯示即時指標。",
       warming: "暖機中：已模擬到 {date}，還沒進入設定的期間。",
       through: "已模擬到 {date}。", pctModel: "模型時間 {p}%",
       finished: "完成", finishedMsg: "{when} 完成。", took: "花了 {s} 秒。",
@@ -723,6 +729,7 @@
       modeRun: "執行", modeFast: "快轉",
       outRun: "模擬", product: "產品", station: "站別",
       outEmpty: "還沒有完成的模擬。到「參數調整」頁設定期間，然後按「執行」。",
+      noRunOpt: "還沒有完成的模擬", noData: "還沒有資料，模擬完成後會顯示在這裡。",
       totals: "各站總產出", totalsHint: "整個期間的加總。",
       daily: "每日產出", dailyTable: "每日明細", tableCsv: "下載這張表（CSV）",
       noTables: "這次模擬沒有輸出表格，可能是用舊版程式跑的，或模擬電腦匯出時失敗。",
@@ -929,7 +936,7 @@
   // =====================================================================
   let T = null, CFG = null, DI = null, history = [], selectedId = null, activeId = null, pollTimer = null;
   let shownJob = null, stateMode = "idle", activeJob = null, pending = null;
-  let TAB = "input", outRunId = null, outTable = null, outStation = null;
+  let TAB = "input", outRunId = null, outTable = load("simOutTable"), outStation = null;
 
   // ---------- formatting ----------
   const pad = (n) => String(n).padStart(2, "0");
@@ -993,7 +1000,7 @@
         <small>${esc(L(p, "help"))}${p.min !== undefined ? ` ${esc(t("range", { min: p.min, max: p.max }))}` : ""}</small>
       </div>`; }).join("");
     $("fields").innerHTML = html;
-    document.querySelectorAll("#fields input").forEach(i => i.addEventListener("input", () => { updatePeriodPreview(); $("formError").hidden = true; }));
+    document.querySelectorAll("#fields input").forEach(i => i.addEventListener("input", () => { updatePeriodPreview(); $("formError").hidden = true; saveForm(); }));
     updatePeriodPreview();
   }
 
@@ -1022,6 +1029,30 @@
     });
     return { params, error };
   }
+  // 參數記憶：每次修改就存，下次打開自動帶回（按「重設」才清除）
+  function saveForm() { const v = currentFormValues(); if (Object.keys(v).length) store("simLastParams", JSON.stringify(v)); }
+  $("f_label").addEventListener("input", () => store("simLabel", $("f_label").value));
+  $("f_who").addEventListener("input", () => store("simWho", $("f_who").value.trim()));
+
+  // 沒有存過的參數（例如換一台電腦）：從最近一次送出的模擬帶入
+  function restoreFromJob(job) {
+    if (!job) return false;
+    let changed = false;
+    if (!load("simLastParams") && job.parameters) { buildForm(job.parameters); saveForm(); changed = true; }
+    if (PD() && !load("simPlans") && job.plans) {
+      for (const [name, pl] of Object.entries(job.plans)) {
+        const inputs = {}; (pl.rows || []).forEach(r => { if (r.input > 0) inputs[r.date] = r.input; });
+        PLANS[name] = { target: pl.target, sat_off: !!pl.sat_off, sun_off: !!pl.sun_off, inputs };
+      }
+      savePlans(); changed = true;
+    }
+    if (SH() && !load("simShifts") && job.shifts) {
+      for (const [name, sf] of Object.entries(job.shifts)) SHIFTS[name] = { count: sf.count, grids: sf.grids.map(g => g.map(r => r.slice())) };
+      saveShifts(); changed = true;
+    }
+    return changed;
+  }
+
   function currentFormValues() {
     const v = {};
     if (DI && $("d_start") && $("d_start").value && $("d_end").value) {
@@ -1047,7 +1078,7 @@
   const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const WD3 = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const PD = () => CFG.daily_input;
-  let PLANS = {}, planProduct = null;
+  let PLANS = {}, planProduct = load("simPlanProduct");
   try { PLANS = JSON.parse(load("simPlans") || "{}") || {}; } catch (e) { PLANS = {}; }
   const savePlans = () => store("simPlans", JSON.stringify(PLANS));
 
@@ -1106,7 +1137,7 @@
     const prods = PD().products;
     if (!prods.find(p => p.name === planProduct)) planProduct = prods[0].name;
     $("planSeg").innerHTML = prods.map(p => `<button type="button" data-p="${esc(p.name)}" aria-pressed="${p.name === planProduct}">${esc(L(p, "label"))}</button>`).join("");
-    $("planSeg").querySelectorAll("button").forEach(b => b.onclick = () => { planProduct = b.dataset.p; renderPlan(); });
+    $("planSeg").querySelectorAll("button").forEach(b => b.onclick = () => { planProduct = b.dataset.p; store("simPlanProduct", planProduct); renderPlan(); });
     const pl = planFor(planProduct);
     if (document.activeElement !== $("planTarget")) $("planTarget").value = pl.target;
     $("planSat").checked = !!pl.sat_off; $("planSun").checked = !!pl.sun_off;
@@ -1206,7 +1237,7 @@
 
   // ---------- shifts ----------
   const SH = () => CFG.shifts;
-  let SHIFTS = {}, shiftProduct = null;
+  let SHIFTS = {}, shiftProduct = load("simShiftProduct");
   try { SHIFTS = JSON.parse(load("simShifts") || "{}") || {}; } catch (e) { SHIFTS = {}; }
   const saveShifts = () => store("simShifts", JSON.stringify(SHIFTS));
   function defaultGrid() { const d = SH().defaults.values; return SH().rows.map(() => SH().columns.map((_, j) => d[j] ?? 0)); }
@@ -1222,7 +1253,7 @@
     const prods = SH().products;
     if (!prods.find(p => p.name === shiftProduct)) shiftProduct = prods[0].name;
     $("shiftSeg").innerHTML = prods.map(p => `<button type="button" data-p="${esc(p.name)}" aria-pressed="${p.name === shiftProduct}">${esc(L(p, "label"))}</button>`).join("");
-    $("shiftSeg").querySelectorAll("button").forEach(b => b.onclick = () => { shiftProduct = b.dataset.p; renderShifts(); });
+    $("shiftSeg").querySelectorAll("button").forEach(b => b.onclick = () => { shiftProduct = b.dataset.p; store("simShiftProduct", shiftProduct); renderShifts(); });
     const sf = shiftFor(shiftProduct);
     document.querySelectorAll('input[name="shiftCount"]').forEach(r => r.checked = Number(r.value) === sf.count);
     $("shiftCopy").hidden = sf.count < 2;
@@ -1323,7 +1354,13 @@
           if (job.mode !== "fast" && job.id === activeId) showLive(job);
           break;
         }
-        if (job.mode === "fast") { setState("running", t("fast"), t("ffMsg"), t("ffSub"), true); drawTimeline(p?.start, p?.end, null, "run"); break; }
+        if (job.mode === "fast") {
+          const atf = job.progress_date ? parseDay(job.progress_date) : null;
+          if (job.progress == null || !atf) setState("running", t("fast"), t("ffMsg"), t("ffWait"), true);
+          else setState("running", t("fast"), t(p && atf < p.start ? "ffWarm" : "ffThrough", { date: dayFmt(atf) }), t("ffSub", { p: fmt(job.progress * 100, 0) }), true);
+          drawTimeline(p?.start, p?.end, atf, "run");
+          break;
+        }
         if (job.progress == null) { setState("running", t("running"), t("starting"), "", true); drawTimeline(p?.start, p?.end, null, "run"); break; }
         const at = job.progress_date ? parseDay(job.progress_date) : null;
         const before = p && at && at < p.start;
@@ -1425,7 +1462,7 @@
     const hasPlan = Object.values(PLANS).some(p => p && Object.keys(p.inputs || {}).length);
     if (hasPlan && !confirm(t("confirmReset"))) return;
     PLANS = {}; savePlans(); SHIFTS = {}; saveShifts();
-    store("simLastParams");
+    store("simLastParams"); store("simLabel");
     buildForm(defaults());
     $("f_label").value = "";
     $("formError").hidden = true;
@@ -1629,7 +1666,7 @@
   function numericCols(tb, def) {
     const keys = new Set((def?.key_columns || []).map(String));
     return tb.columns.map((c, i) => ({ c, i })).filter(({ c, i }) =>
-      !keys.has(c) && tb.rows.length && tb.rows.every(r => typeof r.values[i] === "number"));
+      !keys.has(c) && (!tb.rows.length || tb.rows.every(r => typeof r.values[i] === "number")));
   }
   const keyIdx = (tb, def) => tb.columns.findIndex(c => (def?.key_columns || []).includes(c));
 
@@ -1667,25 +1704,32 @@
     if (!CFG) return;
     const runs = doneRuns();
     const has = runs.length > 0;
-    $("outEmpty").hidden = has; $("outEmpty").textContent = t("outEmpty");
-    $("outLayout").hidden = !has;
-    document.querySelector(".out-head").hidden = !has;
-    if (!has) { renderBars(); return; }
-    if (!runs.find(r => r.id === outRunId)) outRunId = runs[0].id;
-    $("runSel").innerHTML = runs.map(r => `<option value="${esc(r.id)}">${esc(runName(r))}, ${esc(periodLabel(r.parameters))}</option>`).join("");
-    $("runSel").value = outRunId;
-    const job = runs.find(r => r.id === outRunId);
-    selectedId = job.id;
-    const bits = [periodLabel(job.parameters)];
-    if (job.submitted_by) bits.push(t("runBy", { who: job.submitted_by }).replace(/^[,，]\s*/, ""));
-    if (job.wall_seconds) bits.push(t("tookRun", { s: fmt(job.wall_seconds, 0) }));
-    $("outMeta").textContent = bits.join(LANG === "zh" ? "，" : ", ");
+    $("outEmpty").hidden = true;
+    $("outLayout").hidden = false;
+    document.querySelector(".out-head").hidden = false;
+    let job = null;
+    if (has) {
+      if (!runs.find(r => r.id === outRunId)) outRunId = runs[0].id;
+      $("runSel").innerHTML = runs.map(r => `<option value="${esc(r.id)}">${esc(runName(r))}, ${esc(periodLabel(r.parameters))}</option>`).join("");
+      $("runSel").value = outRunId;
+      $("runSel").disabled = false;
+      job = runs.find(r => r.id === outRunId);
+      selectedId = job.id;
+      const bits = [periodLabel(job.parameters)];
+      if (job.submitted_by) bits.push(t("runBy", { who: job.submitted_by }).replace(/^[,，]\s*/, ""));
+      if (job.wall_seconds) bits.push(t("tookRun", { s: fmt(job.wall_seconds, 0) }));
+      $("outMeta").textContent = bits.join(LANG === "zh" ? "，" : ", ");
+    } else {
+      $("runSel").innerHTML = `<option>${esc(t("noRunOpt"))}</option>`;
+      $("runSel").disabled = true;
+      $("outMeta").textContent = t("outEmpty");
+    }
     renderOutNav(job);
 
     if (OUT_CAT === "overview") {
-      const prev = history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
-      $("outKpis").innerHTML = kpiTiles(job.metrics, job.series, prev);
-      renderRunInputs(job);
+      const prev = job && history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
+      $("outKpis").innerHTML = kpiTiles(job ? job.metrics : null, job ? job.series : null, prev);
+      if (job) renderRunInputs(job); else $("runInputs").innerHTML = `<p class="empty">${esc(t("noData"))}</p>`;
       renderBars();
     } else {
       const view = outViews().find(v => v.name === OUT_CAT);
@@ -1694,13 +1738,14 @@
       if (!defs.find(d => d.name === outTable)) outTable = defs[0]?.name || null;
       $("productSeg").innerHTML = defs.map(d => `<button type="button" data-t="${esc(d.name)}" aria-pressed="${d.name === outTable}">${esc(L(d, "product_label") || L(d, "label"))}</button>`).join("");
       $("productSeg").hidden = defs.length < 2;
-      $("productSeg").querySelectorAll("button").forEach(b => b.onclick = () => { outTable = b.dataset.t; renderOutput(); });
+      $("productSeg").querySelectorAll("button").forEach(b => b.onclick = () => { outTable = b.dataset.t; store("simOutTable", outTable); renderOutput(); });
       const def = defs.find(d => d.name === outTable);
-      const tb = job.tables?.[outTable];
+      let tb = job?.tables?.[outTable];
       const ok = tb && tb.rows.length;
-      $("viewEmpty").hidden = !!ok; $("viewEmpty").textContent = t("noTables");
-      $("outBody").hidden = !ok;
-      if (ok) { renderStations(tb, def); renderTotals(tb, def); renderDaily(tb, def); renderDailyTable(tb, def); }
+      if (!ok) tb = { columns: def?.columns || [], rows: [] };  // 沒有資料：照設定的欄位畫空的版面
+      $("viewEmpty").hidden = !(job && !ok); $("viewEmpty").textContent = t("noTables");
+      $("outBody").hidden = false;
+      renderStations(tb, def); renderTotals(tb, def); renderDaily(tb, def); renderDailyTable(tb, def);
     }
     renderTable();
   }
@@ -1708,13 +1753,14 @@
 
   function renderTotals(tb, def) {
     const cols = numericCols(tb, def);
+    const empty = !tb.rows.length;
     const sums = cols.map(({ c, i }) => ({ c, v: tb.rows.reduce((a, r) => a + r.values[i], 0) }));
     const max = Math.max(...sums.map(s => Math.abs(s.v)), 1e-9);
     $("totals").innerHTML = sums.map(s => `
       <div class="bar-row ${s.c === outStation ? "current" : ""}" data-s="${esc(s.c)}" style="cursor:pointer">
         <div class="name">${esc(s.c)}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(0.5, Math.abs(s.v) / max * 100)}%"></div></div>
-        <div class="val">${fmt(s.v, 0)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${empty ? 0 : Math.max(0.5, Math.abs(s.v) / max * 100)}%"></div></div>
+        <div class="val">${empty ? "—" : fmt(s.v, 0)}</div>
       </div>`).join("");
     $("totals").querySelectorAll(".bar-row").forEach(r => r.onclick = () => { outStation = r.dataset.s; renderOutput(); });
   }
@@ -1736,6 +1782,14 @@
     const col = numericCols(tb, def).find(x => x.c === outStation);
     const box = $("dailyChart");
     if (!col) { box.innerHTML = ""; return; }
+    if (!tb.rows.length) {
+      const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 46, r: 8, t: 10, b: 30 }, ph = H - m.t - m.b;
+      let g = '<g class="grid">', ax = '<g class="axis">';
+      for (let k = 0; k <= 4; k++) { const yy = m.t + ph - ph * k / 4; g += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}"/>`; ax += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end">—</text>`; }
+      box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("noData"))}">${g}</g>${ax}</g>
+        <text x="${(W + m.l) / 2}" y="${m.t + ph / 2}" text-anchor="middle" style="fill:var(--muted);font-size:14px">${esc(t("noData"))}</text></svg>`;
+      return;
+    }
     const ki = keyIdx(tb, def);
     const wi = tb.columns.findIndex((c, i) => i !== ki && (def?.key_columns || []).includes(c));
     const data = tb.rows.map(r => ({ label: ki >= 0 ? String(r.values[ki]) : r.row, sub: wi >= 0 ? String(r.values[wi]) : "", v: r.values[col.i], row: r.row }));
@@ -1786,6 +1840,11 @@
   function renderDailyTable(tb, def) {
     const nums = new Set(numericCols(tb, def).map(x => x.i));
     const cols = numericCols(tb, def);
+    if (!tb.rows.length) {
+      $("dailyTable").innerHTML = `<thead><tr><th class="k"></th>${tb.columns.map((c, i) => `<th class="${nums.has(i) ? "" : "k"}">${esc(c)}</th>`).join("")}</tr></thead>` +
+        `<tbody><tr><td class="k empty" colspan="${tb.columns.length + 1}">${esc(t("noData"))}</td></tr></tbody>`;
+      return;
+    }
     $("dailyTable").innerHTML = `<thead><tr><th class="k"></th>${tb.columns.map((c, i) => `<th class="${nums.has(i) ? "" : "k"}">${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
       tb.rows.map(r => {
         const off = cols.length && cols.every(({ i }) => r.values[i] === 0);
@@ -1796,7 +1855,7 @@
 
   $("tableCsvBtn").addEventListener("click", () => {
     const job = doneRuns().find(r => r.id === outRunId); const tb = job?.tables?.[outTable];
-    if (!tb) return;
+    if (!tb || !tb.rows.length) return;
     const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [["", ...tb.columns].map(q).join(","), ...tb.rows.map(r => [r.row, ...r.values].map(q).join(","))];
     const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
@@ -1881,6 +1940,7 @@
       renderConfigText();
       $("mockBanner").hidden = !CFG.mock_mode;
       $("f_who").value = load("simWho") || "";
+      $("f_label").value = load("simLabel") || "";
       let saved = null;
       try { saved = JSON.parse(load("simLastParams") || "null"); } catch (e) {}
       buildForm(saved || defaults());
@@ -1890,6 +1950,10 @@
       showTab((location.hash || "").slice(1), false);
       await refreshSimStatus();
       await refreshHistory();
+      if (!saved) {
+        const mine = history.find(h => h.client?.device_id && h.client.device_id === load("simDevice")) || history[0];
+        if (restoreFromJob(mine)) { renderPlan(); renderShifts(); renderInNav(); }
+      }
       const active = history.find(h => ACTIVE.includes(h.status));
       const lastDone = history.find(h => h.status === "done");
       if (lastDone) { showResult(lastDone); if (!active) renderJob(lastDone); }

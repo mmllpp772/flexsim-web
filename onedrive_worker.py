@@ -249,14 +249,15 @@ class Worker:
                 del series[1:-1:2]
 
         def publish() -> None:
-            """把目前狀態寫給網頁。快轉模式只回報狀態，不回報進度和即時指標。"""
+            """把目前狀態寫給網頁。快轉模式回報進度百分比和日期，但不回報即時指標。"""
             data = {**base, "mode": st["mode"], "status": "running", "started_at": started, "paused": st["paused"]}
             snap = st["last"]
-            if snap and st["mode"] != "fast":
+            if snap:
                 fraction, model_time, metrics = snap
                 dt = model_datetime(self.cfg, params, model_time)
-                data.update(progress=round(fraction, 4), progress_date=dt.strftime("%Y-%m-%d %H:%M") if dt else None,
-                            live_metrics=metrics or None, series=series)
+                data.update(progress=round(fraction, 4), progress_date=dt.strftime("%Y-%m-%d %H:%M") if dt else None)
+                if st["mode"] != "fast":
+                    data.update(live_metrics=metrics or None, series=series)
             self.write_result(job_id, data)
             last_write[0] = time.time()
 
@@ -280,7 +281,7 @@ class Worker:
             st["last"] = (fraction, model_time, metrics)
             if time.time() - last_write[0] < 10:  # 最多 10 秒寫一次，避免 OneDrive 一直同步
                 return
-            if metrics:
+            if metrics and st["mode"] != "fast":
                 add_point(model_time, metrics)
             publish()
             dt = model_datetime(self.cfg, params, model_time)
