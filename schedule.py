@@ -172,3 +172,51 @@ def plan_script(cfg: dict[str, Any], plans: dict[str, Any] | None) -> list[str]:
                 f"{t}[{r_i}][4] = {_s(r['weekday'])}; {t}[{r_i}][5] = {r['input']!r}; {t}[{r_i}][6] = {r['suggest']!r}; "
                 f"{t}[{r_i}][7] = {_s('Y' if r['holiday'] else '')};")
     return lines
+
+
+# ---------------------------------------------------------------------------
+# 班別（WUS_workday_schedul_<產品>_Shift1 / Shift2）
+# ---------------------------------------------------------------------------
+
+def validate_shifts(cfg: dict[str, Any], shifts: Any) -> dict[str, Any] | None:
+    sh = cfg.get("shifts")
+    if not sh:
+        return None
+    if not isinstance(shifts, dict):
+        shifts = {}
+    nr, nc, mx = len(sh["rows"]), len(sh["columns"]), float(sh.get("max", 24))
+    default = [[float(sh["defaults"]["values"][j]) for j in range(nc)] for _ in range(nr)]
+    out = {}
+    for p in sh["products"]:
+        s = shifts.get(p["name"]) or {}
+        count = s.get("count", sh["defaults"].get("count", 2))
+        if count not in (1, 2):
+            raise ValueError(f"{p['label']}: shifts per day must be 1 or 2")
+        grids = s.get("grids") or [default, default]
+        clean = []
+        for gi in range(2):
+            g = grids[gi] if gi < len(grids) else default
+            if not isinstance(g, list) or len(g) != nr or any(not isinstance(row, list) or len(row) != nc for row in g):
+                raise ValueError(f"{p['label']} shift {gi + 1}: table size is wrong")
+            if gi < count:
+                clean.append([[_num(v, f"{p['label']} shift {gi + 1} value", 0, mx) for v in row] for row in g])
+            else:
+                iv = float(sh.get("inactive_value", 0))
+                clean.append([[iv] * nc for _ in range(nr)])
+        out[p["name"]] = {"count": count, "grids": clean}
+    return out
+
+
+def shift_script(cfg: dict[str, Any], shifts: dict[str, Any] | None) -> list[str]:
+    if not shifts:
+        return []
+    sh = cfg["shifts"]
+    lines = ["// ---- shifts ----"]
+    for pi, p in enumerate(sh["products"], 1):
+        s = shifts[p["name"]]
+        for gi, table in enumerate(p["tables"][:2]):
+            v = f"wsh{pi}{gi + 1}"
+            lines.append(f"Table {v} = Table({_s(table)});")
+            for ri, row in enumerate(s["grids"][gi], 1):
+                lines.append(" ".join(f"{v}[{ri}][{ci}] = {val!r};" for ci, val in enumerate(row, 1)))
+    return lines

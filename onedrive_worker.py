@@ -24,15 +24,20 @@ import re
 import shutil
 import signal
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from schedule import validate_plans
+import hashlib
+import hmac
+
+from schedule import validate_plans, validate_shifts
 from runner import (BASE_DIR, Cancelled, load_config, model_datetime, period_of, log, make_runner, now_iso,
                     public_config, setup_logging, validate_params)
 
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-MAX_JOB_BYTES = 64 * 1024
+MAX_JOB_BYTES = 2 * 1024 * 1024      # 網頁送來的檔案（工作、控制、管理要求）上限
+MAX_RESULT_BYTES = 50 * 1024 * 1024  # 自己寫的結果檔（含每日表格）上限
 FINAL = {"done", "error"}
 
 
@@ -51,9 +56,9 @@ def write_json_atomic(path: Path, data: Any) -> None:
             time.sleep(0.5)
 
 
-def read_json(path: Path) -> Any | None:
+def read_json(path: Path, limit: int = MAX_JOB_BYTES) -> Any | None:
     try:
-        if path.stat().st_size > MAX_JOB_BYTES:
+        if path.stat().st_size > limit:
             return None
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
@@ -102,7 +107,9 @@ class Worker:
         self.results_dir = self.share / "results"
         self.cancel_dir = self.share / "cancel"
         self.control_dir = self.share / "control"
-        for d in (self.jobs_dir, self.results_dir, self.cancel_dir, self.control_dir):
+        self.admin_dir = self.share / "admin"
+        self.admin_fails: list[float] = []
+        for d in (self.jobs_dir, self.results_dir, self.cancel_dir, self.control_dir, self.admin_dir):
             d.mkdir(exist_ok=True)
         try:
             self.runner = make_runner(self.cfg)
@@ -145,7 +152,7 @@ class Worker:
             job_id = f.stem
             if not ID_RE.match(job_id):
                 continue
-            res = read_json(self.results_dir / f"{job_id}.json")
+            res = read_json(self.results_dir / f"{job_id}.json", MAX_RESULT_BYTES)
             if res and res.get("status") in FINAL:
                 continue
             if (self.cancel_dir / f"{job_id}.json").exists():
@@ -180,7 +187,7 @@ class Worker:
     def recover_interrupted(self) -> None:
         """上次程式中斷時正在跑的工作：標記為中斷，不要自動重跑。"""
         for f in self.results_dir.glob("*.json"):
-            res = read_json(f)
+            res = read_json(f, MAX_RESULT_BYTES)
             if res and res.get("status") == "running":
                 res.update(status="error", finished_at=now_iso(),
                            error="Interrupted: the simulator PC stopped before this run finished. Please run it again.")
@@ -208,13 +215,14 @@ class Worker:
             params, length = validate_params(self.cfg, job.get("parameters"), job.get("run_length"))
             period = period_of(self.cfg, params)
             plans = validate_plans(self.cfg, job.get("plans"), *period) if period else None
+            shifts = validate_shifts(self.cfg, job.get("shifts"))
         except ValueError as e:
             self.write_result(job_id, {**base, "status": "error", "finished_at": now_iso(), "error": str(e),
                                        "parameters": job.get("parameters"), "run_length": job.get("run_length")})
             log.warning("Rejected job %s: %s", job_id, e)
             return
 
-        base.update(parameters=params, run_length=length, plans=plans)
+        base.update(parameters=params, run_length=length, plans=plans, shifts=shifts)
         self.running = job_id
         started = now_iso()
         self.write_result(job_id, {**base, "status": "running", "started_at": started})
@@ -280,7 +288,7 @@ class Worker:
 
         try:
             result = self.runner.run(params, length, should_cancel=should_cancel, on_progress=on_progress,
-                                     want_pause=want_pause, on_pause=on_pause, plans=plans)
+                                     want_pause=want_pause, on_pause=on_pause, plans=plans, shifts=shifts)
             base["mode"] = st["mode"]
             if series and result.get("model_time") is not None:
                 add_point(result["model_time"], result["metrics"])
@@ -299,6 +307,47 @@ class Worker:
         finally:
             self.running = None
 
+    # ---------- 管理：清除執行紀錄 ----------
+    def handle_admin(self) -> None:
+        for f in sorted(self.admin_dir.glob("*.json")):
+            if f.name.endswith(".result.json") or not ID_RE.match(f.stem):
+                continue
+            req = read_json(f)
+            if req is None:
+                continue
+            res = self.admin_request(f.stem, req)
+            write_json_atomic(self.admin_dir / f"{f.stem}.result.json", {**res, "at": now_iso()})
+            f.unlink(missing_ok=True)  # 要求檔處理完就刪掉
+
+    def admin_request(self, req_id: str, req: dict[str, Any]) -> dict[str, Any]:
+        code = str(self.cfg.get("admin_code") or "").strip()
+        if req.get("action") != "clear_history":
+            return {"status": "bad_request"}
+        if not code:
+            return {"status": "disabled"}
+        now = time.time()
+        self.admin_fails = [t for t in self.admin_fails if now - t < 900]
+        if len(self.admin_fails) >= 5:
+            return {"status": "locked"}
+        expect = hashlib.sha256(f"{code}:{req_id}".encode("utf-8")).hexdigest()
+        if not hmac.compare_digest(expect, str(req.get("hash", ""))):
+            self.admin_fails.append(now)
+            log.warning("Admin request %s: wrong code", req_id)
+            return {"status": "bad_code"}
+        if self.running:
+            return {"status": "busy"}
+        # 封存（搬到這台電腦的 history_archive/），不直接刪除
+        dest = BASE_DIR / "history_archive" / datetime.now().strftime("%Y%m%d-%H%M%S")
+        n = 0
+        for d in (self.jobs_dir, self.results_dir, self.cancel_dir, self.control_dir):
+            for f in d.glob("*.json"):
+                (dest / d.name).mkdir(parents=True, exist_ok=True)
+                shutil.move(str(f), str(dest / d.name / f.name))
+                if d is self.jobs_dir:
+                    n += 1
+        log.info("History cleared by %s: %d runs archived to %s", req.get("by") or "?", n, dest)
+        return {"status": "ok", "archived": n}
+
     # ---------- 主迴圈 ----------
     def loop(self) -> None:
         self.publish()
@@ -306,6 +355,7 @@ class Worker:
         log.info("Watching %s (every %.0fs). Press Ctrl+C to stop.", self.share, self.poll)
         while not self.stopping:
             try:
+                self.handle_admin()
                 self.queue = self.scan()
                 self.heartbeat(force=bool(self.queue))
                 if self.queue:

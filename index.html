@@ -68,7 +68,46 @@
   .demo { margin: 0 0 18px; background: var(--hold-soft); color: var(--hold); border-radius: 8px; padding: 10px 14px; font-size: 14px; }
 
   /* ---------- layout ---------- */
-  main.grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 22px; align-items: start; padding-bottom: 48px; }
+  main.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; padding-bottom: 48px; }
+  main.page > * { min-width: 0; }
+  .cat-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 22px; align-items: start; }
+  .cat-body { min-width: 0; display: grid; gap: 22px; }
+  .cat-body > * { min-width: 0; }
+  .cat-body > div { display: grid; gap: 22px; }
+  .cat-nav { position: sticky; top: 16px; display: grid; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+  .cat-nav .grp { font: 600 12px var(--display); color: var(--faint); padding: 8px 10px 2px; letter-spacing: .02em; }
+  .cat-nav button { display: block; width: 100%; text-align: left; border: 0; background: none; border-radius: 8px; padding: 9px 12px; cursor: pointer; color: var(--ink); }
+  .cat-nav button b { display: block; font: 600 15px var(--display); }
+  .cat-nav button small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-nav button:hover { background: var(--steel); }
+  .cat-nav button[aria-current="true"] { background: var(--console); color: #fff; }
+  .cat-nav button[aria-current="true"] small { color: var(--console-muted); }
+  .basic-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 28px; }
+  .view-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .view-head h2 { margin: 0; }
+  .run-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .run-inputs .ri { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .run-inputs .ri h3 { margin: 0 0 8px; font: 600 16px var(--display); }
+  .run-inputs dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+  .run-inputs dt { color: var(--muted); }
+  .run-inputs dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .shift-count { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 6px; }
+  .shift-count .lbl { font-weight: 600; }
+  .shift-count .spacer { flex: 1; }
+  .shift-count .check input { accent-color: var(--blue); }
+  .shift-hint { margin: 0 0 12px; }
+  .shift-grids { display: grid; gap: 18px; }
+  .shift-grid h3 { margin: 0 0 8px; font: 600 16px var(--display); }
+  .shift-grid.off h3::after { content: attr(data-off); margin-left: 10px; font: 500 13px var(--body); color: var(--faint); }
+  table.shift td, table.shift th { padding: 4px 6px; }
+  table.shift tbody tr { cursor: default; }
+  table.shift tbody tr:hover td { background: transparent; }
+  table.shift input { width: 64px; height: 32px; text-align: right; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font-variant-numeric: tabular-nums; }
+  table.shift input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+  .shift-grid.off table.shift input { background: var(--steel); color: var(--faint); border-style: dashed; }
+  .hist-actions { display: flex; gap: 18px; align-items: center; }
+  .link.danger { color: var(--err); }
+  .err-box.warn.ok { background: var(--ok-soft); color: var(--ok); }
   .col { display: grid; gap: 22px; min-width: 0; }
   .col > * { min-width: 0; }
   section.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
@@ -192,6 +231,7 @@
   table.daily thead th { position: sticky; top: 0; background: var(--panel); z-index: 1; box-shadow: inset 0 -1px 0 var(--line); }
   .out-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 22px; align-items: start; }
   .out-grid > * { min-width: 0; }
+  .out-head .results-meta { margin: 10px 0 0; }
   .run-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
   .run-pick label { font: 600 15px var(--display); }
   .run-pick select { max-width: 100%; min-width: 0; }
@@ -261,7 +301,11 @@
   .btn-primary { height: 48px; width: 100%; border: 0; border-radius: 10px; background: var(--console); color: #fff; font: 600 16px var(--display); cursor: pointer; }
 
   @media (max-width: 900px) {
-    main.grid { grid-template-columns: 1fr; }
+    .cat-layout { grid-template-columns: 1fr; }
+    .cat-nav { position: static; display: flex; overflow-x: auto; padding: 6px; }
+    .cat-nav .grp { display: none; }
+    .cat-nav button { width: auto; flex: none; }
+    .basic-grid { grid-template-columns: 1fr; }
     .wrap { padding: 0 16px; }
     .ctl { height: 48px; padding: 0 16px; }
     .ctl.run { padding: 0 20px; }
@@ -311,131 +355,178 @@
     <button type="button" role="tab" id="tabHistory" data-tab="history" aria-controls="pageHistory"><span data-i18n="tabHistory"></span> <span class="count" id="histCount"></span></button>
   </nav>
 
-  <main class="grid" id="app" role="tabpanel" aria-labelledby="tabInput" hidden>
-    <section class="panel">
-      <h2 data-i18n="scenario"></h2>
-      <form id="form" novalidate>
-        <div id="fields"></div>
-        <div class="period-days" id="periodDays"></div>
-        <hr class="sep">
-        <div class="field">
-          <label for="f_label"><span data-i18n="scenarioName"></span> <span class="opt" data-i18n="optional"></span></label>
-          <input id="f_label" maxlength="60" data-i18n-placeholder="scenarioPh">
-        </div>
-        <div class="field">
-          <label for="f_who"><span data-i18n="yourName"></span></label>
-          <input id="f_who" maxlength="60" autocomplete="name" required>
-          <small data-i18n="nameHelp"></small>
-        </div>
-        <div id="formError" class="err-box" hidden></div>
-      </form>
+  <main class="page" id="app" role="tabpanel" aria-labelledby="tabInput" hidden>
+    <section class="console" data-i18n-aria="controlsAria">
+      <div class="controls">
+        <button type="button" class="ctl" id="btnReset" data-i18n-title="resetTip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          <span data-i18n="reset"></span></button>
+        <button type="button" class="ctl run" id="btnRun" data-i18n-title="runTip">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.4-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+          <span data-i18n="run"></span></button>
+        <button type="button" class="ctl" id="btnFast" data-i18n-title="fastTip">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 5.2v13.6a.8.8 0 0 0 1.25.66L12 13.6v5.2a.8.8 0 0 0 1.25.66l9.4-6.8a.8.8 0 0 0 0-1.32l-9.4-6.8A.8.8 0 0 0 12 5.2v5.2L3.75 4.54A.8.8 0 0 0 2.5 5.2z"/></svg>
+          <span data-i18n="fast"></span></button>
+        <button type="button" class="ctl" id="btnPause" data-i18n-title="pauseTip" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1.2"/><rect x="14" y="4" width="5" height="16" rx="1.2"/></svg>
+          <span data-i18n="pause"></span></button>
+        <div class="spacer"></div>
+        <button type="button" class="ctl stop" id="btnStop" data-i18n-title="stopTip" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+          <span data-i18n="stop"></span></button>
+      </div>
+
+      <div class="state" id="state" aria-live="polite"></div>
+
+      <div class="timeline">
+        <div class="ends"><span id="endStart">—</span><span id="endEnd">—</span></div>
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <div class="ticks" id="ticks"></div>
+      </div>
     </section>
 
-    <div class="col">
-      <section class="console" data-i18n-aria="controlsAria">
-        <div class="controls">
-          <button type="button" class="ctl" id="btnReset" data-i18n-title="resetTip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
-            <span data-i18n="reset"></span></button>
-          <button type="button" class="ctl run" id="btnRun" data-i18n-title="runTip">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.4-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
-            <span data-i18n="run"></span></button>
-          <button type="button" class="ctl" id="btnFast" data-i18n-title="fastTip">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 5.2v13.6a.8.8 0 0 0 1.25.66L12 13.6v5.2a.8.8 0 0 0 1.25.66l9.4-6.8a.8.8 0 0 0 0-1.32l-9.4-6.8A.8.8 0 0 0 12 5.2v5.2L3.75 4.54A.8.8 0 0 0 2.5 5.2z"/></svg>
-            <span data-i18n="fast"></span></button>
-          <button type="button" class="ctl" id="btnPause" data-i18n-title="pauseTip" disabled>
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1.2"/><rect x="14" y="4" width="5" height="16" rx="1.2"/></svg>
-            <span data-i18n="pause"></span></button>
-          <div class="spacer"></div>
-          <button type="button" class="ctl stop" id="btnStop" data-i18n-title="stopTip" disabled>
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-            <span data-i18n="stop"></span></button>
-        </div>
+    <section class="panel live" id="livePanel" hidden>
+      <h2 id="resultsTitle"></h2>
+      <div class="results-meta" id="resultsMeta" hidden></div>
+      <div id="kpis" class="kpis"></div>
+    </section>
 
-        <div class="state" id="state" aria-live="polite"></div>
+    <div class="cat-layout">
+      <nav class="cat-nav" id="inNav" data-i18n-aria="inputCats"></nav>
+      <div class="cat-body">
+        <section class="panel" data-cat="basic">
+          <h2 data-i18n="catBasic"></h2>
+          <form id="form" novalidate>
+            <div class="basic-grid">
+              <div>
+                <div id="fields"></div>
+                <div class="period-days" id="periodDays"></div>
+              </div>
+              <div>
+                <div class="field">
+                  <label for="f_label"><span data-i18n="scenarioName"></span> <span class="opt" data-i18n="optional"></span></label>
+                  <input id="f_label" maxlength="60" data-i18n-placeholder="scenarioPh">
+                </div>
+                <div class="field">
+                  <label for="f_who"><span data-i18n="yourName"></span></label>
+                  <input id="f_who" maxlength="60" autocomplete="name" required>
+                  <small data-i18n="nameHelp"></small>
+                </div>
+              </div>
+            </div>
+            <div id="formError" class="err-box" hidden></div>
+          </form>
+        </section>
 
-        <div class="timeline">
-          <div class="ends"><span id="endStart">—</span><span id="endEnd">—</span></div>
-          <div class="track"><div class="fill" id="fill"></div></div>
-          <div class="ticks" id="ticks"></div>
-        </div>
-      </section>
-
-      <section class="panel" id="planPanel" hidden>
-        <div class="panel-head">
-          <h2 data-i18n="planTitle"></h2>
-          <div class="seg" id="planSeg" role="group" data-i18n-aria="product"></div>
-        </div>
-        <div class="plan-controls">
-          <div class="field plan-target">
-            <label for="planTarget" data-i18n="target"></label>
-            <input id="planTarget" type="number" inputmode="numeric" min="0" step="1">
+        <section class="panel" data-cat="plan" id="planPanel">
+          <div class="panel-head">
+            <h2 data-i18n="planTitle"></h2>
+            <div class="seg" id="planSeg" role="group" data-i18n-aria="product"></div>
           </div>
-          <label class="check"><input type="checkbox" id="planSat"> <span data-i18n="satOff"></span></label>
-          <label class="check"><input type="checkbox" id="planSun"> <span data-i18n="sunOff"></span></label>
-          <div class="spacer"></div>
-          <button type="button" class="link" id="planClear" data-i18n="planClear"></button>
-        </div>
-        <dl class="plan-stats" id="planStats"></dl>
-        <p class="plan-hol" id="planHolidays"></p>
-        <div class="err-box warn" id="planWarn" hidden></div>
-        <p class="hint plan-hint" data-i18n="planHint"></p>
-        <div class="table-wrap plan-wrap"><table id="planTable" class="plan"></table></div>
-      </section>
+          <p class="empty" id="planNoPeriod" data-i18n="needPeriod" hidden></p>
+          <div id="planBody">
+          <div class="plan-controls">
+            <div class="field plan-target">
+              <label for="planTarget" data-i18n="target"></label>
+              <input id="planTarget" type="number" inputmode="numeric" min="0" step="1">
+            </div>
+            <label class="check"><input type="checkbox" id="planSat"> <span data-i18n="satOff"></span></label>
+            <label class="check"><input type="checkbox" id="planSun"> <span data-i18n="sunOff"></span></label>
+            <div class="spacer"></div>
+            <button type="button" class="link" id="planClear" data-i18n="planClear"></button>
+          </div>
+          <dl class="plan-stats" id="planStats"></dl>
+          <p class="plan-hol" id="planHolidays"></p>
+          <div class="err-box warn" id="planWarn" hidden></div>
+          <p class="hint plan-hint" data-i18n="planHint"></p>
+          <div class="table-wrap plan-wrap"><table id="planTable" class="plan"></table></div>
+          </div>
+        </section>
 
-      <section class="panel">
-        <h2 id="resultsTitle"></h2>
-        <div class="results-meta" id="resultsMeta" hidden></div>
-        <div id="kpis" class="kpis"></div>
-      </section>
+        <section class="panel" data-cat="shift" id="shiftPanel">
+          <div class="panel-head">
+            <h2 data-i18n="shiftTitle"></h2>
+            <div class="seg" id="shiftSeg" role="group" data-i18n-aria="product"></div>
+          </div>
+          <div class="shift-count" role="radiogroup" data-i18n-aria="shiftCount">
+            <span class="lbl" data-i18n="shiftCount"></span>
+            <label class="check"><input type="radio" name="shiftCount" value="1"> <span data-i18n="oneShift"></span></label>
+            <label class="check"><input type="radio" name="shiftCount" value="2"> <span data-i18n="twoShifts"></span></label>
+            <div class="spacer"></div>
+            <button type="button" class="link" id="shiftCopy" data-i18n="shiftCopy"></button>
+            <button type="button" class="link" id="shiftDefault" data-i18n="shiftDefault"></button>
+          </div>
+          <p class="hint shift-hint" data-i18n="shiftHint"></p>
+          <div class="shift-grids" id="shiftGrids"></div>
+        </section>
+      </div>
     </div>
   </main>
 
-  <main class="out" id="pageOutput" role="tabpanel" aria-labelledby="tabOutput" hidden>
+  <main class="page" id="pageOutput" role="tabpanel" aria-labelledby="tabOutput" hidden>
     <section class="panel out-head">
-      <div class="panel-head">
-        <div class="run-pick">
-          <label for="runSel" data-i18n="outRun"></label>
-          <select id="runSel"></select>
-        </div>
-        <div class="seg" id="productSeg" role="group" data-i18n-aria="product"></div>
+      <div class="run-pick">
+        <label for="runSel" data-i18n="outRun"></label>
+        <select id="runSel"></select>
       </div>
       <div class="results-meta" id="outMeta"></div>
-      <div id="outKpis" class="kpis"></div>
     </section>
 
     <div id="outEmpty" class="panel empty-panel" hidden></div>
 
-    <div class="out-grid" id="outBody">
-      <section class="panel">
-        <h2 data-i18n="totals"></h2>
-        <p class="hint" data-i18n="totalsHint"></p>
-        <div id="totals" class="bars"></div>
-      </section>
-      <section class="panel">
-        <div class="panel-head">
-          <h2 data-i18n="daily"></h2>
-          <div class="chips" id="stationChips" role="group" data-i18n-aria="station"></div>
+    <div class="cat-layout" id="outLayout">
+      <nav class="cat-nav" id="outNav" data-i18n-aria="outputCats"></nav>
+      <div class="cat-body">
+        <div data-ocat="overview">
+          <section class="panel">
+            <h2 data-i18n="kpiTitle"></h2>
+            <div id="outKpis" class="kpis"></div>
+          </section>
+          <section class="panel">
+            <h2 data-i18n="runInputs"></h2>
+            <div id="runInputs" class="run-inputs"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 data-i18n="compare"></h2>
+              <select id="metricSel" data-i18n-aria="metricAria"></select>
+            </div>
+            <div id="bars" class="bars"></div>
+          </section>
         </div>
-        <div class="chart" id="dailyChart"></div>
-      </section>
+
+        <div data-ocat="view">
+          <section class="panel view-head">
+            <h2 id="viewTitle"></h2>
+            <div class="seg" id="productSeg" role="group" data-i18n-aria="product"></div>
+          </section>
+          <p class="panel empty-panel" id="viewEmpty" hidden></p>
+          <div id="outBody">
+            <div class="out-grid">
+              <section class="panel">
+                <h2 data-i18n="totals"></h2>
+                <p class="hint" data-i18n="totalsHint"></p>
+                <div id="totals" class="bars"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h2 data-i18n="daily"></h2>
+                  <div class="chips" id="stationChips" role="group" data-i18n-aria="station"></div>
+                </div>
+                <div class="chart" id="dailyChart"></div>
+              </section>
+            </div>
+            <section class="panel" id="detailPanel">
+              <div class="panel-head">
+                <h2 data-i18n="dailyTable"></h2>
+                <button class="link" id="tableCsvBtn" type="button" data-i18n="tableCsv"></button>
+              </div>
+              <div class="table-wrap"><table id="dailyTable" class="daily"></table></div>
+            </section>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <section class="panel" id="detailPanel">
-      <div class="panel-head">
-        <h2 data-i18n="dailyTable"></h2>
-        <button class="link" id="tableCsvBtn" type="button" data-i18n="tableCsv"></button>
-      </div>
-      <div class="table-wrap"><table id="dailyTable" class="daily"></table></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2 data-i18n="compare"></h2>
-        <select id="metricSel" data-i18n-aria="metricAria"></select>
-      </div>
-      <div id="bars" class="bars"></div>
-    </section>
   </main>
 
   <main class="out" id="pageHistory" role="tabpanel" aria-labelledby="tabHistory" hidden>
@@ -445,8 +536,12 @@
           <h2 data-i18n="history"></h2>
           <p class="hint hist-hint" data-i18n="historyHint"></p>
         </div>
-        <button class="link" id="csvBtn" type="button" data-i18n="csv"></button>
+        <div class="hist-actions">
+          <button class="link" id="csvBtn" type="button" data-i18n="csv"></button>
+          <button class="link danger" id="clearHistBtn" type="button" data-i18n="clearHist"></button>
+        </div>
       </div>
+      <div class="err-box warn" id="adminMsg" hidden></div>
       <div class="table-wrap"><table id="hist"></table></div>
     </section>
   </main>
@@ -509,6 +604,19 @@
       confirmStop: "Stop this run? FlexSim will be closed and no results will be saved.",
       startLbl: "Start", endLbl: "End",
       tabInput: "Parameters", tabOutput: "Metrics", tabHistory: "Run history",
+      inputCats: "Input categories", outputCats: "Metric categories", grpInputs: "Inputs", grpOutputs: "Metrics",
+      catBasic: "Period and run info", catPlan: "Daily input plan", catShift: "Shifts", catOverview: "Overview",
+      needPeriod: "Choose a start and end date under Period and run info first.",
+      kpiTitle: "Key metrics", runInputs: "Inputs used in this run",
+      sumShift: "{p}: {n} shift(s)", sumTarget: "Target {v}",
+      shiftTitle: "Shifts", shiftCount: "Shifts per day", oneShift: "1 shift", twoShifts: "2 shifts",
+      shiftCopy: "Copy shift 1 to shift 2", shiftDefault: "Restore defaults",
+      shiftHint: "Values per weekday and station, the same as the FlexSim shift tables. With 1 shift, shift 2 is written as 0.",
+      shiftN: "Shift {n}", shiftOff: "not used", eShift: "{p} shift {n}: every value must be between 0 and {max}.",
+      clearHist: "Clear history", adminPrompt: "Enter the admin code to clear all run history. Finished results are archived on the simulator PC, not deleted.",
+      adminSent: "Clear request sent. Waiting for the simulator PC…", adminOk: "History cleared ({n} runs archived on the simulator PC).",
+      adminBad: "Wrong admin code.", adminLocked: "Too many wrong codes. Try again in 15 minutes.", adminOff: "No admin code is set on the simulator PC (config.json → admin_code).",
+      adminBusy: "A run is in progress. Clear the history after it finishes.", adminTimeout: "No reply from the simulator PC yet. Check that it's online.",
       planTitle: "Daily input plan", target: "Target", satOff: "Saturdays off", sunOff: "Sundays off", planClear: "Clear inputs for this product",
       planHint: "Type how many to start each day, or paste a column from Excel. Days you leave empty share the rest of the target evenly. Holidays are locked.",
       sWorkDays: "Work days", sFilled: "Planned input", sRemain: "Left to plan", sPerDay: "Suggested per open day",
@@ -587,6 +695,19 @@
       confirmStop: "要停止這次模擬嗎？FlexSim 會被關閉，不會保留結果。",
       startLbl: "開始", endLbl: "結束",
       tabInput: "參數調整", tabOutput: "指標呈現", tabHistory: "執行紀錄",
+      inputCats: "輸入類別", outputCats: "指標類別", grpInputs: "輸入", grpOutputs: "指標",
+      catBasic: "期間與基本資料", catPlan: "每日投產計畫", catShift: "班別設定", catOverview: "總覽",
+      needPeriod: "請先到「期間與基本資料」選擇開始和結束日期。",
+      kpiTitle: "主要指標", runInputs: "這次模擬用的輸入",
+      sumShift: "{p} {n} 班", sumTarget: "Target {v}",
+      shiftTitle: "班別設定", shiftCount: "每天班數", oneShift: "1 班", twoShifts: "2 班",
+      shiftCopy: "把班別 1 複製到班別 2", shiftDefault: "恢復預設值",
+      shiftHint: "每個星期、每個站別的數值，和 FlexSim 的班別表一樣。選 1 班時，班別 2 會寫入 0。",
+      shiftN: "班別 {n}", shiftOff: "未使用", eShift: "{p} 班別 {n}：每格必須介於 0 到 {max}。",
+      clearHist: "清除紀錄", adminPrompt: "輸入管理代碼以清除所有執行紀錄。已完成的結果會封存在模擬電腦上，不會真的刪掉。",
+      adminSent: "已送出清除要求，等待模擬電腦處理…", adminOk: "已清除紀錄（{n} 筆封存在模擬電腦上）。",
+      adminBad: "管理代碼錯誤。", adminLocked: "錯誤次數太多，請 15 分鐘後再試。", adminOff: "模擬電腦還沒設定管理代碼（config.json 的 admin_code）。",
+      adminBusy: "有模擬正在執行，請等它結束再清除。", adminTimeout: "模擬電腦還沒回應，請確認它在線上。",
       planTitle: "每日投產計畫", target: "目標量 Target", satOff: "週六休息", sunOff: "週日休息", planClear: "清除這個產品的投入量",
       planHint: "填入每天要投產的數量，也可以直接從 Excel 複製一整欄貼上。沒填的日子會平均分攤剩下的目標量。假日自動鎖定不能填。",
       sWorkDays: "工作天數", sFilled: "已填投入", sRemain: "尚未分配", sPerDay: "每個未填工作日建議",
@@ -746,6 +867,9 @@
       },
       async getJob(id) { await status(); return (await merge(id)) || { id, status: "submitted" }; },
       async cancel(id) { await writeJson("cancel", `${id}.json`, { id, cancelled_at: new Date().toISOString() }); },
+      async admin(id, data) { await writeJson("admin", `${id}.json`, data); },
+      async adminResult(id) { return await readJson("admin", `${id}.result.json`); },
+      newId,
       async control(id, action) { await writeJson("control", `${id}.json`, { id, action, at: new Date().toISOString() }); },
       async history() {
         await status();
@@ -976,7 +1100,8 @@
   function renderPlan() {
     if (!PD()) return;
     const per = currentPeriod();
-    $("planPanel").hidden = !per;
+    $("planNoPeriod").hidden = !!per; $("planBody").hidden = !per;
+    renderInNav();
     if (!per) return;
     const prods = PD().products;
     if (!prods.find(p => p.name === planProduct)) planProduct = prods[0].name;
@@ -1003,7 +1128,7 @@
         const v = inp.value.trim();
         if (v === "" || Number(v) <= 0) delete pl.inputs[inp.dataset.iso]; else pl.inputs[inp.dataset.iso] = Number(v);
         inp.classList.toggle("filled", v !== "" && Number(v) > 0);
-        savePlans(); refreshSuggest();
+        savePlans(); refreshSuggest(); renderInNav();
       });
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); (inputs[k + (e.shiftKey ? -1 : 1)] || inp).focus(); } });
       inp.addEventListener("paste", (e) => {
@@ -1045,7 +1170,7 @@
     }
     return out;
   }
-  $("planTarget").addEventListener("input", () => { const pl = planFor(planProduct); pl.target = $("planTarget").value === "" ? 0 : Number($("planTarget").value); savePlans(); refreshSuggest(); });
+  $("planTarget").addEventListener("input", () => { const pl = planFor(planProduct); pl.target = $("planTarget").value === "" ? 0 : Number($("planTarget").value); savePlans(); refreshSuggest(); renderInNav(); });
   $("planSat").addEventListener("change", () => { planFor(planProduct).sat_off = $("planSat").checked; savePlans(); renderPlan(); });
   $("planSun").addEventListener("change", () => { planFor(planProduct).sun_off = $("planSun").checked; savePlans(); renderPlan(); });
   $("planClear").addEventListener("click", () => {
@@ -1053,6 +1178,84 @@
     if (!confirm(t("confirmClear", { p: L(p, "label") }))) return;
     planFor(planProduct).inputs = {}; savePlans(); renderPlan();
   });
+
+  // ---------- input categories ----------
+  let IN_CAT = load("simInCat") || "basic";
+  function inCats() {
+    const c = [{ k: "basic", label: t("catBasic") }];
+    if (PD()) c.push({ k: "plan", label: t("catPlan") });
+    if (SH()) c.push({ k: "shift", label: t("catShift") });
+    return c;
+  }
+  function inSummary(k) {
+    if (k === "basic") { const p = currentPeriod(); return p ? `${dayFmt(p.start, false)} – ${dayFmt(p.end)}` : "—"; }
+    if (k === "plan") return PD().products.map(p => `${L(p, "label")} ${fmt(Number(planFor(p.name).target) || 0, 0)}`).join(", ");
+    if (k === "shift") return SH().products.map(p => t("sumShift", { p: L(p, "label"), n: shiftFor(p.name).count })).join(", ");
+    return "";
+  }
+  function renderInNav() {
+    if (!CFG) return;
+    const cats = inCats();
+    if (!cats.find(c => c.k === IN_CAT)) IN_CAT = "basic";
+    $("inNav").innerHTML = `<div class="grp">${esc(t("grpInputs"))}</div>` + cats.map(c =>
+      `<button type="button" data-k="${c.k}" aria-current="${c.k === IN_CAT}"><b>${esc(c.label)}</b><small>${esc(inSummary(c.k))}</small></button>`).join("");
+    $("inNav").querySelectorAll("button").forEach(b => b.onclick = () => showInCat(b.dataset.k));
+    document.querySelectorAll("#app [data-cat]").forEach(sec => sec.hidden = sec.dataset.cat !== IN_CAT);
+  }
+  function showInCat(k) { IN_CAT = k; store("simInCat", k); renderInNav(); if (k === "plan") renderPlan(); if (k === "shift") renderShifts(); }
+
+  // ---------- shifts ----------
+  const SH = () => CFG.shifts;
+  let SHIFTS = {}, shiftProduct = null;
+  try { SHIFTS = JSON.parse(load("simShifts") || "{}") || {}; } catch (e) { SHIFTS = {}; }
+  const saveShifts = () => store("simShifts", JSON.stringify(SHIFTS));
+  function defaultGrid() { const d = SH().defaults.values; return SH().rows.map(() => SH().columns.map((_, j) => d[j] ?? 0)); }
+  function shiftFor(name) {
+    const ok = (g) => Array.isArray(g) && g.length === SH().rows.length && g.every(r => Array.isArray(r) && r.length === SH().columns.length);
+    let s = SHIFTS[name];
+    if (!s || !Array.isArray(s.grids)) s = SHIFTS[name] = { count: SH().defaults.count || 2, grids: [] };
+    for (let i = 0; i < 2; i++) if (!ok(s.grids[i])) s.grids[i] = defaultGrid();
+    return s;
+  }
+  function renderShifts() {
+    if (!SH()) return;
+    const prods = SH().products;
+    if (!prods.find(p => p.name === shiftProduct)) shiftProduct = prods[0].name;
+    $("shiftSeg").innerHTML = prods.map(p => `<button type="button" data-p="${esc(p.name)}" aria-pressed="${p.name === shiftProduct}">${esc(L(p, "label"))}</button>`).join("");
+    $("shiftSeg").querySelectorAll("button").forEach(b => b.onclick = () => { shiftProduct = b.dataset.p; renderShifts(); });
+    const sf = shiftFor(shiftProduct);
+    document.querySelectorAll('input[name="shiftCount"]').forEach(r => r.checked = Number(r.value) === sf.count);
+    $("shiftCopy").hidden = sf.count < 2;
+    const max = SH().max || 24;
+    $("shiftGrids").innerHTML = [0, 1].map(gi => {
+      const off = gi >= sf.count;
+      return `<div class="shift-grid${off ? " off" : ""}" data-off="${esc(t("shiftOff"))}"><h3>${esc(t("shiftN", { n: gi + 1 }))}</h3>
+        <div class="table-wrap"><table class="shift"><thead><tr><th class="l"></th>${SH().columns.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
+        SH().rows.map((rw, ri) => `<tr><th class="l">${esc(rw)}</th>${SH().columns.map((c, ci) =>
+          `<td><input type="number" min="0" max="${max}" step="0.5" inputmode="decimal" data-g="${gi}" data-r="${ri}" data-c="${ci}" value="${esc(sf.grids[gi][ri][ci])}" ${off ? "disabled" : ""} aria-label="${esc(t("shiftN", { n: gi + 1 }))} ${esc(rw)} ${esc(c)}"></td>`).join("")}</tr>`).join("") +
+        `</tbody></table></div></div>`;
+    }).join("");
+    $("shiftGrids").querySelectorAll("input").forEach(inp => inp.addEventListener("input", () => {
+      sf.grids[+inp.dataset.g][+inp.dataset.r][+inp.dataset.c] = inp.value === "" ? 0 : Number(inp.value);
+      saveShifts();
+    }));
+    renderInNav();
+  }
+  document.querySelectorAll('input[name="shiftCount"]').forEach(r => r.addEventListener("change", () => { shiftFor(shiftProduct).count = Number(r.value); saveShifts(); renderShifts(); }));
+  $("shiftCopy").addEventListener("click", () => { const sf = shiftFor(shiftProduct); sf.grids[1] = sf.grids[0].map(r => r.slice()); saveShifts(); renderShifts(); });
+  $("shiftDefault").addEventListener("click", () => { SHIFTS[shiftProduct] = null; shiftFor(shiftProduct); saveShifts(); renderShifts(); });
+  function shiftsForSubmit() {
+    if (!SH()) return { data: null, error: null };
+    const max = SH().max || 24, out = {};
+    for (const p of SH().products) {
+      const sf = shiftFor(p.name);
+      for (let gi = 0; gi < sf.count; gi++)
+        if (sf.grids[gi].some(r => r.some(v => !(Number(v) >= 0 && Number(v) <= max))))
+          return { data: null, error: t("eShift", { p: L(p, "label"), n: gi + 1, max }), product: p.name };
+      out[p.name] = { count: sf.count, grids: sf.grids.slice(0, 2).map(g => g.map(r => r.map(Number))) };
+    }
+    return { data: out, error: null };
+  }
 
   // ---------- console ----------
   function drawTimeline(start, end, atDate, kind) {
@@ -1156,6 +1359,7 @@
     }
     $("btnPause").disabled = !running || paused || !!pending;
     $("btnStop").disabled = !busy;
+    $("livePanel").hidden = !busy;  // 參數調整頁只在執行中顯示即時數值，完成後到「指標呈現」看
   }
 
   // ---------- who / which device (no IP is available to a page opened from a file) ----------
@@ -1175,16 +1379,18 @@
   async function submit(mode) {
     $("formError").hidden = true;
     const { params, error } = readForm();
-    if (error) { $("formError").textContent = error; $("formError").hidden = false; return; }
+    if (error) { showInCat("basic"); $("formError").textContent = error; $("formError").hidden = false; return; }
     const who = $("f_who").value.trim();
-    if (!who) { $("f_who").closest(".field").classList.add("invalid"); $("formError").textContent = t("eName"); $("formError").hidden = false; $("f_who").focus(); return; }
+    if (!who) { showInCat("basic"); $("f_who").closest(".field").classList.add("invalid"); $("formError").textContent = t("eName"); $("formError").hidden = false; $("f_who").focus(); return; }
     $("f_who").closest(".field").classList.remove("invalid");
     store("simLastParams", JSON.stringify(params));
     store("simWho", who);
     $("btnRun").disabled = $("btnFast").disabled = true;
     try {
       const plans = plansForSubmit();
-      const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who, client: clientInfo(), plans });
+      const sh = shiftsForSubmit();
+      if (sh.error) { shiftProduct = sh.product; showInCat("shift"); alert(sh.error); $("btnRun").disabled = $("btnFast").disabled = false; return; }
+      const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who, client: clientInfo(), plans, shifts: sh.data });
       activeId = selectedId = job.id; activeJob = job; pending = null;
       renderJob(job);
       if (mode !== "fast") showLive(job);
@@ -1218,7 +1424,7 @@
   $("btnReset").addEventListener("click", () => {
     const hasPlan = Object.values(PLANS).some(p => p && Object.keys(p.inputs || {}).length);
     if (hasPlan && !confirm(t("confirmReset"))) return;
-    PLANS = {}; savePlans();
+    PLANS = {}; savePlans(); SHIFTS = {}; saveShifts();
     store("simLastParams");
     buildForm(defaults());
     $("f_label").value = "";
@@ -1227,7 +1433,7 @@
       selectedId = null;
       clearResults();
       setIdle("resetMsg");
-      renderBars(); renderTable();
+      renderBars(); renderTable(); renderShifts();
     }
   });
 
@@ -1427,47 +1633,76 @@
   }
   const keyIdx = (tb, def) => tb.columns.findIndex(c => (def?.key_columns || []).includes(c));
 
+  let OUT_CAT = load("simOutCat") || "overview";
+  const outViews = () => CFG.output_views || [];
+  function renderOutNav(job) {
+    const cats = [{ k: "overview", label: t("catOverview"), sub: "" },
+      ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", ") }))];
+    if (!cats.find(c => c.k === OUT_CAT)) OUT_CAT = "overview";
+    $("outNav").innerHTML = `<div class="grp">${esc(t("grpOutputs"))}</div>` + cats.map(c =>
+      `<button type="button" data-k="${esc(c.k)}" aria-current="${c.k === OUT_CAT}"><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`).join("");
+    $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
+    document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
+    document.querySelector('[data-ocat="view"]').hidden = OUT_CAT === "overview";
+  }
+
+  function renderRunInputs(job) {
+    const box = $("runInputs"), parts = [];
+    const fmtv = (v) => fmt(v, Number.isInteger(v) ? 0 : 2);
+    if (job.plans) for (const [name, pl] of Object.entries(job.plans)) {
+      const p = (PD()?.products || []).find(x => x.name === name);
+      const sh = job.shifts?.[name];
+      parts.push(`<div class="ri"><h3>${esc(p ? L(p, "label") : name)}</h3><dl>
+        <dt>${esc(t("target"))}</dt><dd>${fmtv(pl.target)}</dd>
+        <dt>${esc(t("sWorkDays"))}</dt><dd>${fmtv(pl.total_work_day)} / ${fmtv(pl.total_day)}</dd>
+        <dt>${esc(t("sFilled"))}</dt><dd>${fmtv(pl.filled)}</dd>
+        <dt>${esc(t("sPerDay"))}</dt><dd>${fmtv(pl.per_day)}</dd>
+        ${sh ? `<dt>${esc(t("shiftCount"))}</dt><dd>${sh.count}</dd>` : ""}
+      </dl></div>`);
+    }
+    box.innerHTML = parts.join("") || `<p class="empty">—</p>`;
+  }
+
   function renderOutput() {
     if (!CFG) return;
     const runs = doneRuns();
-    if (!runs.length) {
-      $("outEmpty").hidden = false; $("outEmpty").textContent = t("outEmpty");
-      ["outBody", "detailPanel"].forEach(id => $(id).hidden = true);
-      document.querySelector(".out-head").hidden = true;
-      renderBars();
-      return;
-    }
-    document.querySelector(".out-head").hidden = false;
+    const has = runs.length > 0;
+    $("outEmpty").hidden = has; $("outEmpty").textContent = t("outEmpty");
+    $("outLayout").hidden = !has;
+    document.querySelector(".out-head").hidden = !has;
+    if (!has) { renderBars(); return; }
     if (!runs.find(r => r.id === outRunId)) outRunId = runs[0].id;
     $("runSel").innerHTML = runs.map(r => `<option value="${esc(r.id)}">${esc(runName(r))}, ${esc(periodLabel(r.parameters))}</option>`).join("");
     $("runSel").value = outRunId;
     const job = runs.find(r => r.id === outRunId);
     selectedId = job.id;
-
     const bits = [periodLabel(job.parameters)];
     if (job.submitted_by) bits.push(t("runBy", { who: job.submitted_by }).replace(/^[,，]\s*/, ""));
     if (job.wall_seconds) bits.push(t("tookRun", { s: fmt(job.wall_seconds, 0) }));
     $("outMeta").textContent = bits.join(LANG === "zh" ? "，" : ", ");
-    const prev = history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
-    $("outKpis").innerHTML = kpiTiles(job.metrics, job.series, prev);
+    renderOutNav(job);
 
-    const defs = tableDefs();
-    if (!defs.find(d => d.name === outTable)) outTable = defs[0]?.name || null;
-    $("productSeg").innerHTML = defs.map(d => `<button type="button" data-t="${esc(d.name)}" aria-pressed="${d.name === outTable}">${esc(L(d, "label"))}</button>`).join("");
-    $("productSeg").hidden = defs.length < 2;
-    $("productSeg").querySelectorAll("button").forEach(b => b.onclick = () => { outTable = b.dataset.t; renderOutput(); });
-
-    const def = defs.find(d => d.name === outTable);
-    const tb = job.tables?.[outTable];
-    if (!tb || !tb.rows.length) {
-      $("outEmpty").hidden = false; $("outEmpty").textContent = t("noTables");
-      ["outBody", "detailPanel"].forEach(id => $(id).hidden = true);
+    if (OUT_CAT === "overview") {
+      const prev = history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
+      $("outKpis").innerHTML = kpiTiles(job.metrics, job.series, prev);
+      renderRunInputs(job);
+      renderBars();
     } else {
-      $("outEmpty").hidden = true;
-      ["outBody", "detailPanel"].forEach(id => $(id).hidden = false);
-      renderStations(tb, def); renderTotals(tb, def); renderDaily(tb, def); renderDailyTable(tb, def);
+      const view = outViews().find(v => v.name === OUT_CAT);
+      $("viewTitle").textContent = L(view, "label");
+      const defs = tableDefs().filter(d => d.view === OUT_CAT);
+      if (!defs.find(d => d.name === outTable)) outTable = defs[0]?.name || null;
+      $("productSeg").innerHTML = defs.map(d => `<button type="button" data-t="${esc(d.name)}" aria-pressed="${d.name === outTable}">${esc(L(d, "product_label") || L(d, "label"))}</button>`).join("");
+      $("productSeg").hidden = defs.length < 2;
+      $("productSeg").querySelectorAll("button").forEach(b => b.onclick = () => { outTable = b.dataset.t; renderOutput(); });
+      const def = defs.find(d => d.name === outTable);
+      const tb = job.tables?.[outTable];
+      const ok = tb && tb.rows.length;
+      $("viewEmpty").hidden = !!ok; $("viewEmpty").textContent = t("noTables");
+      $("outBody").hidden = !ok;
+      if (ok) { renderStations(tb, def); renderTotals(tb, def); renderDaily(tb, def); renderDailyTable(tb, def); }
     }
-    renderBars(); renderTable();
+    renderTable();
   }
   $("runSel").addEventListener("change", (e) => { outRunId = e.target.value; renderOutput(); });
 
@@ -1584,10 +1819,45 @@
     if (stateMode === "job" && shownJob) renderJob(shownJob); else setIdle();
     refreshSimStatus(true).catch(() => {});
     if (TAB === "output") renderOutput();
+    renderInNav(); if (IN_CAT === "shift") renderShifts();
   }
   document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
 
   $("metricSel").addEventListener("change", renderBars);
+
+  // ---------- admin: clear run history ----------
+  async function sha256hex(text) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, "0")).join("");
+  }
+  function adminMsg(text, ok) { $("adminMsg").hidden = !text; $("adminMsg").textContent = text || ""; $("adminMsg").classList.toggle("ok", !!ok); }
+  $("clearHistBtn").addEventListener("click", async () => {
+    const code = prompt(t("adminPrompt"));
+    if (!code) return;
+    const id = "clear-" + T.newId();
+    try {
+      // 代碼本身不寫進共用資料夾，只送「代碼＋這次要求編號」的雜湊，模擬電腦用同樣方式比對
+      const hash = await sha256hex(code.trim() + ":" + id);
+      await T.admin(id, { action: "clear_history", hash, by: $("f_who").value.trim() || null, at: new Date().toISOString() });
+    } catch (e) { adminMsg(e.message); return; }
+    adminMsg(t("adminSent"));
+    $("clearHistBtn").disabled = true;
+    const t0 = Date.now();
+    const tick = async () => {
+      const r = await T.adminResult(id).catch(() => null);
+      if (r) {
+        $("clearHistBtn").disabled = false;
+        const map = { ok: ["adminOk", true], bad_code: ["adminBad"], locked: ["adminLocked"], disabled: ["adminOff"], busy: ["adminBusy"] };
+        const [k, ok] = map[r.status] || ["adminBad"];
+        adminMsg(t(k, { n: r.archived ?? 0 }), ok);
+        if (r.status === "ok") { outRunId = null; selectedId = null; await refreshHistory(); clearResults(); }
+        return;
+      }
+      if (Date.now() - t0 > 180000) { $("clearHistBtn").disabled = false; adminMsg(t("adminTimeout")); return; }
+      setTimeout(tick, 3000);
+    };
+    setTimeout(tick, 3000);
+  });
 
   $("csvBtn").addEventListener("click", () => {
     const head = ["scenario", "submitted_by", "device_id", "os", "browser", "timezone", "utc_offset", "submitted_at", "status", "mode", "run_seconds", ...(DI ? ["period"] : []),
@@ -1616,6 +1886,7 @@
       buildForm(saved || defaults());
       clearResults(); setIdle();
       $("tabs").hidden = false;
+      renderInNav(); renderShifts(); showInCat(IN_CAT);
       showTab((location.hash || "").slice(1), false);
       await refreshSimStatus();
       await refreshHistory();

@@ -11,3 +11,4 @@ __pycache__/
 *.pyd
 worker.log
 runs/
+history_archive/

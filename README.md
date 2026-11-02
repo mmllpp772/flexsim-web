@@ -17,7 +17,8 @@ FlexSim 跑在你的桌機上，美國同事在網頁輸入參數 → 按 Run �
 | `config.json` | **唯一要改的檔案**：模型路徑、開放的參數、要讀的指標 |
 | `onedrive_worker.py` | 主程式：監看共用資料夾、跑 FlexSim、寫回結果 |
 | `runner.py` | 核心：檢查參數、用命令列開 FlexSim 跑模擬、讀指標 |
-| `schedule.py` | 每日投產計畫：聯邦假日、Suggest Input 平攤、寫入 WUS_schedule |
+| `schedule.py` | 每日投產計畫（聯邦假日、Suggest Input 平攤）和班別設定，產生寫入 FlexSim 的指令 |
+| `history_archive/` | 清除紀錄時封存的舊紀錄（自動產生，只在你電腦上） |
 | `check_flexsim.py` | 連線檢查：確認這台電腦能用命令列控制 FlexSim |
 | `index.html` | 網頁（英文介面），啟動時自動複製到共用資料夾成為 `Simulator.html` |
 | `start.bat` | 正式上線用：雙擊啟動，不用開 VS Code |
@@ -93,15 +94,40 @@ reset 前、後各寫一次，避免模型 reset 時把表格重建。設定在 
 
 ### 網頁分成三頁
 
-- **參數調整**：設定期間、控制按鈕（重設／執行／快轉／暫停／停止）、時間軸、執行中的即時數值
-- **指標呈現**：選要看哪一次模擬、切換產品（Bianca／Strata）、各站總產出、每日產出長條圖（點站別切換，滑鼠移到長條上看數字）、每日明細表（可下載 CSV）、各次結果比較
-- **執行紀錄**：所有送出過的模擬，包含情境、狀態、期間、**執行者、裝置、時區**、送出時間、模式、執行時間和指標，可下載 CSV
+- **參數調整**：最上方是控制區（重設／執行／快轉／暫停／停止）和時間軸，執行中會出現即時數值。下面是**左邊分類選單＋右邊內容**：
+  - 期間與基本資料：開始／結束日期、情境名稱、你的名字（必填）
+  - 每日投產計畫：見上一節
+  - 班別設定：見下一節
+- **指標呈現**：上方選要看哪一次模擬，左邊分類：
+  - 總覽：主要指標、這次模擬用的輸入（Target、工作天數、班數…）、各次結果比較
+  - 每日產出：切換 Bianca／Strata、各站總產出、每日產出長條圖、每日明細表（可下載 CSV）
+- **執行紀錄**：所有送出過的模擬，包含執行者、裝置、時區等，可下載 CSV、可用管理代碼清除
+
+之後新增輸入或指標類別，左邊選單會多一項，不會全部擠在同一頁。指標類別在 `config.json` 的 `output_views` 和 `tables` 設定。
 
 送出時「你的名字」是必填。因為網頁是直接從 OneDrive 資料夾開的檔案，**瀏覽器不會讓網頁讀取 IP**，所以改記錄：裝置代號（每台電腦每個瀏覽器固定一組）、作業系統、瀏覽器、時區、送出時的當地時間。
 
-模擬完成後，按控制區的「查看指標」，或在執行紀錄點一下那一筆，就會切到指標呈現頁。
+### 班別設定（參數調整頁）
 
-指標呈現頁的資料來自 `config.json` 的 `tables`：模擬跑完後，把 FlexSim 裡的 Global Table 整張匯出（目前是 `WUS_Daily_Record` 和 `WUS_Daily_Record_Strara`），`skip_rows` 裡的列（`TOTAL`）不顯示。數字欄會自動加總、畫圖；`key_columns`（Date、Weekday）當作文字欄顯示。
+Bianca、Strata 分開設定，各自選 **1 班或 2 班**，每班可以編輯「星期 × 站別」的數值（SMT、DIP、FA_L1、FA_L2、FA_L4、POD、Packing），對應 FlexSim 的：
+
+| 產品 | 班別 1 | 班別 2 |
+|---|---|---|
+| Bianca | `WUS_workday_schedul_Bianca_Shift1` | `WUS_workday_schedul_Bianca_Shift2` |
+| Strata | `WUS_workday_schedul_Strata_Shift1` | `WUS_workday_schedul_Strata_Shift2` |
+
+選 1 班時，班別 2 整張寫入 0。預設值和表名在 `config.json` 的 `shifts`。
+
+### 清除執行紀錄
+
+執行紀錄頁的「清除紀錄」要輸入**管理代碼**：
+
+1. 在**你電腦上**的 `config.json` 設定 `"admin_code": "你自己的代碼"`（留空 = 不允許清除），重新啟動 `onedrive_worker.py`
+2. 網頁按「清除紀錄」→ 輸入代碼 → 模擬電腦比對正確後，把所有紀錄**搬到你電腦的 `history_archive/` 資料夾封存**（不是真的刪掉）
+3. 代碼不會以明碼放到共用資料夾：網頁只送出「代碼＋這次要求編號」的雜湊值，每次都不一樣，看到也無法重複使用
+4. 連續錯 5 次會鎖 15 分鐘；有模擬正在跑時不能清除
+
+> ⚠️ 設定了 `admin_code` 的 `config.json` 不要推到公開的 GitHub。
 
 ### 網頁功能
 

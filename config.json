@@ -145,6 +145,59 @@
     "federal_holidays": true
   },
   "_daily_input說明": "每日投產計畫：網頁依期間產生每天一列，使用者填 Target 和每天的 SMT Input，系統算 Suggest Input、判斷假日（週末規則＋美國聯邦假日），寫進 schedule_table（欄位順序：Month、Week of Month、Day of Month、Weekday、SMT Input、Suggest Input、Holiday），並把 Target、週六／週日休息（1=休息）、總天數、工作天數寫進 year_table 對應的列。year_table_col：該產品在 WUS_year 是第幾欄。",
+  "shifts": {
+    "products": [
+      {
+        "name": "bianca",
+        "label": "Bianca",
+        "tables": [
+          "WUS_workday_schedul_Bianca_Shift1",
+          "WUS_workday_schedul_Bianca_Shift2"
+        ]
+      },
+      {
+        "name": "strata",
+        "label": "Strata",
+        "tables": [
+          "WUS_workday_schedul_Strata_Shift1",
+          "WUS_workday_schedul_Strata_Shift2"
+        ]
+      }
+    ],
+    "rows": [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "columns": [
+      "SMT",
+      "DIP",
+      "FA_L1",
+      "FA_L2",
+      "FA_L4",
+      "POD",
+      "Packing"
+    ],
+    "defaults": {
+      "count": 2,
+      "values": [
+        7,
+        7,
+        7,
+        7,
+        7,
+        12,
+        7
+      ]
+    },
+    "max": 24,
+    "inactive_value": 0
+  },
+  "_shifts說明": "班別設定：每個產品可選 1 或 2 班，網頁上可以改每個星期 × 站別的數值，寫進 tables 列出的 FlexSim 表（第 1 個是班別 1、第 2 個是班別 2）。選 1 班時，班別 2 整張寫入 inactive_value。rows / columns 要和 FlexSim 表的列、欄順序一致。",
   "metrics": [
     {
       "name": "total_day",
@@ -166,6 +219,14 @@
     }
   ],
   "_metrics說明": "每個指標是一段回傳數字的 FlexScript，跑完模擬後讀取。請先在 FlexSim 的 Script Console 測試，例如輸入 return Table(\"WUS_year\")[9][1]; 看結果對不對。 label_zh / unit_zh 是切換成中文時顯示的名稱和單位，可省略（省略就顯示英文）。",
+  "output_views": [
+    {
+      "name": "daily_output",
+      "label": "Daily output",
+      "label_zh": "每日產出"
+    }
+  ],
+  "_output_views說明": "指標呈現頁左邊的分類。每個 tables 項目用 view 指定放在哪個分類、product_label 是產品名稱。之後新增輸出類別（例如重工數量），在這裡加一個 view，再到 tables 加對應的表。",
   "tables": [
     {
       "name": "bianca",
@@ -178,7 +239,9 @@
       "key_columns": [
         "Date",
         "Weekday"
-      ]
+      ],
+      "view": "daily_output",
+      "product_label": "Bianca"
     },
     {
       "name": "strata",
@@ -191,8 +254,12 @@
       "key_columns": [
         "Date",
         "Weekday"
-      ]
+      ],
+      "view": "daily_output",
+      "product_label": "Strata"
     }
   ],
-  "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。"
+  "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。",
+  "admin_code": "",
+  "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。"
 }
