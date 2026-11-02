@@ -64,8 +64,22 @@ python onedrive_worker.py
 看到 `Watching C:\Users\...\OneDrive - 公司名稱\FlexSimShare` 就成功了。
 
 - 程式會自動在公司 OneDrive 裡建立 `FlexSimShare` 資料夾，**不用填路徑**
-- 終端機要一直開著，按 `Ctrl + C` 停止（停止後網頁會顯示 offline）
+- 終端機要一直開著。按 `Ctrl + C` 停止：如果正在跑模擬，會先關掉背景的 FlexSim 再結束（再按一次 `Ctrl + C` 立刻強制結束）。停止後網頁會顯示 offline
+- 程式中斷時正在跑的工作，下次啟動會標記為 Interrupted，**不會自動重跑**；還沒開始的工作則會照常執行
 - 想先不開 FlexSim、只測網頁流程：把 `config.json` 的 `"mock_mode"` 改成 `true`（用假資料，網頁上方會有黃色 Demo 提示）
+
+### 網頁功能
+
+| 按鈕 | 作用 |
+|---|---|
+| **Reset 重設** | 把輸入恢復成預設值，清掉畫面上的結果（不會動到 FlexSim） |
+| **Run 執行** | 執行模擬，期間顯示進度和時間軸（模擬到哪一天） |
+| **Fast forward 快轉** | 直接跑到結束，中途不回報進度，結果稍微快一點出來 |
+| **Stop 停止** | 停止正在跑或排隊中的模擬，背景的 FlexSim 會被關閉（要等 OneDrive 同步，約幾十秒生效） |
+
+- 右上角可以切換 **English / 中文**，選擇會記在瀏覽器裡。標題、指標名稱等來自 config.json 的文字，中文用 `title_zh`、`subtitle_zh`、`label_zh`、`unit_zh`、`help_zh`（沒填就顯示英文）
+- 日期用兩個日期選擇器輸入，送出時自動拆成 `year`、`st_m`、`st_d`、`ed_m`、`ed_d`（設定在 config.json 的 `date_inputs`）
+- 想清掉舊的執行紀錄：先停止程式，再把 `FlexSimShare` 裡 `jobs/` 和 `results/` 的檔案刪掉
 
 `FlexSimShare` 裡會自動出現：
 
