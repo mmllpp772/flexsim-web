@@ -176,37 +176,7 @@
   const ACTIVE = ["submitted", "queued", "running"];
 
   // =====================================================================
-  // Transport 1: HTTP（直連模式，由 server.py 提供網頁時使用）
-  // =====================================================================
-  function httpTransport() {
-    let accessKey = load("simKey") || "";
-    async function api(path, opts = {}) {
-      const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
-      if (accessKey) headers["X-Access-Key"] = accessKey;
-      const res = await fetch(path, { ...opts, headers });
-      if (res.status === 401) {
-        store("simKey");
-        accessKey = prompt("Access key:") || "";
-        if (accessKey) { store("simKey", accessKey); return api(path, opts); }
-        throw new Error("Access key required");
-      }
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.detail || `Server error (${res.status})`);
-      return body;
-    }
-    return {
-      kind: "http",
-      pollMs: 1500,
-      getConfig: () => api("/api/config"),
-      submit: (job) => api("/api/run", { method: "POST", body: JSON.stringify(job) }),
-      getJob: (id) => api(`/api/jobs/${encodeURIComponent(id)}`),
-      history: () => api("/api/history"),
-      simStatus: async () => null,
-    };
-  }
-
-  // =====================================================================
-  // Transport 2: 資料夾（OneDrive 中轉模式，直接開啟 Simulator.html 時使用）
+  // 資料夾存取（OneDrive 中轉：直接讀寫同步的共用資料夾）
   // =====================================================================
   const IDB_NAME = "flexsim-web", IDB_STORE = "handles";
   function idb(mode, fn) {
@@ -500,7 +470,6 @@
 
   async function refreshSimStatus() {
     const st = await T.simStatus();
-    if (T.kind !== "folder") return;
     const el = $("simStatus"); el.hidden = false;
     let cls = "off", text;
     if (!st) {
@@ -532,11 +501,7 @@
 
   (async function init() {
     try {
-      if (location.protocol === "http:" || location.protocol === "https:") {
-        T = httpTransport();
-      } else {
-        T = folderTransport(await connectFolder());
-      }
+      T = folderTransport(await connectFolder());
       CFG = await T.getConfig();
       document.title = CFG.title;
       $("title").textContent = CFG.title;
@@ -552,13 +517,11 @@
       const lastDone = history.find(h => h.status === "done");
       if (lastDone) { showResult(lastDone); if (!active) renderStatus(lastDone); }
       if (active) { $("runBtn").disabled = true; selectedId = active.id; renderStatus(active); poll(active.id); }
-      if (T.kind === "folder") {
-        setInterval(() => refreshSimStatus().catch(() => {}), 10000);
-        setInterval(() => { if (!pollTimer || !document.querySelector(".spinner")) refreshHistory().catch(() => {}); }, 30000);
-      }
+      setInterval(() => refreshSimStatus().catch(() => {}), 10000);
+      setInterval(() => { if (!document.querySelector(".spinner")) refreshHistory().catch(() => {}); }, 30000);
     } catch (err) {
       $("connectCard").hidden = true;
-      $("subtitle").textContent = (T && T.kind === "folder" ? "" : "Cannot reach the simulation server: ") + err.message;
+      $("subtitle").textContent = err.message;
     }
   })();
 })();

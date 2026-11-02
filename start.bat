@@ -1,5 +1,5 @@
 @echo off
-REM 直連模式：同公司網路的人可透過 http://本機名稱:8000 使用（需開防火牆 TCP 8000）
+REM 啟動模擬程式：監看 OneDrive 共用資料夾，有新工作就跑 FlexSim
 cd /d "%~dp0"
-python -m uvicorn server:app --host 0.0.0.0 --port 8000
+python onedrive_worker.py
 pause

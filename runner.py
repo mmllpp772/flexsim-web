@@ -1,5 +1,5 @@
 """
-共用的模擬執行核心（server.py 與 onedrive_worker.py 都用這支）
+共用的模擬執行核心（onedrive_worker.py 使用）
 
 - load_config()     讀 config.json
 - validate_params() 檢查參數是否在允許範圍內（只接受 config 裡列出的參數）

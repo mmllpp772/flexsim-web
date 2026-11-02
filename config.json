@@ -100,8 +100,5 @@
       "script": "Table(\"WebResults\")[1][1]"
     }
   ],
-  "_metrics說明": "每個指標是一段回傳數字的 FlexScript。請先在 FlexSim 的 Script Console 測試能正確回傳。不好直接算的指標（例如利用率），建議在模型 OnRunStop 時寫進 Global Table「WebResults」，這裡再讀出來。",
-  "access_key": "",
-  "_access_key說明": "留空 = 不需要密碼。填入字串後，使用者第一次開網頁要輸入這組 key。",
-  "history_size": 50
+  "_metrics說明": "每個指標是一段回傳數字的 FlexScript。請先在 FlexSim 的 Script Console 測試能正確回傳。不好直接算的指標（例如利用率），建議在模型 OnRunStop 時寫進 Global Table「WebResults」，這裡再讀出來。"
 }
