@@ -217,21 +217,34 @@ class Worker:
                 return "Cancelled"
             return None
 
-        def on_progress(fraction: float, model_time: float) -> None:
+        series: list[dict[str, Any]] = []  # 執行中的指標變化，給網頁畫小折線圖
+
+        def add_point(model_time: float, metrics: dict[str, Any]) -> None:
+            dt = model_datetime(self.cfg, params, model_time)
+            series.append({"t": model_time, "date": dt.strftime("%Y-%m-%d %H:%M") if dt else None, "m": metrics})
+            if len(series) > 200:  # 太多點就隔一個刪一個
+                del series[1:-1:2]
+
+        def on_progress(fraction: float, model_time: float, metrics: dict[str, Any]) -> None:
             if time.time() - last_write[0] < 10:  # 最多 10 秒寫一次，避免 OneDrive 一直同步
                 return
             last_write[0] = time.time()
             dt = model_datetime(self.cfg, params, model_time)
+            if metrics:
+                add_point(model_time, metrics)
             self.write_result(job_id, {**base, "status": "running", "started_at": started,
                                        "progress": round(fraction, 4),
-                                       "progress_date": dt.strftime("%Y-%m-%d %H:%M") if dt else None})
+                                       "progress_date": dt.strftime("%Y-%m-%d %H:%M") if dt else None,
+                                       "live_metrics": metrics or None, "series": series})
             log.info("Job %s: %.0f%%%s", job_id, fraction * 100, f" (simulated to {dt:%Y-%m-%d})" if dt else "")
 
         try:
             result = self.runner.run(params, length, should_cancel=should_cancel,
                                      on_progress=None if base["mode"] == "fast" else on_progress)
+            if series and result.get("model_time") is not None:
+                add_point(result["model_time"], result["metrics"])
             self.write_result(job_id, {**base, "status": "done", "started_at": started,
-                                       "finished_at": now_iso(), **result})
+                                       "finished_at": now_iso(), **result, "series": series or None})
             log.info("Job %s done", job_id)
         except Cancelled as e:
             log.warning("Job %s: %s", job_id, e)

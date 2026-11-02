@@ -213,8 +213,19 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
         "int wr_same = 0;",
         "int wr_n = 0;",
     ]
+    live = [m for m in cfg["metrics"] if m.get("live", True)]
+
+    def snapshot(indent: str) -> list[str]:
+        """把目前的模型時間和指標寫進 progress 檔（最後一行 __end 代表寫完整）。"""
+        out = [f"{indent}fileopen({_fs_str(str(progress_path))}, \"w\");",
+               f'{indent}fpt("model_time\\t" + numtostring(Model.time, 0, 6)); fpr();']
+        for m in live:
+            out.append(f'{indent}fpt("{m["name"]}\\t" + numtostring({m["script"]}, 0, 6)); fpr();')
+        out += [f'{indent}fpt("__end\\t1"); fpr();', f"{indent}fileclose();"]
+        return out
+
     if progress_path:
-        lines.append(f"fileopen({_fs_str(str(progress_path))}, \"w\"); fpt(\"0\"); fileclose();")
+        lines += snapshot("")
     lines += [
         "while (Model.time < wr_end) {",
         "    step();",
@@ -223,7 +234,7 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
         lines += [
             "    wr_n++;",
             "    if (wr_n % 20000 == 0) {",
-            f"        fileopen({_fs_str(str(progress_path))}, \"w\"); fpt(numtostring(Model.time, 0, 0)); fileclose();",
+            *snapshot("        "),
             "    }",
         ]
     lines += [
@@ -284,7 +295,7 @@ class FlexSimRunner:
 
     def run(self, params: dict[str, float], length: float | None,
             should_cancel: Callable[[], str | None] | None = None,
-            on_progress: Callable[[float, float], None] | None = None) -> dict[str, Any]:
+            on_progress: Callable[[float, float, dict[str, float | None]], None] | None = None) -> dict[str, Any]:
         end_time = stop_time(self.cfg, params, length)
         run_dir = RUNS_DIR / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         run_dir.mkdir(parents=True)
@@ -312,12 +323,16 @@ class FlexSimRunner:
                         raise RuntimeError(f"Simulation did not finish within {limit:.0f} s (see runs/{run_dir.name})")
                     if on_progress and progress.exists():
                         try:
-                            mt = float(progress.read_text().strip() or 0)
-                        except (OSError, ValueError):
+                            snap = parse_results(progress)
+                        except OSError:
                             continue
+                        if "__end" not in snap or snap.get("model_time") is None:
+                            continue  # FlexSim 正在寫，下一秒再讀
+                        mt = snap["model_time"]
                         if mt != last_progress:
                             last_progress = mt
-                            on_progress(min(mt / end_time, 1.0) if end_time else 0.0, mt)
+                            live = {m["name"]: snap.get(m["name"]) for m in self.cfg["metrics"] if m["name"] in snap}
+                            on_progress(min(mt / end_time, 1.0) if end_time else 0.0, mt, live)
             finally:
                 if proc.poll() is None:  # 取消、逾時或程式被中斷：把背景的 FlexSim 關掉
                     log.warning("Stopping background FlexSim (pid %s)", proc.pid)
@@ -353,7 +368,7 @@ class MockRunner:
 
     def run(self, params: dict[str, float], length: float | None,
             should_cancel: Callable[[], str | None] | None = None,
-            on_progress: Callable[[float, float], None] | None = None) -> dict[str, Any]:
+            on_progress: Callable[[float, float, dict[str, float | None]], None] | None = None) -> dict[str, Any]:
         end_time = stop_time(self.cfg, params, length)
         steps = int(self.cfg.get("mock_seconds", 3))
         for i in range(steps):
@@ -362,7 +377,8 @@ class MockRunner:
             if reason:
                 raise Cancelled(reason)
             if on_progress:
-                on_progress((i + 1) / steps, end_time * (i + 1) / steps)
+                f = (i + 1) / steps
+                on_progress(f, end_time * f, {m["name"]: round(random.uniform(10, 1000) * f, 2) for m in self.cfg["metrics"]})
         metrics = {m["name"]: round(random.uniform(10, 1000), 2) for m in self.cfg["metrics"]}
         return {"metrics": metrics, "model_time": end_time, "wall_seconds": 3.0}
 

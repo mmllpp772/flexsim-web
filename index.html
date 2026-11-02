@@ -139,6 +139,13 @@
   .kpi .d { font-size: 13px; color: var(--muted); margin-top: 4px; min-height: 18px; }
   .kpi .d.up { color: var(--ok); } .kpi .d.down { color: var(--err); }
   .results-meta { color: var(--muted); font-size: 14px; margin: -8px 0 14px; }
+  .live-tag { display: inline-block; vertical-align: middle; margin-left: 10px; font: 600 12px var(--display); letter-spacing: .02em;
+    color: var(--amber-ink); background: var(--amber); padding: 3px 9px; border-radius: 5px; }
+  .live-tag::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--amber-ink); margin-right: 6px; vertical-align: 1px; animation: blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .live-tag::before { animation: none; } }
+  .spark { display: block; width: 100%; max-width: 220px; height: 34px; margin-top: 8px; overflow: visible; }
+  .spark polyline { fill: none; stroke: var(--blue); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
   .empty { color: var(--muted); padding: 18px 0 6px; }
 
   select { height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--steel); }
@@ -339,6 +346,7 @@
       confirmStop: "Stop this run? FlexSim will be closed and no results will be saved.",
       startLbl: "Start", endLbl: "End",
       results: "Results", resultsEmpty: "Results appear here when a run finishes.",
+      liveTag: "Live", liveMeta: "Live values, simulated through {date}. Updates about every 10 seconds.", liveWait: "Live values appear once the model has run for a moment.",
       runBy: ", run by {who}",
       same: "Same as previous run", up: "Up {p}% from previous run", down: "Down {p}% from previous run",
       compare: "Compare runs", compareEmpty: "Finished runs appear here side by side.", metricAria: "Metric to compare",
@@ -390,6 +398,7 @@
       confirmStop: "要停止這次模擬嗎？FlexSim 會被關閉，不會保留結果。",
       startLbl: "開始", endLbl: "結束",
       results: "模擬結果", resultsEmpty: "模擬完成後，結果會顯示在這裡。",
+      liveTag: "即時", liveMeta: "即時數值，已模擬到 {date}，大約每 10 秒更新一次。", liveWait: "模型跑一小段之後，這裡會開始顯示即時數值。",
       runBy: "，執行者：{who}",
       same: "與上次相同", up: "比上次增加 {p}%", down: "比上次減少 {p}%",
       compare: "比較各次結果", compareEmpty: "完成的模擬會並排顯示在這裡。", metricAria: "要比較的指標",
@@ -750,7 +759,9 @@
         const before = p && at && at < p.start;
         setState("running", t("running"), at ? t(before ? "warming" : "through", { date: dayFmt(at) }) : t("starting"),
           t("pctModel", { p: fmt(job.progress * 100, 0) }), true);
-        drawTimeline(p?.start, p?.end, at, "run"); break;
+        drawTimeline(p?.start, p?.end, at, "run");
+        if (job.id === activeId) showLive(job);
+        break;
       }
       case "done":
         setState("done", t("finished"), t("finishedMsg", { when: when(job.finished_at) }), job.wall_seconds ? t("took", { s: fmt(job.wall_seconds, 0) }) : "", false);
@@ -781,6 +792,7 @@
       const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who || null });
       activeId = selectedId = job.id;
       renderJob(job);
+      if (mode !== "fast") showLive(job);
       await refreshHistory();
       poll(job.id);
     } catch (err) {
@@ -837,14 +849,18 @@
     $("kpis").innerHTML = `<div class="empty">${esc(t("resultsEmpty"))}</div>`;
   }
 
-  function showResult(job) {
-    selectedId = job.id;
-    $("resultsTitle").textContent = runName(job);
-    $("resultsMeta").hidden = false;
-    $("resultsMeta").textContent = periodLabel(job.parameters) + (job.submitted_by ? t("runBy", { who: job.submitted_by }) : "");
-    const prev = history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
-    $("kpis").innerHTML = CFG.metrics.map(m => {
-      const v = job.metrics?.[m.name];
+  function spark(series, name) {
+    const pts = (series || []).map(p => p.m?.[name]).filter(v => v != null && !Number.isNaN(Number(v))).map(Number);
+    if (pts.length < 2) return "";
+    const lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1;
+    const xy = pts.map((v, i) => [i / (pts.length - 1) * 100, 30 - (v - lo) / span * 26]);
+    return `<svg class="spark" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="${xy.map(p => p[0].toFixed(2) + "," + p[1].toFixed(2)).join(" ")}"/></svg>`;
+  }
+
+  function kpiTiles(metrics, series, prev) {
+    return CFG.metrics.map(m => {
+      const v = metrics?.[m.name];
       let delta = "", cls = "";
       const pv = prev?.metrics?.[m.name];
       if (prev && v != null && pv != null && pv !== 0) {
@@ -855,9 +871,31 @@
       const unit = L(m, "unit");
       return `<div class="kpi"><div class="k">${esc(L(m, "label"))}</div>
         <div class="v">${fmt(v, m.decimals ?? 1)}${unit ? `<small>${esc(unit)}</small>` : ""}</div>
+        ${spark(series, m.name)}
         <div class="d ${cls}">${esc(delta)}</div></div>`;
     }).join("");
+  }
+
+  function showResult(job) {
+    selectedId = job.id;
+    $("resultsTitle").textContent = runName(job);
+    $("resultsMeta").hidden = false;
+    $("resultsMeta").textContent = periodLabel(job.parameters) + (job.submitted_by ? t("runBy", { who: job.submitted_by }) : "");
+    const prev = history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
+    $("kpis").innerHTML = kpiTiles(job.metrics, job.series, prev);
     renderBars(); renderTable();
+  }
+
+  function showLive(job) {
+    $("resultsTitle").innerHTML = `${esc(runName(job))}<span class="live-tag">${esc(t("liveTag"))}</span>`;
+    $("resultsMeta").hidden = false;
+    if (!job.live_metrics) {
+      $("resultsMeta").textContent = periodLabel(job.parameters);
+      $("kpis").innerHTML = `<div class="empty">${esc(t("liveWait"))}</div>`;
+      return;
+    }
+    $("resultsMeta").textContent = t("liveMeta", { date: job.progress_date ? dayFmt(parseDay(job.progress_date)) : "…" });
+    $("kpis").innerHTML = kpiTiles(job.live_metrics, job.series, null);
   }
 
   function renderBars() {
@@ -947,9 +985,9 @@
     const vals = currentFormValues();
     renderConfigText();
     buildForm(vals);
-    if (stateMode === "job" && shownJob) renderJob(shownJob); else setIdle();
     const sel = history.find(h => h.id === selectedId && h.status === "done");
     if (sel) showResult(sel); else { clearResults(); renderBars(); renderTable(); }
+    if (stateMode === "job" && shownJob) renderJob(shownJob); else setIdle();
     refreshSimStatus(true).catch(() => {});
   }
   document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
@@ -987,7 +1025,7 @@
       const active = history.find(h => ACTIVE.includes(h.status));
       const lastDone = history.find(h => h.status === "done");
       if (lastDone) { showResult(lastDone); if (!active) renderJob(lastDone); }
-      if (active) { activeId = selectedId = active.id; renderJob(active); poll(active.id); }
+      if (active) { activeId = selectedId = active.id; if (active.mode !== "fast") showLive(active); renderJob(active); poll(active.id); }
       syncButtons();
       setInterval(() => refreshSimStatus().catch(() => {}), 10000);
       setInterval(() => { if (!activeId) refreshHistory().catch(() => {}); }, 30000);

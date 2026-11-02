@@ -73,7 +73,7 @@ python onedrive_worker.py
 | 按鈕 | 作用 |
 |---|---|
 | **Reset 重設** | 把輸入恢復成預設值，清掉畫面上的結果（不會動到 FlexSim） |
-| **Run 執行** | 執行模擬，期間顯示進度和時間軸（模擬到哪一天） |
+| **Run 執行** | 執行模擬，期間顯示進度、時間軸（模擬到哪一天），以及**即時指標**（約每 10 秒更新，附小折線圖） |
 | **Fast forward 快轉** | 直接跑到結束，中途不回報進度，結果稍微快一點出來 |
 | **Stop 停止** | 停止正在跑或排隊中的模擬，背景的 FlexSim 會被關閉（要等 OneDrive 同步，約幾十秒生效） |
 
@@ -148,7 +148,8 @@ python onedrive_worker.py
 | `stop.model_start` | 只在 `set_model_start` 為 `false` 時使用，要和 FlexSim 工具列 Run Time 左邊的開始日期時間一致 |
 | `stop.time_unit_seconds` | 模型時間單位：秒=1、分鐘=60、小時=3600 |
 | `parameters[].set_script` | 寫入模型的 FlexScript。`Table("WUS_year")[列][欄]`，第 1 欄是第一個產品；要同時寫第 2 欄就再加 `Table("WUS_year")[列][2] = {value};` |
-| `metrics[].script` | 跑完後讀取指標的 FlexScript，要回傳數字 |
+| `metrics[].script` | 讀取指標的 FlexScript，要回傳數字。執行中也會定時讀取來顯示即時數值 |
+| `metrics[].live` | 設成 `false` 就不在執行中讀取這個指標（適合只有跑完才算得出來的指標） |
 
 ### 新增指標
 
