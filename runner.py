@@ -81,7 +81,7 @@ def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
             "groups": [{k: v for k, v in g.items() if k in ("name", "label", "label_zh", "product", "objects")} for g in ut["groups"]],
             "state_names": state_names(cfg),
             "utilized_states": ut.get("utilized_states", [2]),
-            "excluded_states": ut.get("excluded_states", []),
+            "excluded_states": ut.get("excluded_states", [12, 30, 34, 35]),
         }
     di = cfg.get("date_inputs")
     if di:
@@ -283,11 +283,14 @@ def parse_tables(path: Path, cfg_tables: list[dict[str, Any]]) -> dict[str, Any]
 # FlexSim 內建狀態編號 → 名稱。config.json 的 utilization.state_names 可以覆蓋任何一個。
 DEFAULT_STATE_NAMES = {
     1: "Idle", 2: "Processing", 3: "Busy", 4: "Blocked", 5: "Generating", 6: "Empty", 7: "Collecting",
-    8: "Releasing", 9: "Waiting for operator", 10: "Waiting for transporter", 11: "Breakdown",
+    8: "Releasing", 9: "Waiting for operator", 10: "Waiting for transport", 11: "Breakdown",
     12: "Scheduled down", 13: "Conveying", 14: "Travel empty", 15: "Travel loaded", 16: "Offset travel empty",
     17: "Offset travel loaded", 18: "Loading", 19: "Unloading", 20: "Down", 21: "Setup", 22: "Utilize",
     23: "Full", 24: "Not empty", 25: "Filling", 26: "Starved", 27: "Mixing", 28: "Flowing", 29: "Allocated idle",
-    30: "Off shift", 31: "Change over",
+    30: "Off shift", 31: "Change over", 32: "Repair", 33: "Maintenance", 34: "Lunch", 35: "On break", 36: "Suspend",
+    37: "Available", 38: "Preprocessing", 39: "Postprocessing", 40: "Inspecting", 41: "Operating", 42: "Standby",
+    43: "Purging", 44: "Cleaning", 45: "Accelerating", 46: "Maxspeed", 47: "Decelerating", 48: "Stopped",
+    49: "Waiting", 50: "Accumulating",
 }
 
 

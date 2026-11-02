@@ -1987,7 +1987,8 @@
   $("runSel").addEventListener("change", (e) => { outRunId = e.target.value; renderOutput(); });
 
   // ---------- equipment utilization ----------
-  const ST_VAR = { 2: "proc", 21: "setup", 31: "setup", 9: "op", 10: "tr", 4: "block", 26: "block", 11: "down", 20: "down", 12: "down", 1: "idle", 6: "idle", 29: "idle" };
+  const ST_VAR = { 2: "proc", 21: "setup", 31: "setup", 9: "op", 49: "op", 10: "tr", 14: "tr", 15: "tr", 4: "block", 26: "block", 48: "block",
+    11: "down", 20: "down", 12: "down", 32: "down", 33: "down", 1: "idle", 6: "idle", 29: "idle", 37: "idle", 42: "idle" };
   const stColor = (n) => `var(--st-${ST_VAR[n] || "other"})`;
   let utilGroup = load("simUtilGroup");
   let utilSorted = load("simUtilSort") === "1";
