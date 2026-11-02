@@ -67,9 +67,15 @@ def resolve_share_dir(share: str) -> Path:
         name = m.group(1)
         val = os.environ.get(name)
         if not val and name.lower() == "onedrivecommercial":
-            val = os.environ.get("OneDrive")  # 沒有公司版時退回一般 OneDrive
+            # 有些電腦沒有設定 OneDriveCommercial：直接找家目錄下的「OneDrive - 公司名稱」資料夾
+            company = sorted(p for p in Path.home().glob("OneDrive - *") if p.is_dir())
+            if len(company) == 1:
+                val = str(company[0])
+            elif len(company) > 1:
+                raise SystemExit("找到多個公司 OneDrive 資料夾：\n  " + "\n  ".join(map(str, company)) +
+                                 "\n請在 config.json 的 share_dir 填入要用的完整路徑。")
         if not val:
-            raise SystemExit(f"找不到環境變數 %{name}%（這台電腦可能沒有登入公司 OneDrive）。\n"
+            raise SystemExit(f"找不到 %{name}%（這台電腦可能沒有登入公司 OneDrive）。\n"
                              f"請在 config.json 的 share_dir 直接填資料夾完整路徑。")
         return val
     return Path(os.path.expanduser(re.sub(r"%([^%]+)%", sub, share)))
