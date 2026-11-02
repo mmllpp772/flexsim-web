@@ -1,20 +1,24 @@
 {
   "_說明": "這個檔案是唯一需要依你的模型修改的地方。改完重新啟動 start.bat 即可。",
-
   "mock_mode": true,
   "_mock_mode說明": "true = 不呼叫 FlexSim，用假資料測試網頁流程；接上 FlexSim 後改成 false",
-
   "flexsim": {
     "program_dir": "C:/Program Files/FlexSim 2025/program/",
     "model_path": "C:/FlexSimModels/MyLine.fsm",
-    "launch_kwargs": { "showGUI": false },
+    "launch_kwargs": {
+      "showGUI": false
+    },
     "_launch_kwargs說明": "直接傳給 FlexSimPy.launch()，依你編譯的 FlexSimPy 版本調整（例如授權伺服器參數）",
     "max_run_seconds": 1800
   },
-
+  "onedrive": {
+    "share_dir": "C:/Users/你的帳號/OneDrive - 公司名稱/FlexSimShare",
+    "poll_seconds": 3,
+    "heartbeat_seconds": 30
+  },
+  "_onedrive說明": "OneDrive 中轉模式才需要：share_dir 填你電腦上那個共用資料夾的完整路徑（在檔案總管對資料夾按右鍵→內容可看到位置）",
   "title": "Production Line Simulator",
   "subtitle": "Enter scenario parameters and run the FlexSim model",
-
   "run_length": {
     "label": "Simulated time",
     "unit": "hours",
@@ -23,7 +27,6 @@
     "max": 720,
     "seconds_per_unit": 3600
   },
-
   "parameters": [
     {
       "name": "ArrivalInterval",
@@ -60,7 +63,6 @@
     }
   ],
   "_parameters說明": "name 必須和 FlexSim 模型裡 Model Parameters 的名稱完全一樣。預設用 Model.parameters.<name> = <value>; 寫入，如需特殊寫法可加 \"set_script\": \"... {value} ...\"",
-
   "metrics": [
     {
       "name": "throughput",
@@ -99,9 +101,7 @@
     }
   ],
   "_metrics說明": "每個指標是一段回傳數字的 FlexScript。請先在 FlexSim 的 Script Console 測試能正確回傳。不好直接算的指標（例如利用率），建議在模型 OnRunStop 時寫進 Global Table「WebResults」，這裡再讀出來。",
-
   "access_key": "",
   "_access_key說明": "留空 = 不需要密碼。填入字串後，使用者第一次開網頁要輸入這組 key。",
-
   "history_size": 50
 }

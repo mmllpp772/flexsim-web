@@ -21,6 +21,7 @@
     }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--ink);
     font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   header { padding: 22px 24px 8px; max-width: 1240px; margin: 0 auto; }
@@ -86,16 +87,40 @@
   tr.clickable { cursor: pointer; } tr.clickable:hover td { background: var(--bg); }
   tr.selected td { background: var(--accent-soft); }
   .err-box { background: var(--err-soft); color: var(--err); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-top: 10px; }
+  .sim-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .sim-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .sim-status.on .dot { background: var(--ok); }
+  .sim-status.busy .dot { background: var(--accent); }
+  .sim-status.off .dot { background: var(--err); }
+  .sim-status button { margin-left: 6px; font-size: 12px; padding: 2px 8px; }
+  .connect { max-width: 560px; margin: 24px auto; }
+  .connect p { color: var(--muted); margin: 0 0 14px; }
+  .connect ol { color: var(--muted); padding-left: 20px; margin: 0 0 18px; }
+  .connect ol li { margin-bottom: 4px; }
+  .connect code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 13px; color: var(--ink); }
 </style>
 </head>
 <body>
 <header>
   <h1 id="title">Simulation Runner</h1>
   <p id="subtitle">Loading…</p>
+  <div id="simStatus" class="sim-status" hidden><span class="dot"></span><span id="simStatusText"></span></div>
 </header>
 <div class="banner" id="mockBanner" hidden><div>Demo mode — results are generated test data, not FlexSim output.</div></div>
 
-<main>
+<section class="card connect" id="connectCard" hidden>
+  <h2>Connect to the shared folder</h2>
+  <p>This simulator works through a shared OneDrive folder. Your browser needs permission to read and write that folder.</p>
+  <ol>
+    <li>Click the button below.</li>
+    <li>Select the shared folder <code>FlexSimShare</code> (the folder that contains this page).</li>
+    <li>When the browser asks, allow it to <strong>view and edit</strong> files.</li>
+  </ol>
+  <button class="primary" id="connectBtn" type="button">Choose shared folder</button>
+  <div id="connectError" class="err-box" hidden></div>
+</section>
+
+<main id="app" hidden>
   <section class="card">
     <h2>Scenario</h2>
     <form id="form" novalidate>
@@ -116,7 +141,7 @@
 
   <div class="right">
     <section class="card">
-      <div class="status" id="statusLine"><span class="pill done" style="visibility:hidden">—</span><span class="muted">No run yet.</span></div>
+      <div class="status" id="statusLine"><span>No run yet.</span></div>
     </section>
 
     <section class="card">
@@ -144,48 +169,203 @@
 
 <script>
 (() => {
-  let CFG = null;
-  let accessKey = "";
-  let history = [];
-  let selectedId = null;
-  let pollTimer = null;
-
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-
   function store(k, v) { try { v === undefined ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
   function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  const ACTIVE = ["submitted", "queued", "running"];
 
-  async function api(path, opts = {}) {
-    const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
-    if (accessKey) headers["X-Access-Key"] = accessKey;
-    const res = await fetch(path, { ...opts, headers });
-    if (res.status === 401) {
-      store("simKey");
-      accessKey = prompt("Access key:") || "";
-      if (accessKey) { store("simKey", accessKey); return api(path, opts); }
-      throw new Error("Access key required");
+  // =====================================================================
+  // Transport 1: HTTP（直連模式，由 server.py 提供網頁時使用）
+  // =====================================================================
+  function httpTransport() {
+    let accessKey = load("simKey") || "";
+    async function api(path, opts = {}) {
+      const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+      if (accessKey) headers["X-Access-Key"] = accessKey;
+      const res = await fetch(path, { ...opts, headers });
+      if (res.status === 401) {
+        store("simKey");
+        accessKey = prompt("Access key:") || "";
+        if (accessKey) { store("simKey", accessKey); return api(path, opts); }
+        throw new Error("Access key required");
+      }
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.detail || `Server error (${res.status})`);
+      return body;
     }
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.detail || `Server error (${res.status})`);
-    return body;
+    return {
+      kind: "http",
+      pollMs: 1500,
+      getConfig: () => api("/api/config"),
+      submit: (job) => api("/api/run", { method: "POST", body: JSON.stringify(job) }),
+      getJob: (id) => api(`/api/jobs/${encodeURIComponent(id)}`),
+      history: () => api("/api/history"),
+      simStatus: async () => null,
+    };
   }
 
+  // =====================================================================
+  // Transport 2: 資料夾（OneDrive 中轉模式，直接開啟 Simulator.html 時使用）
+  // =====================================================================
+  const IDB_NAME = "flexsim-web", IDB_STORE = "handles";
+  function idb(mode, fn) {
+    return new Promise((resolve, reject) => {
+      let req;
+      try { req = indexedDB.open(IDB_NAME, 1); } catch (e) { return reject(e); }
+      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        try {
+          const tx = req.result.transaction(IDB_STORE, mode);
+          const r = fn(tx.objectStore(IDB_STORE));
+          tx.oncomplete = () => resolve(r && r.result);
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error);
+        } catch (e) { reject(e); }
+      };
+    });
+  }
+  const saveHandle = (h) => idb("readwrite", s => s.put(h, "share")).catch(() => {});
+  const loadHandle = () => idb("readonly", s => s.get("share")).catch(() => null);
+
+  function folderTransport(root) {
+    let lastStatus = null;
+
+    async function readJson(dir, name) {
+      try {
+        const d = dir ? await root.getDirectoryHandle(dir) : root;
+        const fh = await d.getFileHandle(name);
+        const text = await (await fh.getFile()).text();
+        return JSON.parse(text);
+      } catch (e) { return null; }  // 不存在、或 OneDrive 還在同步
+    }
+    async function writeJson(dir, name, data) {
+      const d = await root.getDirectoryHandle(dir, { create: true });
+      const fh = await d.getFileHandle(name, { create: true });
+      const w = await fh.createWritable();
+      await w.write(JSON.stringify(data, null, 2));
+      await w.close();
+    }
+    async function listIds(dir) {
+      const ids = [];
+      try {
+        const d = await root.getDirectoryHandle(dir);
+        for await (const [name, h] of d.entries()) {
+          if (h.kind === "file" && /^[A-Za-z0-9_-]{1,64}\.json$/.test(name)) ids.push(name.slice(0, -5));
+        }
+      } catch (e) {}
+      return ids;
+    }
+    function newId() {
+      const t = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+      const r = Array.from(crypto.getRandomValues(new Uint8Array(3)), b => b.toString(16).padStart(2, "0")).join("");
+      return `${t}-${r}`;
+    }
+    async function status() { lastStatus = await readJson(null, "status.json"); return lastStatus; }
+    async function merge(id, jobFile) {
+      const res = await readJson("results", `${id}.json`);
+      if (res) return res;
+      const job = jobFile || await readJson("jobs", `${id}.json`);
+      if (!job) return null;
+      const q = lastStatus?.queue || [];
+      const pos = q.indexOf(id);
+      return { ...job, id, status: pos >= 0 ? "queued" : "submitted", queue_position: pos >= 0 ? pos + 1 : null };
+    }
+    return {
+      kind: "folder",
+      pollMs: 3000,
+      async getConfig() {
+        const c = await readJson(null, "config.json");
+        if (!c) throw new Error("config.json was not found in this folder. Make sure you chose the shared FlexSimShare folder and that the simulator PC has been started at least once.");
+        return c;
+      },
+      async submit(job) {
+        const id = newId();
+        const data = { ...job, id, submitted_at: new Date().toISOString() };
+        await writeJson("jobs", `${id}.json`, data);
+        return { ...data, status: "submitted" };
+      },
+      async getJob(id) { await status(); return (await merge(id)) || { id, status: "submitted" }; },
+      async history() {
+        await status();
+        const ids = (await listIds("jobs")).sort().reverse().slice(0, 50);
+        const out = [];
+        for (const id of ids) { const j = await merge(id); if (j) out.push(j); }
+        return out;
+      },
+      simStatus: status,
+    };
+  }
+
+  async function connectFolder() {
+    const unsupported = !("showDirectoryPicker" in window);
+    $("connectCard").hidden = false;
+    $("subtitle").textContent = "";
+    if (unsupported) {
+      $("connectBtn").hidden = true;
+      $("connectError").textContent = "This browser can't open local folders. Please open this file in Microsoft Edge or Google Chrome.";
+      $("connectError").hidden = false;
+      return new Promise(() => {});
+    }
+    const saved = await loadHandle();
+    if (saved) {
+      try {
+        if (await saved.queryPermission({ mode: "readwrite" }) === "granted") { $("connectCard").hidden = true; return saved; }
+        $("connectBtn").textContent = `Reconnect to “${saved.name}”`;
+      } catch (e) {}
+    }
+    return new Promise((resolve) => {
+      $("connectBtn").onclick = async () => {
+        $("connectError").hidden = true;
+        try {
+          let h = null;
+          if (saved && $("connectBtn").textContent.startsWith("Reconnect")) {
+            if (await saved.requestPermission({ mode: "readwrite" }) === "granted") h = saved;
+          }
+          if (!h) h = await window.showDirectoryPicker({ id: "flexsim-share", mode: "readwrite" });
+          try { await h.getFileHandle("config.json"); }
+          catch (e) { throw new Error(`“${h.name}” doesn't look like the simulator folder (config.json not found). Please choose the FlexSimShare folder.`); }
+          await saveHandle(h);
+          $("connectCard").hidden = true;
+          resolve(h);
+        } catch (e) {
+          if (e.name === "AbortError") return;
+          $("connectBtn").textContent = "Choose shared folder";
+          $("connectError").textContent = e.message;
+          $("connectError").hidden = false;
+        }
+      };
+    });
+  }
+
+  // =====================================================================
+  // UI
+  // =====================================================================
+  let T = null, CFG = null, history = [], selectedId = null, pollTimer = null;
+
   function fmt(v, decimals = 1) {
-    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return "—";
     return Number(v).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   }
   function fmtTime(iso) {
     if (!iso) return "";
     return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   }
-  function runName(j) { return j.label || `Run ${fmtTime(j.submitted_at)}`; }
+  function ago(iso) {
+    const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 90) return `${Math.round(s)} s ago`;
+    if (s < 5400) return `${Math.round(s / 60)} min ago`;
+    if (s < 172800) return `${Math.round(s / 3600)} h ago`;
+    return `${Math.round(s / 86400)} days ago`;
+  }
+  const runName = (j) => j.label || `Run ${fmtTime(j.submitted_at)}`;
 
-  // ---------- form ----------
   function buildForm() {
     const rl = CFG.run_length;
     const items = [...CFG.parameters, { name: "__run_length", label: rl.label, unit: rl.unit, default: rl.default, min: rl.min, max: rl.max, step: "any", help: "Length of the simulated period" }];
-    const saved = JSON.parse(load("simLastParams") || "{}");
+    let saved = {};
+    try { saved = JSON.parse(load("simLastParams") || "{}"); } catch (e) {}
     $("fields").innerHTML = items.map(p => `
       <div class="field" data-name="${esc(p.name)}">
         <label for="p_${esc(p.name)}">${esc(p.label)} ${p.unit ? `<span>${esc(p.unit)}</span>` : ""}</label>
@@ -219,50 +399,49 @@
     const { __run_length, ...parameters } = vals;
     $("runBtn").disabled = true;
     try {
-      const job = await api("/api/run", { method: "POST", body: JSON.stringify({
-        parameters, run_length: __run_length, label: $("f_label").value.trim() || null, submitted_by: who || null }) });
+      const job = await T.submit({ parameters, run_length: __run_length, label: $("f_label").value.trim() || null, submitted_by: who || null });
       selectedId = job.id;
       renderStatus(job);
+      await refreshHistory();
       poll(job.id);
     } catch (err) {
       showFormError(err.message);
       $("runBtn").disabled = false;
     }
   });
-
   function showFormError(msg) { $("formError").textContent = msg; $("formError").hidden = false; }
 
-  // ---------- polling ----------
   function poll(id) {
     clearTimeout(pollTimer);
     pollTimer = setTimeout(async () => {
       try {
-        const job = await api(`/api/jobs/${id}`);
+        const job = await T.getJob(id);
         renderStatus(job);
-        if (job.status === "queued" || job.status === "running") return poll(id);
+        if (ACTIVE.includes(job.status)) return poll(id);
         $("runBtn").disabled = false;
         await refreshHistory();
+        refreshSimStatus().catch(() => {});
         if (job.status === "done") showResult(job);
       } catch (err) {
         renderStatus({ status: "error", error: err.message });
         $("runBtn").disabled = false;
       }
-    }, 1500);
+    }, T.pollMs);
   }
 
   function renderStatus(job) {
     const map = {
+      submitted: ["queued", "Sent", "Waiting for OneDrive to sync your request to the simulator (usually under a minute)…"],
       queued: ["queued", "Queued", `Waiting for the simulator${job.queue_position ? ` · position ${job.queue_position} in line` : ""}…`],
       running: ["running", "Running", "FlexSim is running your scenario…"],
       done: ["done", "Complete", `Finished ${fmtTime(job.finished_at)}${job.wall_seconds ? ` · took ${fmt(job.wall_seconds, 1)} s` : ""}`],
       error: ["error", "Failed", job.error || "Unknown error"],
     };
     const [cls, label, text] = map[job.status] || map.error;
-    const spin = (job.status === "queued" || job.status === "running") ? '<div class="spinner" aria-hidden="true"></div>' : "";
+    const spin = ACTIVE.includes(job.status) ? '<div class="spinner" aria-hidden="true"></div>' : "";
     $("statusLine").innerHTML = `${spin}<span class="pill ${cls}">${label}</span><span>${esc(text)}</span>`;
   }
 
-  // ---------- results ----------
   function showResult(job) {
     selectedId = job.id;
     $("resultsTitle").textContent = `Results · ${runName(job)}`;
@@ -285,7 +464,7 @@
     const done = history.filter(h => h.status === "done").slice(0, 12);
     if (!done.length) return;
     const m = CFG.metrics.find(x => x.name === $("metricSel").value) || CFG.metrics[0];
-    const vals = done.map(h => h.metrics?.[m.name] ?? 0);
+    const vals = done.map(h => Number(h.metrics?.[m.name] ?? 0));
     const max = Math.max(...vals.map(Math.abs), 1e-9);
     $("bars").innerHTML = done.map((h, i) => `
       <div class="bar-row ${h.id === selectedId ? "latest" : ""}" title="${esc(runName(h))}">
@@ -301,20 +480,40 @@
       ...CFG.metrics.map(m => ({ k: "m", name: m.name, label: m.label + (m.unit ? ` (${m.unit})` : ""), d: m.decimals ?? 1 })),
     ];
     if (!history.length) { $("hist").innerHTML = `<tr><td class="empty" colspan="99">No runs yet.</td></tr>`; return; }
+    const pillCls = { submitted: "queued", queued: "queued", running: "running", done: "done", error: "error" };
     $("hist").innerHTML = `<thead><tr><th>Scenario</th><th>By</th><th>Status</th>${cols.map(c => `<th>${esc(c.label)}</th>`).join("")}</tr></thead><tbody>` +
       history.map(h => `<tr class="clickable ${h.id === selectedId ? "selected" : ""}" data-id="${esc(h.id)}">
         <td>${esc(runName(h))}</td><td>${esc(h.submitted_by || "")}</td>
-        <td><span class="pill ${esc(h.status)}">${esc(h.status)}</span></td>
+        <td><span class="pill ${pillCls[h.status] || "error"}">${esc(h.status === "submitted" ? "sent" : h.status)}</span></td>
         ${cols.map(c => `<td>${fmt(c.k === "p" ? h.parameters?.[c.name] : h.metrics?.[c.name], c.d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
     document.querySelectorAll("#hist tr.clickable").forEach(tr => tr.addEventListener("click", () => {
       const j = history.find(h => h.id === tr.dataset.id);
-      if (j && j.status === "done") showResult(j);
+      if (!j) return;
+      if (j.status === "done") showResult(j); else { selectedId = j.id; renderStatus(j); renderTable(); }
     }));
   }
 
   async function refreshHistory() {
-    history = await api("/api/history");
+    history = await T.history();
     renderBars(); renderTable();
+  }
+
+  async function refreshSimStatus() {
+    const st = await T.simStatus();
+    if (T.kind !== "folder") return;
+    const el = $("simStatus"); el.hidden = false;
+    let cls = "off", text;
+    if (!st) {
+      text = "Simulator has not connected yet";
+    } else {
+      const age = (Date.now() - new Date(st.updated_at).getTime()) / 1000;
+      const limit = Math.max(300, (st.heartbeat_seconds || 30) * 8);
+      if (st.online && st.running) { cls = "busy"; text = `Simulator busy running a scenario · ${(st.queue || []).length} waiting`; }
+      else if (st.online && age < limit) { cls = "on"; text = `Simulator online · checked ${ago(st.updated_at)}`; }
+      else text = `Simulator offline · last seen ${ago(st.updated_at)}`;
+    }
+    el.className = `sim-status ${cls}`;
+    $("simStatusText").textContent = text;
   }
 
   $("metricSel").addEventListener("change", renderBars);
@@ -331,11 +530,14 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 
-  // ---------- init ----------
   (async function init() {
     try {
-      accessKey = load("simKey") || "";
-      CFG = await api("/api/config");
+      if (location.protocol === "http:" || location.protocol === "https:") {
+        T = httpTransport();
+      } else {
+        T = folderTransport(await connectFolder());
+      }
+      CFG = await T.getConfig();
       document.title = CFG.title;
       $("title").textContent = CFG.title;
       $("subtitle").textContent = CFG.subtitle || "";
@@ -343,13 +545,20 @@
       $("f_who").value = load("simWho") || "";
       $("metricSel").innerHTML = CFG.metrics.map(m => `<option value="${esc(m.name)}">${esc(m.label)}</option>`).join("");
       buildForm();
+      $("app").hidden = false;
+      await refreshSimStatus();
       await refreshHistory();
-      const active = history.find(h => h.status === "queued" || h.status === "running");
+      const active = history.find(h => ACTIVE.includes(h.status));
       const lastDone = history.find(h => h.status === "done");
       if (lastDone) { showResult(lastDone); if (!active) renderStatus(lastDone); }
-      if (active) { $("runBtn").disabled = true; renderStatus(active); poll(active.id); }
+      if (active) { $("runBtn").disabled = true; selectedId = active.id; renderStatus(active); poll(active.id); }
+      if (T.kind === "folder") {
+        setInterval(() => refreshSimStatus().catch(() => {}), 10000);
+        setInterval(() => { if (!pollTimer || !document.querySelector(".spinner")) refreshHistory().catch(() => {}); }, 30000);
+      }
     } catch (err) {
-      $("subtitle").textContent = "Cannot reach the simulation server: " + err.message;
+      $("connectCard").hidden = true;
+      $("subtitle").textContent = (T && T.kind === "folder" ? "" : "Cannot reach the simulation server: ") + err.message;
     }
   })();
 })();

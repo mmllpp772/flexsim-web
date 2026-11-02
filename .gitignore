@@ -9,3 +9,4 @@ __pycache__/
 *.fsm
 *.fsx
 *.pyd
+worker.log
