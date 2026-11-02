@@ -344,7 +344,8 @@
           "WUS_Top_Post_AOI",
           "WUS_SMT1_AXI1",
           "WUS_SMT1_AXI2"
-        ]
+        ],
+        "product": "bianca"
       },
       {
         "name": "dip",
@@ -355,7 +356,8 @@
           "WUS_D01_MDA1",
           "WUS_D01_MDA2",
           "WUS_D01_AOI"
-        ]
+        ],
+        "product": "bianca"
       }
     ]
   },

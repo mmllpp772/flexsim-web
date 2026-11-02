@@ -260,6 +260,7 @@
     --st-down: #c47a48; --st-idle: #46535f; --st-other: #8090a0; } }
   :root[data-theme="dark"] { --st-proc: #5b95d6; --st-setup: #1aa591; --st-op: #e65f70; --st-tr: #9b7fd6; --st-block: #c28418;
     --st-down: #c47a48; --st-idle: #46535f; --st-other: #8090a0; }
+  .util-segs { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
   .util-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
   .util-stats { display: flex; flex-wrap: wrap; gap: 8px 32px; margin: 0; }
   .util-stats dt { color: var(--muted); font-size: 13px; }
@@ -645,7 +646,10 @@
         <div data-ocat="util" hidden>
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
-            <div class="seg" id="utilSeg" role="group" data-i18n-aria="utilGroups"></div>
+            <div class="util-segs">
+              <div class="seg" id="utilProdSeg" role="group" data-i18n-aria="product"></div>
+              <div class="seg" id="utilSeg" role="group" data-i18n-aria="utilGroups"></div>
+            </div>
           </section>
           <p class="panel empty-panel" id="utilEmpty" hidden></p>
           <section class="panel">
@@ -1919,7 +1923,7 @@
   function renderOutNav(job) {
     const cats = [{ k: "overview", label: t("catOverview"), sub: "" },
       ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", ") })),
-      ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: CFG.utilization.groups.map(g => L(g, "label")).join(", ") }] : [])];
+      ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: [...new Set(CFG.utilization.groups.map(g => L(g, "label")))].join(", ") }] : [])];
     if (!cats.find(c => c.k === OUT_CAT)) OUT_CAT = "overview";
     $("outNav").innerHTML = `<div class="grp">${esc(t("grpOutputs"))}</div>` + cats.map(c =>
       `<button type="button" data-k="${esc(c.k)}" aria-current="${c.k === OUT_CAT}"><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`).join("");
@@ -2004,6 +2008,7 @@
     11: "down", 20: "down", 12: "down", 32: "down", 33: "down", 1: "idle", 6: "idle", 29: "idle", 37: "idle", 42: "idle" };
   const stColor = (n) => `var(--st-${ST_VAR[n] || "other"})`;
   let utilGroup = load("simUtilGroup");
+  let utilProd = load("simUtilProd");
   let utilSorted = load("simUtilSort") === "1";
   function utilRows(job, g) {
     const U = CFG.utilization, ex = new Set(U.excluded_states.map(String)), used = new Set(U.utilized_states.map(String));
@@ -2021,8 +2026,20 @@
     });
   }
   function renderUtil(job) {
-    const U = CFG.utilization, groups = U.groups;
-    if (!groups.find(g => g.name === utilGroup)) utilGroup = groups[0]?.name;
+    const U = CFG.utilization, all = U.groups;
+    // products (Bianca / Strata) when the groups say which product they belong to
+    const prods = [...new Set(all.map(g => g.product).filter(Boolean))];
+    if (prods.length && !prods.includes(utilProd)) utilProd = prods[0];
+    const prodLabel = (n) => { const p = (PD()?.products || CFG.shifts?.products || []).find(x => x.name === n); return p ? L(p, "label") : n; };
+    $("utilProdSeg").innerHTML = prods.map(n => `<button type="button" data-p="${esc(n)}" aria-pressed="${n === utilProd}">${esc(prodLabel(n))}</button>`).join("");
+    $("utilProdSeg").hidden = prods.length < 2;
+    $("utilProdSeg").querySelectorAll("button").forEach(b => b.onclick = () => { utilProd = b.dataset.p; store("simUtilProd", utilProd); renderOutput(); });
+    const groups = prods.length ? all.filter(g => !g.product || g.product === utilProd) : all;
+    if (!groups.find(g => g.name === utilGroup)) {
+      // keep the same station when switching product (SMT -> SMT)
+      const cur = all.find(g => g.name === utilGroup);
+      utilGroup = (cur && groups.find(g => L(g, "label") === L(cur, "label")))?.name || groups[0]?.name;
+    }
     $("utilSeg").innerHTML = groups.map(g => `<button type="button" data-g="${esc(g.name)}" aria-pressed="${g.name === utilGroup}">${esc(L(g, "label"))}</button>`).join("");
     $("utilSeg").hidden = groups.length < 2;
     $("utilSeg").querySelectorAll("button").forEach(b => b.onclick = () => { utilGroup = b.dataset.g; store("simUtilGroup", utilGroup); renderOutput(); });
