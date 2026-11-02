@@ -44,9 +44,12 @@ FlexSim 跑在你的桌機上，美國同事用瀏覽器打開 `http://你的電
    ```
 3. 啟動伺服器：
    ```
-   python -m uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+   python -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
    ```
-   看到 `Uvicorn running on http://0.0.0.0:8000` 就成功了。終端機要一直開著，按 `Ctrl + C` 停止
+   看到 `Uvicorn running on http://127.0.0.1:8000` 就成功了。終端機要一直開著，按 `Ctrl + C` 停止
+
+   > 用 `127.0.0.1` 只有自己這台電腦連得到，所以 **Windows 防火牆不會跳出詢問**。開發、測試時都用這個。
+   > 要讓美國同事連進來時，才改成 `--host 0.0.0.0`（見「第三步」）。
 4. 瀏覽器開 `http://localhost:8000`，按 **Run simulation**，幾秒後會看到假資料的指標
 
 `config.json` 裡 `"mock_mode": true` 時完全不會碰 FlexSim，網頁上方會有黃色 Demo 提示。
@@ -97,6 +100,14 @@ FlexSimPy 是 FlexSim 官方的 Python 控制模組，要自己用 Visual Studio
 ### 4. 在 VS Code 終端機按 `Ctrl + C` 再重新啟動，按一次 Run 確認數字和你在 FlexSim 手動跑的一致
 
 ## 第三步：開給美國同事用（找 IT）
+
+要讓別台電腦連進來，啟動指令要改成 `--host 0.0.0.0`（`start.bat` 已經是這樣設定）：
+```
+python -m uvicorn server:app --host 0.0.0.0 --port 8000
+```
+這時 Windows 會跳出「Windows 安全性警示 / 防火牆」詢問，**這是正常的**，因為程式要接收來自其他電腦的連線。
+- 公司電腦通常需要系統管理員權限才能按「允許」。按「取消」的話，伺服器還是會啟動，但其他電腦連不進來
+- 最好的做法是請 IT 加一條固定的防火牆規則，之後就不會再跳：允許 **TCP 8000 輸入連線**（或允許 `python.exe`），網路類型選「網域」，來源限定美國辦公室網段
 
 - 防火牆開放 TCP **8000** 輸入連線（建議只允許美國辦公室網段）
 - 桌機給固定 IP 或 DNS 名稱，例如 `sim-pc01.company.local`
