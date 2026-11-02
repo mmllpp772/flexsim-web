@@ -29,9 +29,10 @@
     --err-soft: #f8e5e3;
     --hold: #8a6d1d;
     --hold-soft: #f7efd8;
-    --display: "Barlow", "Segoe UI", system-ui, sans-serif;
-    --cond: "Barlow Semi Condensed", "Barlow", "Segoe UI", sans-serif;
-    --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    --cjk: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+    --display: "Barlow", "Segoe UI", system-ui, var(--cjk);
+    --cond: "Barlow Semi Condensed", "Barlow", "Segoe UI", var(--cjk);
+    --body: "Source Sans 3", "Segoe UI", system-ui, var(--cjk);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -44,6 +45,7 @@
   [hidden] { display: none !important; }
   html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--steel); color: var(--ink); font: 16px/1.5 var(--body); }
+  html[lang="zh-Hant"] body { line-height: 1.6; }
   button, input, select { font: inherit; color: inherit; }
   :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
@@ -53,12 +55,16 @@
   header.top { padding: 28px 0 22px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   header.top h1 { margin: 0; font: 700 30px/1.1 var(--display); letter-spacing: -0.01em; }
   header.top p { margin: 6px 0 0; color: var(--muted); }
+  .top-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .sim-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted);
     background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px 6px 12px; }
   .sim-status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--faint); }
   .sim-status.on .dot { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
   .sim-status.busy .dot { background: var(--amber); box-shadow: 0 0 0 3px var(--hold-soft); }
   .sim-status.off .dot { background: var(--err); box-shadow: 0 0 0 3px var(--err-soft); }
+  .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); padding: 3px; }
+  .lang button { border: 0; background: none; padding: 4px 12px; border-radius: 999px; cursor: pointer; font-size: 14px; color: var(--muted); }
+  .lang button[aria-pressed="true"] { background: var(--console); color: #fff; font-weight: 600; }
   .demo { margin: 0 0 18px; background: var(--hold-soft); color: var(--hold); border-radius: 8px; padding: 10px 14px; font-size: 14px; }
 
   /* ---------- layout ---------- */
@@ -188,37 +194,43 @@
   <header class="top">
     <div>
       <h1 id="title">Production Simulator</h1>
-      <p id="subtitle">Loading…</p>
+      <p id="subtitle" data-i18n="loading">Loading…</p>
     </div>
-    <div id="simStatus" class="sim-status" hidden><span class="dot"></span><span id="simStatusText"></span></div>
+    <div class="top-right">
+      <div id="simStatus" class="sim-status" hidden><span class="dot"></span><span id="simStatusText"></span></div>
+      <div class="lang" role="group" aria-label="Language / 語言">
+        <button type="button" data-lang="en" aria-pressed="true">English</button>
+        <button type="button" data-lang="zh" aria-pressed="false" lang="zh-Hant">中文</button>
+      </div>
+    </div>
   </header>
-  <div class="demo" id="mockBanner" hidden>Demo mode: results are test data, not FlexSim output.</div>
+  <div class="demo" id="mockBanner" data-i18n="demo" hidden></div>
 
   <section class="panel connect" id="connectCard" hidden>
-    <h2>Connect to the shared folder</h2>
-    <p>This simulator runs through a shared OneDrive folder. Your browser needs permission to read and write it.</p>
+    <h2 data-i18n="connectTitle"></h2>
+    <p data-i18n="connectBody"></p>
     <ol>
-      <li>Click the button below.</li>
-      <li>Choose the <code>FlexSimShare</code> folder (the one that contains this page).</li>
-      <li>When the browser asks, allow it to view and edit files.</li>
+      <li data-i18n="connectStep1"></li>
+      <li data-i18n-html="connectStep2"></li>
+      <li data-i18n="connectStep3"></li>
     </ol>
-    <button class="btn-primary" id="connectBtn" type="button">Choose shared folder</button>
+    <button class="btn-primary" id="connectBtn" type="button" data-i18n="chooseFolder"></button>
     <div id="connectError" class="err-box" hidden></div>
   </section>
 
   <main class="grid" id="app" hidden>
     <section class="panel">
-      <h2>Scenario</h2>
+      <h2 data-i18n="scenario"></h2>
       <form id="form" novalidate>
         <div id="fields"></div>
         <div class="period-days" id="periodDays"></div>
         <hr class="sep">
         <div class="field">
-          <label for="f_label">Scenario name <span class="opt">(optional)</span></label>
-          <input id="f_label" maxlength="60" placeholder="e.g. Q4 peak season">
+          <label for="f_label"><span data-i18n="scenarioName"></span> <span class="opt" data-i18n="optional"></span></label>
+          <input id="f_label" maxlength="60" data-i18n-placeholder="scenarioPh">
         </div>
         <div class="field">
-          <label for="f_who">Your name <span class="opt">(optional)</span></label>
+          <label for="f_who"><span data-i18n="yourName"></span> <span class="opt" data-i18n="optional"></span></label>
           <input id="f_who" maxlength="60">
         </div>
         <div id="formError" class="err-box" hidden></div>
@@ -226,24 +238,24 @@
     </section>
 
     <div class="col">
-      <section class="console" aria-label="Simulation controls">
+      <section class="console" data-i18n-aria="controlsAria">
         <div class="controls">
-          <button type="button" class="ctl" id="btnReset" title="Restore the default inputs and clear the results view">
+          <button type="button" class="ctl" id="btnReset" data-i18n-title="resetTip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
-            <span>Reset</span></button>
-          <button type="button" class="ctl run" id="btnRun" title="Run the simulation and show progress">
+            <span data-i18n="reset"></span></button>
+          <button type="button" class="ctl run" id="btnRun" data-i18n-title="runTip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.4-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
-            <span>Run</span></button>
-          <button type="button" class="ctl" id="btnFast" title="Run straight to the end without progress updates">
+            <span data-i18n="run"></span></button>
+          <button type="button" class="ctl" id="btnFast" data-i18n-title="fastTip">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 5.2v13.6a.8.8 0 0 0 1.25.66L12 13.6v5.2a.8.8 0 0 0 1.25.66l9.4-6.8a.8.8 0 0 0 0-1.32l-9.4-6.8A.8.8 0 0 0 12 5.2v5.2L3.75 4.54A.8.8 0 0 0 2.5 5.2z"/></svg>
-            <span>Fast forward</span></button>
+            <span data-i18n="fast"></span></button>
           <div class="spacer"></div>
-          <button type="button" class="ctl stop" id="btnStop" title="Stop the run in progress" disabled>
+          <button type="button" class="ctl stop" id="btnStop" data-i18n-title="stopTip" disabled>
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-            <span>Stop</span></button>
+            <span data-i18n="stop"></span></button>
         </div>
 
-        <div class="state" id="state" aria-live="polite"><span class="tag">Idle</span><span class="msg">Set the period and press Run.</span></div>
+        <div class="state" id="state" aria-live="polite"></div>
 
         <div class="timeline">
           <div class="ends"><span id="endStart">—</span><span id="endEnd">—</span></div>
@@ -253,23 +265,23 @@
       </section>
 
       <section class="panel">
-        <h2 id="resultsTitle">Results</h2>
+        <h2 id="resultsTitle"></h2>
         <div class="results-meta" id="resultsMeta" hidden></div>
-        <div id="kpis" class="kpis"><div class="empty">Results appear here when a run finishes.</div></div>
+        <div id="kpis" class="kpis"></div>
       </section>
 
       <section class="panel">
         <div class="panel-head">
-          <h2>Compare runs</h2>
-          <select id="metricSel" aria-label="Metric to compare"></select>
+          <h2 data-i18n="compare"></h2>
+          <select id="metricSel" data-i18n-aria="metricAria"></select>
         </div>
-        <div id="bars" class="bars"><div class="empty">Finished runs appear here side by side.</div></div>
+        <div id="bars" class="bars"></div>
       </section>
 
       <section class="panel">
         <div class="panel-head">
-          <h2>Run history</h2>
-          <button class="link" id="csvBtn" type="button">Download CSV</button>
+          <h2 data-i18n="history"></h2>
+          <button class="link" id="csvBtn" type="button" data-i18n="csv"></button>
         </div>
         <div class="table-wrap"><table id="hist"></table></div>
       </section>
@@ -284,6 +296,154 @@
   function store(k, v) { try { v === undefined ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
   function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   const ACTIVE = ["submitted", "queued", "running"];
+
+  // =====================================================================
+  // 語言 / Language
+  // =====================================================================
+  const I18N = {
+    en: {
+      loading: "Loading…",
+      demo: "Demo mode: results are test data, not FlexSim output.",
+      connectTitle: "Connect to the shared folder",
+      connectBody: "This simulator runs through a shared OneDrive folder. Your browser needs permission to read and write it.",
+      connectStep1: "Click the button below.",
+      connectStep2: "Choose the <code>FlexSimShare</code> folder (the one that contains this page).",
+      connectStep3: "When the browser asks, allow it to view and edit files.",
+      chooseFolder: "Choose shared folder",
+      reconnect: "Reconnect to “{name}”",
+      errBrowser: "This browser can't open local folders. Open this file in Microsoft Edge or Google Chrome.",
+      errWrongFolder: "“{name}” isn't the simulator folder (config.json not found). Choose the FlexSimShare folder.",
+      errNoConfig: "config.json wasn't found in this folder. Choose the FlexSimShare folder, and make sure the simulator PC has been started at least once.",
+      scenario: "Scenario",
+      startDate: "Start date", endDate: "End date",
+      dateHelp: "Both dates must be in the same year. The run includes the whole end date.",
+      calDays: "{n} calendar days",
+      scenarioName: "Scenario name", yourName: "Your name", optional: "(optional)", scenarioPh: "e.g. Q4 peak season",
+      range: "Range {min} to {max}.",
+      controlsAria: "Simulation controls",
+      reset: "Reset", run: "Run", fast: "Fast forward", stop: "Stop",
+      resetTip: "Restore the default inputs and clear the results view",
+      runTip: "Run the simulation and show progress",
+      fastTip: "Run straight to the end without progress updates",
+      stopTip: "Stop the run in progress",
+      idle: "Idle", idleMsg: "Set the period and press Run.", resetMsg: "Inputs restored to defaults.",
+      sent: "Sent", sentMsg: "Waiting for OneDrive to deliver the request.", sentSub: "Usually under a minute.",
+      queued: "Queued", queuePos: "Position {n} in line.", queueNext: "Next in line.",
+      running: "Running", starting: "Starting FlexSim.",
+      ffMsg: "Running to the end date.", ffSub: "No progress updates in this mode.",
+      warming: "Warming up: simulated through {date}, before the period starts.",
+      through: "Simulated through {date}.", pctModel: "{p}% of model time",
+      finished: "Finished", finishedMsg: "Finished {when}.", took: "Took {s} s.",
+      stopped: "Stopped", failed: "Failed", failedMsg: "The run failed.",
+      stopping: "Stopping", stoppingMsg: "Sending the stop request.", stoppingSub: "It takes effect once OneDrive syncs.",
+      confirmStop: "Stop this run? FlexSim will be closed and no results will be saved.",
+      startLbl: "Start", endLbl: "End",
+      results: "Results", resultsEmpty: "Results appear here when a run finishes.",
+      runBy: ", run by {who}",
+      same: "Same as previous run", up: "Up {p}% from previous run", down: "Down {p}% from previous run",
+      compare: "Compare runs", compareEmpty: "Finished runs appear here side by side.", metricAria: "Metric to compare",
+      history: "Run history", csv: "Download CSV", noRuns: "No runs yet.",
+      thScenario: "Scenario", thBy: "By", thStatus: "Status", thPeriod: "Period",
+      pSent: "Sent", pQueued: "Queued", pRunning: "Running", pDone: "Done", pStopped: "Stopped", pFailed: "Failed", ffTag: "FF",
+      runOf: "Run of {when}",
+      simNever: "Simulator has not connected yet", simBusy: "Simulator busy", simBusyQ: "Simulator busy, {n} waiting",
+      simOn: "Simulator online, checked {ago}", simOff: "Simulator offline, last seen {ago}",
+      sAgo: "{n} s ago", mAgo: "{n} min ago", hAgo: "{n} h ago", dAgo: "{n} days ago",
+      eStart: "Choose a start date.", eEnd: "Choose an end date.", eYear: "Start and end dates must be in the same year.",
+      eOrder: "The end date is before the start date.", eRange: "{label} must be between {min} and {max}.",
+    },
+    zh: {
+      loading: "載入中…",
+      demo: "示範模式：結果是測試資料，不是 FlexSim 的輸出。",
+      connectTitle: "連接共用資料夾",
+      connectBody: "這個模擬器透過 OneDrive 共用資料夾運作，瀏覽器需要讀寫這個資料夾的權限。",
+      connectStep1: "按下面的按鈕。",
+      connectStep2: "選擇 <code>FlexSimShare</code> 資料夾（就是放這個網頁的資料夾）。",
+      connectStep3: "瀏覽器詢問時，允許「檢視和編輯」檔案。",
+      chooseFolder: "選擇共用資料夾",
+      reconnect: "重新連接「{name}」",
+      errBrowser: "這個瀏覽器無法開啟本機資料夾，請改用 Microsoft Edge 或 Google Chrome 開啟這個檔案。",
+      errWrongFolder: "「{name}」不是模擬器資料夾（找不到 config.json），請選擇 FlexSimShare 資料夾。",
+      errNoConfig: "這個資料夾裡找不到 config.json。請選擇 FlexSimShare 資料夾，並確認模擬電腦至少啟動過一次。",
+      scenario: "情境設定",
+      startDate: "開始日期", endDate: "結束日期",
+      dateHelp: "開始與結束日期必須在同一年，結束日當天會完整模擬。",
+      calDays: "共 {n} 天",
+      scenarioName: "情境名稱", yourName: "你的名字", optional: "（選填）", scenarioPh: "例如：第四季旺季",
+      range: "範圍 {min} 到 {max}。",
+      controlsAria: "模擬控制",
+      reset: "重設", run: "執行", fast: "快轉", stop: "停止",
+      resetTip: "把輸入恢復成預設值，並清除畫面上的結果",
+      runTip: "執行模擬並顯示進度",
+      fastTip: "直接跑到結束，中途不回報進度",
+      stopTip: "停止執行中的模擬",
+      idle: "待命", idleMsg: "設定期間後按「執行」。", resetMsg: "已恢復預設值。",
+      sent: "已送出", sentMsg: "等待 OneDrive 把需求送到模擬電腦。", sentSub: "通常不到一分鐘。",
+      queued: "排隊中", queuePos: "排在第 {n} 位。", queueNext: "下一個就輪到你。",
+      running: "執行中", starting: "正在啟動 FlexSim。",
+      ffMsg: "直接跑到結束日。", ffSub: "快轉模式不回報進度。",
+      warming: "暖機中：已模擬到 {date}，還沒進入設定的期間。",
+      through: "已模擬到 {date}。", pctModel: "模型時間 {p}%",
+      finished: "完成", finishedMsg: "{when} 完成。", took: "花了 {s} 秒。",
+      stopped: "已停止", failed: "失敗", failedMsg: "這次模擬失敗。",
+      stopping: "停止中", stoppingMsg: "正在送出停止要求。", stoppingSub: "OneDrive 同步後生效。",
+      confirmStop: "要停止這次模擬嗎？FlexSim 會被關閉，不會保留結果。",
+      startLbl: "開始", endLbl: "結束",
+      results: "模擬結果", resultsEmpty: "模擬完成後，結果會顯示在這裡。",
+      runBy: "，執行者：{who}",
+      same: "與上次相同", up: "比上次增加 {p}%", down: "比上次減少 {p}%",
+      compare: "比較各次結果", compareEmpty: "完成的模擬會並排顯示在這裡。", metricAria: "要比較的指標",
+      history: "執行紀錄", csv: "下載 CSV", noRuns: "還沒有執行紀錄。",
+      thScenario: "情境", thBy: "執行者", thStatus: "狀態", thPeriod: "期間",
+      pSent: "已送出", pQueued: "排隊中", pRunning: "執行中", pDone: "完成", pStopped: "已停止", pFailed: "失敗", ffTag: "快轉",
+      runOf: "{when} 的模擬",
+      simNever: "模擬電腦尚未連線", simBusy: "模擬電腦忙碌中", simBusyQ: "模擬電腦忙碌中，{n} 個排隊",
+      simOn: "模擬電腦在線（{ago}確認）", simOff: "模擬電腦離線（最後上線：{ago}）",
+      sAgo: "{n} 秒前", mAgo: "{n} 分鐘前", hAgo: "{n} 小時前", dAgo: "{n} 天前",
+      eStart: "請選擇開始日期。", eEnd: "請選擇結束日期。", eYear: "開始與結束日期必須在同一年。",
+      eOrder: "結束日期早於開始日期。", eRange: "{label} 必須介於 {min} 到 {max}。",
+    },
+  };
+  // 模擬電腦傳回的英文錯誤訊息 → 中文
+  const ERR_ZH = [
+    [/^Cancelled before it started$/, "開始前已取消"],
+    [/^Cancelled$/, "已取消"],
+    [/^Stopped on the simulator PC/, "模擬電腦在跑完前停止了，請重新執行。"],
+    [/^Interrupted/, "中斷：模擬電腦在這次執行完成前停止了，請重新執行。"],
+    [/End date must be on or after the start date/, "結束日期不能早於開始日期。"],
+    [/date is not a valid calendar date/, "日期不存在（例如 2 月 30 日）。"],
+    [/End date must be after the model start \((.+)\)/, "結束日期必須晚於模型開始時間（$1）。"],
+    [/did not finish within (\d+) s/, "模擬沒有在 $1 秒內完成。"],
+    [/FlexSim closed without writing results/, "FlexSim 關閉了但沒有寫出結果，請看模擬電腦上的 runs 資料夾。"],
+    [/stopped part-way through writing results/, "FlexSim 寫結果寫到一半就停止了。"],
+    [/Job file could not be read/, "讀不到這筆工作的檔案。"],
+    [/^(.+) must be (≥|≤) (.+)$/, "$1 必須 $2 $3。"],
+  ];
+
+  let LANG = load("simLang") || ((navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en");
+  function t(key, vars) {
+    let s = (I18N[LANG] && I18N[LANG][key]) ?? I18N.en[key] ?? key;
+    if (vars) s = s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+    return s;
+  }
+  const L = (obj, field) => (LANG === "zh" && obj?.[field + "_zh"]) || obj?.[field] || "";
+  function errText(msg) {
+    if (!msg) return t("failedMsg");
+    if (LANG !== "zh") return msg;
+    for (const [re, zh] of ERR_ZH) if (re.test(msg)) return msg.replace(re, zh);
+    return msg;
+  }
+  const locale = () => LANG === "zh" ? "zh-TW" : "en-US";
+
+  function applyStatic() {
+    document.documentElement.lang = LANG === "zh" ? "zh-Hant" : "en";
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+    document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+    document.querySelectorAll("[data-i18n-aria]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+    document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === LANG)));
+  }
 
   // =====================================================================
   // 共用資料夾存取（OneDrive 中轉）
@@ -357,7 +517,7 @@
       pollMs: 3000,
       async getConfig() {
         const c = await readJson(null, "config.json");
-        if (!c) throw new Error("config.json was not found in this folder. Make sure you chose the shared FlexSimShare folder and that the simulator PC has been started at least once.");
+        if (!c) throw new Error(t("errNoConfig"));
         return c;
       },
       async submit(job) {
@@ -385,15 +545,16 @@
     $("subtitle").textContent = "";
     if (unsupported) {
       $("connectBtn").hidden = true;
-      $("connectError").textContent = "This browser can't open local folders. Please open this file in Microsoft Edge or Google Chrome.";
+      $("connectError").textContent = t("errBrowser");
       $("connectError").hidden = false;
       return new Promise(() => {});
     }
     const saved = await loadHandle();
+    let reconnecting = false;
     if (saved) {
       try {
         if (await saved.queryPermission({ mode: "readwrite" }) === "granted") { $("connectCard").hidden = true; return saved; }
-        $("connectBtn").textContent = `Reconnect to “${saved.name}”`;
+        $("connectBtn").textContent = t("reconnect", { name: saved.name }); reconnecting = true;
       } catch (e) {}
     }
     return new Promise((resolve) => {
@@ -401,18 +562,18 @@
         $("connectError").hidden = true;
         try {
           let h = null;
-          if (saved && $("connectBtn").textContent.startsWith("Reconnect")) {
+          if (saved && reconnecting) {
             if (await saved.requestPermission({ mode: "readwrite" }) === "granted") h = saved;
           }
           if (!h) h = await window.showDirectoryPicker({ id: "flexsim-share", mode: "readwrite" });
           try { await h.getFileHandle("config.json"); }
-          catch (e) { throw new Error(`“${h.name}” doesn't look like the simulator folder (config.json not found). Please choose the FlexSimShare folder.`); }
+          catch (e) { throw new Error(t("errWrongFolder", { name: h.name })); }
           await saveHandle(h);
           $("connectCard").hidden = true;
           resolve(h);
         } catch (e) {
           if (e.name === "AbortError") return;
-          $("connectBtn").textContent = "Choose shared folder";
+          $("connectBtn").textContent = t("chooseFolder"); reconnecting = false;
           $("connectError").textContent = e.message;
           $("connectError").hidden = false;
         }
@@ -424,6 +585,7 @@
   // UI
   // =====================================================================
   let T = null, CFG = null, DI = null, history = [], selectedId = null, activeId = null, pollTimer = null;
+  let shownJob = null, stateMode = "idle";
 
   // ---------- formatting ----------
   const pad = (n) => String(n).padStart(2, "0");
@@ -433,16 +595,17 @@
   }
   const parseDay = (s) => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
   const isoDay = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const dayFmt = (d, year = true) => d.toLocaleDateString("en-US", year ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" });
-  const when = (iso) => iso ? new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+  const dayFmt = (d, year = true) => d.toLocaleDateString(locale(), year ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" });
+  const when = (iso) => iso ? new Date(iso).toLocaleString(locale(), { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
   function ago(iso) {
     const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-    if (s < 90) return `${Math.round(s)} s ago`;
-    if (s < 5400) return `${Math.round(s / 60)} min ago`;
-    if (s < 172800) return `${Math.round(s / 3600)} h ago`;
-    return `${Math.round(s / 86400)} days ago`;
+    if (s < 90) return t("sAgo", { n: Math.round(s) });
+    if (s < 5400) return t("mAgo", { n: Math.round(s / 60) });
+    if (s < 172800) return t("hAgo", { n: Math.round(s / 3600) });
+    return t("dAgo", { n: Math.round(s / 86400) });
   }
-  const runName = (j) => j.label || `Run of ${when(j.submitted_at) || "unknown time"}`;
+  const runName = (j) => j.label || t("runOf", { when: when(j.submitted_at) || "?" });
+  const isStopped = (j) => j.status === "error" && /^(Cancelled|Interrupted|Stopped)/.test(j.error || "");
 
   // ---------- period helpers (date pickers ↔ year / month / day parameters) ----------
   function periodOf(params) {
@@ -453,8 +616,7 @@
   }
   function periodLabel(params) {
     const p = periodOf(params);
-    if (!p) return "—";
-    return `${dayFmt(p.start, false)} – ${dayFmt(p.end)}`;
+    return p ? `${dayFmt(p.start, false)} – ${dayFmt(p.end)}` : "—";
   }
   const daysBetween = (a, b) => Math.round((b - a) / 86400000);
 
@@ -467,23 +629,25 @@
     if (DI) {
       const p = periodOf(values) || periodOf(defaults());
       html += `
-        <div class="field" data-kind="date" data-role="start">
-          <label for="d_start">Start date</label>
+        <div class="field" data-kind="date">
+          <label for="d_start">${esc(t("startDate"))}</label>
           <input id="d_start" type="date" value="${isoDay(p.start)}" ${DI.min ? `min="${esc(DI.min)}"` : ""}>
         </div>
-        <div class="field" data-kind="date" data-role="end">
-          <label for="d_end">End date</label>
+        <div class="field" data-kind="date">
+          <label for="d_end">${esc(t("endDate"))}</label>
           <input id="d_end" type="date" value="${isoDay(p.end)}" ${DI.min ? `min="${esc(DI.min)}"` : ""}>
-          <small>Both dates must be in the same year. The run includes the whole end date.</small>
+          <small>${esc(t("dateHelp"))}</small>
         </div>`;
     }
-    html += otherParams().map(p => `
-      <div class="field" data-kind="num" data-name="${esc(p.name)}">
-        <label for="p_${esc(p.name)}">${esc(p.label)}${p.unit ? ` <span class="opt">(${esc(p.unit)})</span>` : ""}</label>
+    html += otherParams().map(p => {
+      const unit = L(p, "unit");
+      return `
+      <div class="field" data-kind="num">
+        <label for="p_${esc(p.name)}">${esc(L(p, "label"))}${unit ? ` <span class="opt">(${esc(unit)})</span>` : ""}</label>
         <input id="p_${esc(p.name)}" type="number" inputmode="decimal" value="${esc(values?.[p.name] ?? p.default)}"
           min="${esc(p.min)}" max="${esc(p.max)}" step="${esc(p.step ?? "any")}">
-        <small>${esc(p.help || "")}${p.min !== undefined ? ` Range ${esc(p.min)} to ${esc(p.max)}.` : ""}</small>
-      </div>`).join("");
+        <small>${esc(L(p, "help"))}${p.min !== undefined ? ` ${esc(t("range", { min: p.min, max: p.max }))}` : ""}</small>
+      </div>`; }).join("");
     $("fields").innerHTML = html;
     document.querySelectorAll("#fields input").forEach(i => i.addEventListener("input", () => { updatePeriodPreview(); $("formError").hidden = true; }));
     updatePeriodPreview();
@@ -494,12 +658,12 @@
     document.querySelectorAll("#fields .field").forEach(f => f.classList.remove("invalid"));
     if (DI) {
       const s = $("d_start").value, e = $("d_end").value;
-      if (!s) { $("d_start").closest(".field").classList.add("invalid"); error = "Choose a start date."; }
-      if (!e) { $("d_end").closest(".field").classList.add("invalid"); error = error || "Choose an end date."; }
+      if (!s) { $("d_start").closest(".field").classList.add("invalid"); error = t("eStart"); }
+      if (!e) { $("d_end").closest(".field").classList.add("invalid"); error = error || t("eEnd"); }
       if (s && e) {
         const a = parseDay(s), b = parseDay(e);
-        if (a.getFullYear() !== b.getFullYear()) { $("d_end").closest(".field").classList.add("invalid"); error = "Start and end dates must be in the same year."; }
-        else if (b < a) { $("d_end").closest(".field").classList.add("invalid"); error = "The end date is before the start date."; }
+        if (a.getFullYear() !== b.getFullYear()) { $("d_end").closest(".field").classList.add("invalid"); error = t("eYear"); }
+        else if (b < a) { $("d_end").closest(".field").classList.add("invalid"); error = t("eOrder"); }
         params[DI.year] = a.getFullYear();
         params[DI.start_month] = a.getMonth() + 1; params[DI.start_day] = a.getDate();
         params[DI.end_month] = b.getMonth() + 1; params[DI.end_day] = b.getDate();
@@ -508,11 +672,21 @@
     otherParams().forEach(p => {
       const inp = $(`p_${p.name}`); const v = Number(inp.value);
       if (inp.value === "" || Number.isNaN(v) || (p.min != null && v < p.min) || (p.max != null && v > p.max)) {
-        inp.closest(".field").classList.add("invalid"); error = error || `${p.label} must be between ${p.min} and ${p.max}.`;
+        inp.closest(".field").classList.add("invalid"); error = error || t("eRange", { label: L(p, "label"), min: p.min, max: p.max });
       }
       params[p.name] = v;
     });
     return { params, error };
+  }
+  function currentFormValues() {
+    const v = {};
+    if (DI && $("d_start") && $("d_start").value && $("d_end").value) {
+      const a = parseDay($("d_start").value), b = parseDay($("d_end").value);
+      Object.assign(v, { [DI.year]: a.getFullYear(), [DI.start_month]: a.getMonth() + 1, [DI.start_day]: a.getDate(),
+                         [DI.end_month]: b.getMonth() + 1, [DI.end_day]: b.getDate() });
+    }
+    otherParams().forEach(p => { const i = $(`p_${p.name}`); if (i) v[p.name] = i.value; });
+    return v;
   }
 
   function updatePeriodPreview() {
@@ -520,24 +694,19 @@
     const s = $("d_start").value, e = $("d_end").value;
     if (!s || !e) { $("periodDays").textContent = ""; return; }
     const n = daysBetween(parseDay(s), parseDay(e)) + 1;
-    $("periodDays").textContent = n > 0 ? `${n} calendar days` : "";
-    if (!activeId) drawTimeline(parseDay(s), parseDay(e), null, "idle");
+    $("periodDays").textContent = n > 0 ? t("calDays", { n }) : "";
+    if (!activeId && stateMode === "idle") drawTimeline(parseDay(s), parseDay(e), null, "idle");
   }
 
   // ---------- console ----------
   function drawTimeline(start, end, atDate, kind) {
-    $("endStart").innerHTML = start ? `${esc(dayFmt(start))}<small>Start</small>` : "—";
-    $("endEnd").innerHTML = end ? `${esc(dayFmt(end))}<small>End</small>` : "—";
+    $("endStart").innerHTML = start ? `${esc(dayFmt(start))}<small>${esc(t("startLbl"))}</small>` : "—";
+    $("endEnd").innerHTML = end ? `${esc(dayFmt(end))}<small>${esc(t("endLbl"))}</small>` : "—";
     let pct = 0;
     if (kind === "done") pct = 100;
-    else if (start && end && atDate) {
-      const total = (end - start) + 86400000;
-      pct = Math.max(0, Math.min(100, (atDate - start) / total * 100));
-    }
-    const fill = $("fill");
-    fill.style.width = pct + "%";
-    fill.classList.toggle("complete", kind === "done");
-    // month ticks between start and end
+    else if (start && end && atDate) pct = Math.max(0, Math.min(100, (atDate - start) / ((end - start) + 86400000) * 100));
+    $("fill").style.width = pct + "%";
+    $("fill").classList.toggle("complete", kind === "done");
     let ticks = "";
     if (start && end && end > start) {
       const total = (end - start) + 86400000;
@@ -548,7 +717,7 @@
       months.forEach((m, i) => {
         if (i % every) return;
         const x = (m - start) / total * 100;
-        if (x > 6 && x < 94) ticks += `<span class="tick" style="left:${x}%">${esc(m.toLocaleDateString("en-US", { month: "short" }))}</span>`;
+        if (x > 6 && x < 94) ticks += `<span class="tick" style="left:${x}%">${esc(m.toLocaleDateString(locale(), { month: "short" }))}</span>`;
       });
     }
     $("ticks").innerHTML = ticks;
@@ -558,32 +727,36 @@
     $("state").innerHTML = `${spinning ? '<span class="spin" aria-hidden="true"></span>' : ""}<span class="tag ${tagCls}">${esc(tag)}</span>` +
       `<span class="msg">${esc(msg)}${sub ? ` <span class="sub">${esc(sub)}</span>` : ""}</span>`;
   }
+  function setIdle(msgKey = "idleMsg") {
+    stateMode = "idle"; shownJob = null;
+    setState("", t("idle"), t(msgKey), "", false);
+    updatePeriodPreview();
+  }
 
   function renderJob(job) {
+    shownJob = job; stateMode = "job";
     const p = periodOf(job.parameters);
-    const fast = job.mode === "fast";
-    const stopped = job.status === "error" && /^(Cancelled|Interrupted|Stopped)/.test(job.error || "");
     switch (job.status) {
       case "submitted":
-        setState("wait", "Sent", "Waiting for OneDrive to deliver the request.", "Usually under a minute.", true);
+        setState("wait", t("sent"), t("sentMsg"), t("sentSub"), true);
         drawTimeline(p?.start, p?.end, null, "wait"); break;
       case "queued":
-        setState("wait", "Queued", job.queue_position > 1 ? `Position ${job.queue_position} in line.` : "Next in line.", "", true);
+        setState("wait", t("queued"), job.queue_position > 1 ? t("queuePos", { n: job.queue_position }) : t("queueNext"), "", true);
         drawTimeline(p?.start, p?.end, null, "wait"); break;
       case "running": {
-        if (fast) { setState("running", "Fast forward", "Running to the end date.", "No progress updates in this mode.", true); drawTimeline(p?.start, p?.end, null, "run"); break; }
-        if (job.progress == null) { setState("running", "Running", "Starting FlexSim.", "", true); drawTimeline(p?.start, p?.end, null, "run"); break; }
+        if (job.mode === "fast") { setState("running", t("fast"), t("ffMsg"), t("ffSub"), true); drawTimeline(p?.start, p?.end, null, "run"); break; }
+        if (job.progress == null) { setState("running", t("running"), t("starting"), "", true); drawTimeline(p?.start, p?.end, null, "run"); break; }
         const at = job.progress_date ? parseDay(job.progress_date) : null;
         const before = p && at && at < p.start;
-        setState("running", "Running", before ? `Warming up: simulated through ${dayFmt(at)}, before the period starts.` : `Simulated through ${at ? dayFmt(at) : "…"}.`,
-          `${fmt(job.progress * 100, 0)}% of model time`, true);
+        setState("running", t("running"), at ? t(before ? "warming" : "through", { date: dayFmt(at) }) : t("starting"),
+          t("pctModel", { p: fmt(job.progress * 100, 0) }), true);
         drawTimeline(p?.start, p?.end, at, "run"); break;
       }
       case "done":
-        setState("done", "Finished", `Finished ${when(job.finished_at)}.`, job.wall_seconds ? `Took ${fmt(job.wall_seconds, 0)} s.` : "", false);
+        setState("done", t("finished"), t("finishedMsg", { when: when(job.finished_at) }), job.wall_seconds ? t("took", { s: fmt(job.wall_seconds, 0) }) : "", false);
         drawTimeline(p?.start, p?.end, null, "done"); break;
       default:
-        setState(stopped ? "wait" : "error", stopped ? "Stopped" : "Failed", job.error || "The run failed.", "", false);
+        setState(isStopped(job) ? "wait" : "error", isStopped(job) ? t("stopped") : t("failed"), errText(job.error), "", false);
         drawTimeline(p?.start, p?.end, null, "idle");
     }
     syncButtons();
@@ -620,9 +793,9 @@
   $("form").addEventListener("submit", (e) => { e.preventDefault(); submit("run"); });
 
   $("btnStop").addEventListener("click", async () => {
-    if (!activeId || !confirm("Stop this run? FlexSim will be closed and no results will be saved.")) return;
+    if (!activeId || !confirm(t("confirmStop"))) return;
     $("btnStop").disabled = true;
-    setState("wait", "Stopping", "Sending the stop request.", "It takes effect once OneDrive syncs.", true);
+    setState("wait", t("stopping"), t("stoppingMsg"), t("stoppingSub"), true);
     try { await T.cancel(activeId); } catch (e) { $("btnStop").disabled = false; alert(e.message); }
   });
 
@@ -633,10 +806,8 @@
     $("formError").hidden = true;
     if (!activeId) {
       selectedId = null;
-      $("resultsTitle").textContent = "Results";
-      $("resultsMeta").hidden = true;
-      $("kpis").innerHTML = '<div class="empty">Results appear here when a run finishes.</div>';
-      setState("", "Idle", "Inputs restored to defaults.", "", false);
+      clearResults();
+      setIdle("resetMsg");
       renderBars(); renderTable();
     }
   });
@@ -654,17 +825,23 @@
         if (job.status === "done") showResult(job);
       } catch (err) {
         activeId = null;
-        setState("error", "Failed", err.message, "", false); syncButtons();
+        setState("error", t("failed"), err.message, "", false); syncButtons();
       }
     }, T.pollMs);
   }
 
   // ---------- results ----------
+  function clearResults() {
+    $("resultsTitle").textContent = t("results");
+    $("resultsMeta").hidden = true;
+    $("kpis").innerHTML = `<div class="empty">${esc(t("resultsEmpty"))}</div>`;
+  }
+
   function showResult(job) {
     selectedId = job.id;
     $("resultsTitle").textContent = runName(job);
     $("resultsMeta").hidden = false;
-    $("resultsMeta").textContent = `${periodLabel(job.parameters)}${job.submitted_by ? `, run by ${job.submitted_by}` : ""}`;
+    $("resultsMeta").textContent = periodLabel(job.parameters) + (job.submitted_by ? t("runBy", { who: job.submitted_by }) : "");
     const prev = history.find(h => h.status === "done" && h.id !== job.id && new Date(h.submitted_at) < new Date(job.submitted_at));
     $("kpis").innerHTML = CFG.metrics.map(m => {
       const v = job.metrics?.[m.name];
@@ -672,11 +849,12 @@
       const pv = prev?.metrics?.[m.name];
       if (prev && v != null && pv != null && pv !== 0) {
         const pct = (v - pv) / Math.abs(pv) * 100;
-        if (Math.abs(pct) < 0.05) delta = "Same as previous run";
-        else { delta = `${pct > 0 ? "Up" : "Down"} ${fmt(Math.abs(pct), 1)}% from previous run`; cls = pct > 0 ? "up" : "down"; }
+        if (Math.abs(pct) < 0.05) delta = t("same");
+        else { delta = t(pct > 0 ? "up" : "down", { p: fmt(Math.abs(pct), 1) }); cls = pct > 0 ? "up" : "down"; }
       }
-      return `<div class="kpi"><div class="k">${esc(m.label)}</div>
-        <div class="v">${fmt(v, m.decimals ?? 1)}${m.unit ? `<small>${esc(m.unit)}</small>` : ""}</div>
+      const unit = L(m, "unit");
+      return `<div class="kpi"><div class="k">${esc(L(m, "label"))}</div>
+        <div class="v">${fmt(v, m.decimals ?? 1)}${unit ? `<small>${esc(unit)}</small>` : ""}</div>
         <div class="d ${cls}">${esc(delta)}</div></div>`;
     }).join("");
     renderBars(); renderTable();
@@ -684,7 +862,7 @@
 
   function renderBars() {
     const done = history.filter(h => h.status === "done").slice(0, 12);
-    if (!done.length) { $("bars").innerHTML = '<div class="empty">Finished runs appear here side by side.</div>'; return; }
+    if (!done.length) { $("bars").innerHTML = `<div class="empty">${esc(t("compareEmpty"))}</div>`; return; }
     const m = CFG.metrics.find(x => x.name === $("metricSel").value) || CFG.metrics[0];
     const vals = done.map(h => Number(h.metrics?.[m.name] ?? 0));
     const max = Math.max(...vals.map(Math.abs), 1e-9);
@@ -692,24 +870,25 @@
       <div class="bar-row ${h.id === selectedId ? "current" : ""}" title="${esc(runName(h))}">
         <div class="name">${esc(runName(h))}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${Math.max(1, Math.abs(vals[i]) / max * 100)}%"></div></div>
-        <div class="val">${fmt(vals[i], m.decimals ?? 1)} ${esc(m.unit || "")}</div>
+        <div class="val">${fmt(vals[i], m.decimals ?? 1)} ${esc(L(m, "unit"))}</div>
       </div>`).join("");
   }
 
   function renderTable() {
-    if (!history.length) { $("hist").innerHTML = `<tbody><tr><td class="l empty" colspan="99">No runs yet.</td></tr></tbody>`; return; }
-    const pcols = otherParams().map(p => ({ name: p.name, label: p.label + (p.unit ? ` (${p.unit})` : ""), d: p.type === "integer" ? 0 : 1 }));
-    const mcols = CFG.metrics.map(m => ({ name: m.name, label: m.label + (m.unit ? ` (${m.unit})` : ""), d: m.decimals ?? 1 }));
+    if (!history.length) { $("hist").innerHTML = `<tbody><tr><td class="l empty" colspan="99">${esc(t("noRuns"))}</td></tr></tbody>`; return; }
+    const head = (o) => L(o, "label") + (L(o, "unit") ? ` (${L(o, "unit")})` : "");
+    const pcols = otherParams().map(p => ({ name: p.name, label: head(p), d: p.type === "integer" ? 0 : 1 }));
+    const mcols = CFG.metrics.map(m => ({ name: m.name, label: head(m), d: m.decimals ?? 1 }));
     const pill = (h) => {
-      const stopped = h.status === "error" && /^(Cancelled|Interrupted|Stopped)/.test(h.error || "");
-      const map = { submitted: ["wait", "Sent"], queued: ["wait", "Queued"], running: ["running", "Running"], done: ["done", "Done"], error: stopped ? ["wait", "Stopped"] : ["error", "Failed"] };
-      const [c, t] = map[h.status] || ["error", h.status];
-      return `<span class="pill ${c}">${t}</span>`;
+      const map = { submitted: ["wait", "pSent"], queued: ["wait", "pQueued"], running: ["running", "pRunning"], done: ["done", "pDone"],
+                    error: isStopped(h) ? ["wait", "pStopped"] : ["error", "pFailed"] };
+      const [c, k] = map[h.status] || ["error", "pFailed"];
+      return `<span class="pill ${c}">${esc(t(k))}</span>`;
     };
-    $("hist").innerHTML = `<thead><tr><th class="l">Scenario</th><th class="l">By</th><th class="l">Status</th>${DI ? '<th class="l">Period</th>' : ""}` +
+    $("hist").innerHTML = `<thead><tr><th class="l">${esc(t("thScenario"))}</th><th class="l">${esc(t("thBy"))}</th><th class="l">${esc(t("thStatus"))}</th>${DI ? `<th class="l">${esc(t("thPeriod"))}</th>` : ""}` +
       pcols.map(c => `<th>${esc(c.label)}</th>`).join("") + mcols.map(c => `<th>${esc(c.label)}</th>`).join("") + "</tr></thead><tbody>" +
       history.map(h => `<tr class="${h.id === selectedId ? "selected" : ""}" data-id="${esc(h.id)}" tabindex="0">
-        <td class="l">${esc(runName(h))}${h.mode === "fast" ? ' <span class="pill running" title="Fast forward">FF</span>' : ""}</td>
+        <td class="l">${esc(runName(h))}${h.mode === "fast" ? ` <span class="pill running">${esc(t("ffTag"))}</span>` : ""}</td>
         <td class="l">${esc(h.submitted_by || "")}</td><td class="l">${pill(h)}</td>
         ${DI ? `<td class="l">${esc(periodLabel(h.parameters))}</td>` : ""}
         ${pcols.map(c => `<td>${fmt(h.parameters?.[c.name], c.d, false)}</td>`).join("")}
@@ -730,21 +909,50 @@
     renderBars(); renderTable();
   }
 
-  async function refreshSimStatus() {
-    const st = await T.simStatus();
+  let lastSim = undefined;
+  async function refreshSimStatus(useCached = false) {
+    const st = useCached ? lastSim : await T.simStatus();
+    lastSim = st;
     const el = $("simStatus"); el.hidden = false;
     let cls = "off", text;
-    if (!st) text = "Simulator has not connected yet";
+    if (!st) text = t("simNever");
     else {
       const age = (Date.now() - new Date(st.updated_at).getTime()) / 1000;
       const limit = Math.max(300, (st.heartbeat_seconds || 30) * 8);
-      if (st.online && st.running) { cls = "busy"; text = (st.queue || []).length ? `Simulator busy, ${(st.queue || []).length} waiting` : "Simulator busy"; }
-      else if (st.online && age < limit) { cls = "on"; text = `Simulator online, checked ${ago(st.updated_at)}`; }
-      else text = `Simulator offline, last seen ${ago(st.updated_at)}`;
+      const q = (st.queue || []).length;
+      if (st.online && st.running) { cls = "busy"; text = q ? t("simBusyQ", { n: q }) : t("simBusy"); }
+      else if (st.online && age < limit) { cls = "on"; text = t("simOn", { ago: ago(st.updated_at) }); }
+      else text = t("simOff", { ago: ago(st.updated_at) });
     }
     el.className = `sim-status ${cls}`;
     $("simStatusText").textContent = text;
   }
+
+  function renderConfigText() {
+    const title = L(CFG, "title"), sub = L(CFG, "subtitle");
+    document.title = title;
+    $("title").textContent = title;
+    $("subtitle").textContent = sub;
+    const cur = $("metricSel").value;
+    $("metricSel").innerHTML = CFG.metrics.map(m => `<option value="${esc(m.name)}">${esc(L(m, "label"))}</option>`).join("");
+    if (cur) $("metricSel").value = cur;
+  }
+
+  // ---------- language switch ----------
+  function setLang(lang) {
+    if (lang === LANG) return;
+    LANG = lang; store("simLang", lang);
+    applyStatic();
+    if (!CFG) return;
+    const vals = currentFormValues();
+    renderConfigText();
+    buildForm(vals);
+    if (stateMode === "job" && shownJob) renderJob(shownJob); else setIdle();
+    const sel = history.find(h => h.id === selectedId && h.status === "done");
+    if (sel) showResult(sel); else { clearResults(); renderBars(); renderTable(); }
+    refreshSimStatus(true).catch(() => {});
+  }
+  document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
 
   $("metricSel").addEventListener("change", renderBars);
 
@@ -754,26 +962,25 @@
     const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const rows = history.map(h => [runName(h), h.submitted_by, h.submitted_at, h.status, h.mode || "run", ...(DI ? [periodLabel(h.parameters)] : []),
       ...CFG.parameters.map(p => h.parameters?.[p.name]), ...CFG.metrics.map(m => h.metrics?.[m.name])].map(q).join(","));
-    const blob = new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv" });
+    const blob = new Blob(["﻿" + [head.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = "simulation_runs.csv"; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 
   (async function init() {
+    applyStatic();
     try {
       T = folderTransport(await connectFolder());
       CFG = await T.getConfig();
       DI = CFG.date_inputs || null;
-      document.title = CFG.title;
-      $("title").textContent = CFG.title;
-      $("subtitle").textContent = CFG.subtitle || "";
+      renderConfigText();
       $("mockBanner").hidden = !CFG.mock_mode;
       $("f_who").value = load("simWho") || "";
-      $("metricSel").innerHTML = CFG.metrics.map(m => `<option value="${esc(m.name)}">${esc(m.label)}</option>`).join("");
       let saved = null;
       try { saved = JSON.parse(load("simLastParams") || "null"); } catch (e) {}
       buildForm(saved || defaults());
+      clearResults(); setIdle();
       $("app").hidden = false;
       await refreshSimStatus();
       await refreshHistory();

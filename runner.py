@@ -57,7 +57,7 @@ def now_iso() -> str:
 
 def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
     """給網頁看的設定：不含 FlexSim 路徑、模型路徑、FlexScript。"""
-    out = {k: cfg.get(k) for k in ["title", "subtitle", "run_length", "parameters", "metrics"]}
+    out = {k: cfg.get(k) for k in ["title", "title_zh", "subtitle", "subtitle_zh", "run_length", "parameters", "metrics"]}
     out["parameters"] = [{k: v for k, v in p.items() if k != "set_script"} for p in cfg["parameters"]]
     out["metrics"] = [{k: v for k, v in m.items() if k != "script"} for m in cfg["metrics"]]
     out["mock_mode"] = bool(cfg.get("mock_mode"))

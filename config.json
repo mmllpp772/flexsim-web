@@ -15,7 +15,9 @@
   },
   "_onedrive說明": "預設會自動指到公司 OneDrive 裡的 FlexSimShare 資料夾，通常不用改。",
   "title": "Production Simulator",
+  "title_zh": "生產模擬器",
   "subtitle": "Choose a period, then run the FlexSim model.",
+  "subtitle_zh": "選擇模擬期間，然後執行 FlexSim 模型。",
   "run_length": null,
   "stop": {
     "type": "end_of_date",
@@ -32,6 +34,7 @@
     {
       "name": "year",
       "label": "Year",
+      "label_zh": "年份",
       "unit": "",
       "type": "integer",
       "default": 2026,
@@ -39,11 +42,13 @@
       "max": 2035,
       "step": 1,
       "help": "Simulation year",
+      "help_zh": "模擬年份",
       "set_script": "Table(\"WUS_year\")[1][1] = {value};"
     },
     {
       "name": "st_m",
       "label": "Start month",
+      "label_zh": "開始月",
       "unit": "",
       "type": "integer",
       "default": 11,
@@ -51,11 +56,13 @@
       "max": 12,
       "step": 1,
       "help": "Month the simulation period starts",
+      "help_zh": "模擬期間開始的月份",
       "set_script": "Table(\"WUS_year\")[2][1] = {value};"
     },
     {
       "name": "st_d",
       "label": "Start day",
+      "label_zh": "開始日",
       "unit": "",
       "type": "integer",
       "default": 2,
@@ -63,11 +70,13 @@
       "max": 31,
       "step": 1,
       "help": "Day the simulation period starts",
+      "help_zh": "模擬期間開始的日期",
       "set_script": "Table(\"WUS_year\")[3][1] = {value};"
     },
     {
       "name": "ed_m",
       "label": "End month",
+      "label_zh": "結束月",
       "unit": "",
       "type": "integer",
       "default": 12,
@@ -75,11 +84,13 @@
       "max": 12,
       "step": 1,
       "help": "Month the simulation period ends",
+      "help_zh": "模擬期間結束的月份",
       "set_script": "Table(\"WUS_year\")[4][1] = {value};"
     },
     {
       "name": "ed_d",
       "label": "End day",
+      "label_zh": "結束日",
       "unit": "",
       "type": "integer",
       "default": 31,
@@ -87,6 +98,7 @@
       "max": 31,
       "step": 1,
       "help": "Day the simulation period ends",
+      "help_zh": "模擬期間結束的日期",
       "set_script": "Table(\"WUS_year\")[5][1] = {value};"
     }
   ],
@@ -103,17 +115,21 @@
     {
       "name": "total_day",
       "label": "Total days",
+      "label_zh": "總天數",
       "unit": "days",
+      "unit_zh": "天",
       "decimals": 0,
       "script": "Table(\"WUS_year\")[9][1]"
     },
     {
       "name": "total_work_day",
       "label": "Total work days",
+      "label_zh": "工作天數",
       "unit": "days",
+      "unit_zh": "天",
       "decimals": 0,
       "script": "Table(\"WUS_year\")[10][1]"
     }
   ],
-  "_metrics說明": "每個指標是一段回傳數字的 FlexScript，跑完模擬後讀取。請先在 FlexSim 的 Script Console 測試，例如輸入 return Table(\"WUS_year\")[9][1]; 看結果對不對。"
+  "_metrics說明": "每個指標是一段回傳數字的 FlexScript，跑完模擬後讀取。請先在 FlexSim 的 Script Console 測試，例如輸入 return Table(\"WUS_year\")[9][1]; 看結果對不對。 label_zh / unit_zh 是切換成中文時顯示的名稱和單位，可省略（省略就顯示英文）。"
 }
