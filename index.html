@@ -527,7 +527,10 @@
       <nav class="cat-nav" id="inNav" data-i18n-aria="inputCats"></nav>
       <div class="cat-body">
         <section class="panel" data-cat="basic">
-          <h2 data-i18n="catBasic"></h2>
+          <div class="panel-head">
+            <h2 data-i18n="catBasic"></h2>
+            <button type="button" class="link" id="btnDefaults" data-i18n="restoreDefaults"></button>
+          </div>
           <form id="form" novalidate>
             <div class="basic-grid">
               <div>
@@ -752,11 +755,13 @@
       pausing: "Pausing", pausingMsg: "Sending the pause request.", resuming: "Resuming", resumingMsg: "Sending the request to continue.",
       switching: "Switching", toFast: "Switching to fast forward.", toRun: "Switching to normal run with progress.",
       syncSub: "It takes effect once OneDrive syncs.", pPaused: "Paused",
-      resetTip: "Restore the default inputs and clear the results view",
+      resetTip: "Clear the run status and results view. Your inputs stay as they are.",
+      restoreDefaults: "Restore all inputs to defaults", confirmDefaults: "Restore every input (period, daily plan, shifts) to the defaults?",
+      defaultsMsg: "All inputs restored to defaults.",
       runTip: "Run the simulation and show progress",
       fastTip: "Run to the end with progress only, no live metrics",
       stopTip: "Stop the run in progress. FlexSim is closed and no results are kept.",
-      idle: "Idle", idleMsg: "Set the period and press Run.", resetMsg: "Inputs restored to defaults.",
+      idle: "Idle", idleMsg: "Set the period and press Run.", resetMsg: "Ready. Your inputs are kept; press Run to start again.",
       sent: "Sent", sentMsg: "Waiting for OneDrive to deliver the request.", sentSub: "Usually under a minute.",
       queued: "Queued", queuePos: "Position {n} in line.", queueNext: "Next in line.",
       running: "Running", starting: "Starting FlexSim.",
@@ -859,11 +864,13 @@
       pausing: "暫停中", pausingMsg: "正在送出暫停要求。", resuming: "繼續中", resumingMsg: "正在送出繼續要求。",
       switching: "切換中", toFast: "切換成快轉。", toRun: "切換成一般執行，顯示進度。",
       syncSub: "OneDrive 同步後生效。", pPaused: "已暫停",
-      resetTip: "把輸入恢復成預設值，並清除畫面上的結果",
+      resetTip: "清除執行狀態和畫面上的結果，你設定的參數會保留。",
+      restoreDefaults: "所有輸入恢復預設值", confirmDefaults: "要把所有輸入（期間、每日投產計畫、班別）恢復成預設值嗎？",
+      defaultsMsg: "所有輸入已恢復預設值。",
       runTip: "執行模擬並顯示進度",
       fastTip: "直接跑到結束，只顯示進度，不顯示即時指標",
       stopTip: "停止這次模擬，FlexSim 會被關閉，不保留結果。",
-      idle: "待命", idleMsg: "設定期間後按「執行」。", resetMsg: "已恢復預設值。",
+      idle: "待命", idleMsg: "設定期間後按「執行」。", resetMsg: "已重設，參數都保留著。按「執行」重新開始。",
       sent: "已送出", sentMsg: "等待 OneDrive 把需求送到模擬電腦。", sentSub: "通常不到一分鐘。",
       queued: "排隊中", queuePos: "排在第 {n} 位。", queueNext: "下一個就輪到你。",
       running: "執行中", starting: "正在啟動 FlexSim。",
@@ -1688,20 +1695,26 @@
     try { await T.cancel(activeId); } catch (e) { $("btnStop").disabled = false; alert(e.message); }
   });
 
+  // Reset: like FlexSim's Reset — back to the start, inputs untouched
   $("btnReset").addEventListener("click", () => {
-    const hasPlan = Object.values(PLANS).some(p => p && Object.keys(p.inputs || {}).length);
-    if (hasPlan && !confirm(t("confirmReset"))) return;
-    PLANS = {}; savePlans(); SHIFTS = {}; saveShifts();
-    store("simLastParams"); store("simLabel");
-    buildForm(defaults());
-    $("f_label").value = "";
     $("formError").hidden = true;
     if (!activeId) {
       selectedId = null;
       clearResults();
       setIdle("resetMsg");
-      renderBars(); renderTable(); renderShifts();
+      renderBars(); renderTable();
     }
+  });
+  // Restoring defaults is a separate, confirmed action
+  $("btnDefaults").addEventListener("click", () => {
+    if (!confirm(t("confirmDefaults"))) return;
+    PLANS = {}; savePlans(); SHIFTS = {}; saveShifts();
+    store("simLastParams"); store("simLabel");
+    buildForm(defaults());
+    $("f_label").value = "";
+    $("formError").hidden = true;
+    renderPlan(); renderShifts(); renderInNav();
+    if (!activeId) setIdle("defaultsMsg");
   });
 
   function poll(id) {
