@@ -352,6 +352,31 @@ def parse_util(path: Path) -> dict[str, Any]:
     return {"objects": objects, "missing": missing}
 
 
+def sync_table_lines(cfg: dict[str, Any]) -> list[str]:
+    """Reset 後，把來源表（Bianca 的每日紀錄）的列數、列名和 Date / Weekday 複製到 Strata 的表。
+    模型的 On Model Reset 只重建 Bianca 的表，Strata 的表會留著存檔時的舊日期。"""
+    sy = cfg.get("sync_tables")
+    if not sy or not sy.get("targets"):
+        return []
+    cols = sy.get("columns", ["Date", "Weekday"])
+    cond = " || ".join(f"wyh == {_fs_str(c)}" for c in cols)
+    out = ["// ---- copy dates to the other product's record tables ----",
+           f"Table wys = Table({_fs_str(sy['source'])});",
+           "int wyr; int wyc; int wyk; string wyh;"]
+    for i, t in enumerate(sy["targets"], 1):
+        v = f"wyt{i}"
+        out += [
+            f"Table {v} = Table({_fs_str(t)});",
+            f"while ({v}.numRows > wys.numRows) {v}.deleteRow({v}.numRows);",
+            f"while ({v}.numRows < wys.numRows) {v}.addRow();",
+            f"for (wyr = 1; wyr <= wys.numRows; wyr++) {v}.setRowHeader(wyr, wys.getRowHeader(wyr));",
+            "for (wyk = 1; wyk <= wys.numCols; wyk++) { wyh = wys.getColHeader(wyk);",
+            f"    if ({cond}) {{ for (wyc = 1; wyc <= {v}.numCols; wyc++) {{ if ({v}.getColHeader(wyc) == wyh) {{",
+            f"        for (wyr = 2; wyr <= wys.numRows; wyr++) {v}[wyr][wyc] = wys[wyr][wyk]; }} }} }} }}",
+        ]
+    return out
+
+
 def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float, result_path: Path,
                  progress_path: Path | None, tables_path: Path | None = None, plans: dict[str, Any] | None = None,
                  shifts: dict[str, Any] | None = None, util_path: Path | None = None) -> str:
@@ -376,6 +401,7 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
     ]
     if plan_lines:  # reset 後再寫一次（以防模型 reset 時把表格重建）
         lines += [ln[len("Table "):] if ln.startswith("Table ") else ln for ln in plan_lines]  # 變數已宣告過，第二次不再宣告
+    lines += sync_table_lines(cfg)
     lines += [
         f"double wr_end = {end_time!r};",
         "double wr_last = -1;",
