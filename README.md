@@ -75,7 +75,7 @@ FlexSim 跑在你的桌機上，美國同事用瀏覽器打開 `http://你的電
 FlexSimPy 是 FlexSim 官方的 Python 控制模組，要自己用 Visual Studio 編譯成 `.pyd`：
 - 原始碼：https://github.com/flexsim/FlexSimPy
 - 依 README 選對應 Python 版本的組態編譯，把產生的 `FlexSimPy.pyd` 放到 Python 找得到的地方（例如這個資料夾）
-- 測試：`python -c "import FlexSimPy"` 沒報錯就成功
+- 測試：在 VS Code 終端機輸入 `python -c "import FlexSimPy"`，沒有錯誤訊息就成功
 
 ### 2. 整理模型
 - 要讓客戶調的值，在 FlexSim 裡做成 **Model Parameters**，名稱要和 `config.json` 的 `name` 一模一樣
@@ -93,7 +93,6 @@ FlexSimPy 是 FlexSim 官方的 Python 控制模組，要自己用 Visual Studio
 ```
 - `launch_kwargs` 會直接傳給 `FlexSimPy.launch()`。不同版本的參數名稱可能不同，若啟動失敗請看 FlexSimPy 原始碼裡 `launch` 接受哪些參數再調整
 - 第一次測試可以先設 `"showGUI": true`，看得到 FlexSim 視窗比較好除錯
-- 測試 FlexSimPy 是否裝好：在 VS Code 終端機輸入 `python -c "import FlexSimPy"`，沒有錯誤訊息就成功
 
 ### 4. 在 VS Code 終端機按 `Ctrl + C` 再重新啟動，按一次 Run 確認數字和你在 FlexSim 手動跑的一致
 
