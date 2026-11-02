@@ -40,11 +40,16 @@ def main() -> None:
     run_dir = RUNS_DIR / ("check-" + datetime.now().strftime("%Y%m%d-%H%M%S"))
     run_dir.mkdir(parents=True)
     script, result, tables = run_dir / "script.txt", run_dir / "result.txt", run_dir / "tables.txt"
+    di = cfg.get("daily_input")
+    sched_check = "".join(
+        f'Table wq{i} = Table({_fs_str(p["schedule_table"])}); wq{i}.setSize(wq{i}.numRows, Math.max(7, wq{i}.numCols)); '
+        f'fpt("sched_{p["name"]}\\t" + numtostring(wq{i}.numCols, 0, 0)); fpr();\n'
+        for i, p in enumerate(di["products"], 1)) if di else ""
     export = "\n".join(table_export_lines(cfg.get("tables", []), tables)) + "\n" if cfg.get("tables") else ""
     script.write_text(
         f'fileopen({_fs_str(str(result))}, "w");\n'
         'fpt("model_time\\t" + numtostring(Model.time, 0, 6)); fpr();\n'
-        'fpt("wus_year_r1c1\\t" + numtostring(Table("WUS_year")[1][1], 0, 6)); fpr();\n'
+        'fpt("wus_year_r1c1\\t" + numtostring(Table("WUS_year")[1][1], 0, 6)); fpr();\n' + sched_check +
         'fpt("__done\\t1"); fpr();\n'
         "fileclose();\n" + export +
         "cmdexit();\n", encoding="utf-8")
@@ -68,6 +73,14 @@ def main() -> None:
     if v is None:
         sys.exit("  ✗ 讀不到 Table(\"WUS_year\")[1][1]")
     print(f"  ✓ WUS_year 第 1 列第 1 欄 = {v:g}（應該是年份，例如 2026）")
+
+    if di:
+        print("\n== 3a. 每日投產表 ==")
+        for p in di["products"]:
+            n = values.get(f"sched_{p['name']}")
+            if n is None:
+                sys.exit(f"  ✗ 無法操作 {p['schedule_table']}（setSize 或表名有問題）。請把 {script} 貼到 Script Console 執行看哪一行出錯。")
+            print(f"  ✓ {p['schedule_table']}: {n:g} 欄（需要至少 7 欄：Month … Holiday）")
 
     if cfg.get("tables"):
         print("\n== 3b. 匯出輸出表格 ==")

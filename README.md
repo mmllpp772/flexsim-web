@@ -17,6 +17,7 @@ FlexSim 跑在你的桌機上，美國同事在網頁輸入參數 → 按 Run �
 | `config.json` | **唯一要改的檔案**：模型路徑、開放的參數、要讀的指標 |
 | `onedrive_worker.py` | 主程式：監看共用資料夾、跑 FlexSim、寫回結果 |
 | `runner.py` | 核心：檢查參數、用命令列開 FlexSim 跑模擬、讀指標 |
+| `schedule.py` | 每日投產計畫：聯邦假日、Suggest Input 平攤、寫入 WUS_schedule |
 | `check_flexsim.py` | 連線檢查：確認這台電腦能用命令列控制 FlexSim |
 | `index.html` | 網頁（英文介面），啟動時自動複製到共用資料夾成為 `Simulator.html` |
 | `start.bat` | 正式上線用：雙擊啟動，不用開 VS Code |
@@ -67,6 +68,28 @@ python onedrive_worker.py
 - 終端機要一直開著。按 `Ctrl + C` 停止：如果正在跑模擬，會先關掉背景的 FlexSim 再結束（再按一次 `Ctrl + C` 立刻強制結束）。停止後網頁會顯示 offline
 - 程式中斷時正在跑的工作，下次啟動會標記為 Interrupted，**不會自動重跑**；還沒開始的工作則會照常執行
 - 想先不開 FlexSim、只測網頁流程：把 `config.json` 的 `"mock_mode"` 改成 `true`（用假資料，網頁上方會有黃色 Demo 提示）
+
+### 每日投產計畫（參數調整頁）
+
+選好開始和結束日期後，下方會出現「每日投產計畫」，Bianca 和 Strata 各一份：
+
+- **日期自動產生**：每天一列，自動填 Month、Week of Month、Day of Month、Weekday
+- **假日自動判斷並鎖定**：依「週六休息／週日休息」勾選，加上**美國聯邦假日**（含補假，例如遇週六提前到週五），Holiday 填 Y，那天的投入量不能填
+- **Target**：每個產品各自的目標量
+- **SMT Input**：每天要投產的數量。可以一格一格填（Enter 跳下一格），也可以從 Excel 複製一整欄，點第一格貼上
+- **Suggest Input**：有填投入量的日子 = 投入量；沒填的工作日平均分攤 (Target − 已填總和)。已填超過 Target 時會出現提醒，建議值變成負數（跟原本模型的算法一樣）
+- 填的內容會記在瀏覽器裡，重新開網頁不會不見
+
+送出後，背景程式會**再算一次**（以背景程式的結果為準），寫進 FlexSim：
+
+| 寫到哪裡 | 內容 |
+|---|---|
+| `WUS_schedule` / `WUS_schedule_Strata` | 依期間調整列數，每列：Month、Week of Month、Day of Month、Weekday、SMT Input、Suggest Input、Holiday |
+| `WUS_year` 第 6、7 列 | Saturday / Sunday（1 = 休息） |
+| `WUS_year` 第 8 列 | Target |
+| `WUS_year` 第 9、10 列 | Total Day / Total Work Day（已扣掉聯邦假日） |
+
+reset 前、後各寫一次，避免模型 reset 時把表格重建。設定在 `config.json` 的 `daily_input`。
 
 ### 網頁分成三頁
 

@@ -114,6 +114,37 @@
     "end_day": "ed_d"
   },
   "_date_inputs說明": "網頁用兩個日期選擇器（開始日、結束日）取代這 5 個數字欄位，送出時自動拆成年、月、日。不需要的話整段刪掉，網頁就會改回一般數字欄位。",
+  "daily_input": {
+    "year_table": "WUS_year",
+    "year_rows": {
+      "saturday": 6,
+      "sunday": 7,
+      "target": 8,
+      "total_day": 9,
+      "total_work_day": 10
+    },
+    "products": [
+      {
+        "name": "bianca",
+        "label": "Bianca",
+        "schedule_table": "WUS_schedule",
+        "year_table_col": 1
+      },
+      {
+        "name": "strata",
+        "label": "Strata",
+        "schedule_table": "WUS_schedule_Strata",
+        "year_table_col": 2
+      }
+    ],
+    "defaults": {
+      "target": 1000,
+      "sat_off": false,
+      "sun_off": true
+    },
+    "federal_holidays": true
+  },
+  "_daily_input說明": "每日投產計畫：網頁依期間產生每天一列，使用者填 Target 和每天的 SMT Input，系統算 Suggest Input、判斷假日（週末規則＋美國聯邦假日），寫進 schedule_table（欄位順序：Month、Week of Month、Day of Month、Weekday、SMT Input、Suggest Input、Holiday），並把 Target、週六／週日休息（1=休息）、總天數、工作天數寫進 year_table 對應的列。year_table_col：該產品在 WUS_year 是第幾欄。",
   "metrics": [
     {
       "name": "total_day",

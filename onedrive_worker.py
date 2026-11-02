@@ -27,7 +27,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from runner import (BASE_DIR, Cancelled, load_config, model_datetime, log, make_runner, now_iso,
+from schedule import validate_plans
+from runner import (BASE_DIR, Cancelled, load_config, model_datetime, period_of, log, make_runner, now_iso,
                     public_config, setup_logging, validate_params)
 
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -205,13 +206,15 @@ class Worker:
         base = self.base_info(job_id, job)
         try:
             params, length = validate_params(self.cfg, job.get("parameters"), job.get("run_length"))
+            period = period_of(self.cfg, params)
+            plans = validate_plans(self.cfg, job.get("plans"), *period) if period else None
         except ValueError as e:
             self.write_result(job_id, {**base, "status": "error", "finished_at": now_iso(), "error": str(e),
                                        "parameters": job.get("parameters"), "run_length": job.get("run_length")})
             log.warning("Rejected job %s: %s", job_id, e)
             return
 
-        base.update(parameters=params, run_length=length)
+        base.update(parameters=params, run_length=length, plans=plans)
         self.running = job_id
         started = now_iso()
         self.write_result(job_id, {**base, "status": "running", "started_at": started})
@@ -277,7 +280,7 @@ class Worker:
 
         try:
             result = self.runner.run(params, length, should_cancel=should_cancel, on_progress=on_progress,
-                                     want_pause=want_pause, on_pause=on_pause)
+                                     want_pause=want_pause, on_pause=on_pause, plans=plans)
             base["mode"] = st["mode"]
             if series and result.get("model_time") is not None:
                 add_point(result["model_time"], result["metrics"])
