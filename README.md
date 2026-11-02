@@ -75,6 +75,7 @@ python onedrive_worker.py
 | `config.json` | 網頁用的公開設定（**不含**模型路徑和 FlexScript） |
 | `status.json` | 讓網頁顯示「Simulator online / offline」 |
 | `jobs/` | 網頁送來的工作，一個工作一個檔案 |
+| `cancel/` | 網頁按 Cancel 時寫入的取消要求 |
 | `results/` | 模擬結果，一個工作一個檔案 |
 
 ### 共用資料夾的位置

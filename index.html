@@ -86,6 +86,10 @@
   th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
   tr.clickable { cursor: pointer; } tr.clickable:hover td { background: var(--bg); }
   tr.selected td { background: var(--accent-soft); }
+  .status-text { flex: 1; min-width: 0; }
+  .progress { height: 6px; background: var(--bg); border-radius: 3px; margin-top: 6px; overflow: hidden; max-width: 420px; }
+  .progress div { height: 100%; background: var(--accent); transition: width .6s; }
+  .cancel-btn { margin-left: auto; font-size: 13px; padding: 5px 12px; }
   .err-box { background: var(--err-soft); color: var(--err); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-top: 10px; }
   .sim-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-top: 8px; }
   .sim-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
@@ -257,6 +261,7 @@
         return { ...data, status: "submitted" };
       },
       async getJob(id) { await status(); return (await merge(id)) || { id, status: "submitted" }; },
+      async cancel(id) { await writeJson("cancel", `${id}.json`, { id, cancelled_at: new Date().toISOString() }); },
       async history() {
         await status();
         const ids = (await listIds("jobs")).sort().reverse().slice(0, 50);
@@ -328,6 +333,10 @@
     if (s < 5400) return `${Math.round(s / 60)} min ago`;
     if (s < 172800) return `${Math.round(s / 3600)} h ago`;
     return `${Math.round(s / 86400)} days ago`;
+  }
+  function fmtDate(s) {
+    const d = new Date(String(s).replace(" ", "T"));
+    return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
   const runName = (j) => j.label || `Run ${fmtTime(j.submitted_at)}`;
 
@@ -404,13 +413,26 @@
     const map = {
       submitted: ["queued", "Sent", "Waiting for OneDrive to sync your request to the simulator (usually under a minute)…"],
       queued: ["queued", "Queued", `Waiting for the simulator${job.queue_position ? ` · position ${job.queue_position} in line` : ""}…`],
-      running: ["running", "Running", "FlexSim is running your scenario…"],
+      running: ["running", "Running", job.progress != null
+        ? `FlexSim is running your scenario · ${fmt(job.progress * 100, 0)}%${job.progress_date ? ` · simulated through ${fmtDate(job.progress_date)}` : ""}`
+        : "FlexSim is starting…"],
       done: ["done", "Complete", `Finished ${fmtTime(job.finished_at)}${job.wall_seconds ? ` · took ${fmt(job.wall_seconds, 1)} s` : ""}`],
       error: ["error", "Failed", job.error || "Unknown error"],
     };
-    const [cls, label, text] = map[job.status] || map.error;
+    let [cls, label, text] = map[job.status] || map.error;
+    if (job.status === "error" && /^(Cancelled|Interrupted|Stopped)/.test(job.error || "")) { cls = "queued"; label = "Stopped"; }
     const spin = ACTIVE.includes(job.status) ? '<div class="spinner" aria-hidden="true"></div>' : "";
-    $("statusLine").innerHTML = `${spin}<span class="pill ${cls}">${label}</span><span>${esc(text)}</span>`;
+    const canCancel = ACTIVE.includes(job.status) && job.id;
+    const bar = job.status === "running" && job.progress != null
+      ? `<div class="progress"><div style="width:${Math.max(2, job.progress * 100)}%"></div></div>` : "";
+    $("statusLine").innerHTML = `${spin}<span class="pill ${cls}">${label}</span><span class="status-text">${esc(text)}${bar}</span>` +
+      (canCancel ? `<button type="button" class="cancel-btn" data-id="${esc(job.id)}">Cancel</button>` : "");
+    const btn = document.querySelector("#statusLine .cancel-btn");
+    if (btn) btn.onclick = async () => {
+      if (!confirm("Cancel this run?")) return;
+      btn.disabled = true; btn.textContent = "Cancelling…";
+      try { await T.cancel(btn.dataset.id); } catch (e) { btn.disabled = false; btn.textContent = "Cancel"; alert(e.message); }
+    };
   }
 
   function showResult(job) {

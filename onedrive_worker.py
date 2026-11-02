@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from runner import (BASE_DIR, load_config, log, make_runner, now_iso,
+from runner import (BASE_DIR, Cancelled, load_config, model_datetime, log, make_runner, now_iso,
                     public_config, setup_logging, validate_params)
 
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -99,8 +99,9 @@ class Worker:
         self.heartbeat_every = float(od.get("heartbeat_seconds", 30))
         self.jobs_dir = self.share / "jobs"
         self.results_dir = self.share / "results"
-        self.jobs_dir.mkdir(exist_ok=True)
-        self.results_dir.mkdir(exist_ok=True)
+        self.cancel_dir = self.share / "cancel"
+        for d in (self.jobs_dir, self.results_dir, self.cancel_dir):
+            d.mkdir(exist_ok=True)
         try:
             self.runner = make_runner(self.cfg)
         except RuntimeError as e:
@@ -145,8 +146,36 @@ class Worker:
             res = read_json(self.results_dir / f"{job_id}.json")
             if res and res.get("status") in FINAL:
                 continue
+            if (self.cancel_dir / f"{job_id}.json").exists():
+                job = read_json(f) or {}
+                self.write_result(job_id, {**self.base_info(job_id, job), "parameters": job.get("parameters"),
+                                           "status": "error", "finished_at": now_iso(),
+                                           "error": "Cancelled before it started"})
+                log.info("Job %s cancelled before start", job_id)
+                continue
             pending.append(job_id)
         return sorted(pending)  # id 以時間開頭，排序後就是先來先做
+
+    @staticmethod
+    def base_info(job_id: str, job: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": job_id,
+            "label": str(job.get("label") or "")[:60] or None,
+            "submitted_by": str(job.get("submitted_by") or "")[:60] or None,
+            "submitted_at": job.get("submitted_at"),
+        }
+
+    def recover_interrupted(self) -> None:
+        """上次程式中斷時正在跑的工作：標記為中斷，不要自動重跑。"""
+        for f in self.results_dir.glob("*.json"):
+            res = read_json(f)
+            if res and res.get("status") == "running":
+                res.update(status="error", finished_at=now_iso(),
+                           error="Interrupted: the simulator PC stopped before this run finished. Please run it again.")
+                res.pop("progress", None)
+                res.pop("progress_date", None)
+                self.write_result(f.stem, res)
+                log.warning("Marked interrupted job %s", f.stem)
 
     def write_result(self, job_id: str, data: dict[str, Any]) -> None:
         write_json_atomic(self.results_dir / f"{job_id}.json", data)
@@ -162,12 +191,7 @@ class Worker:
             return
         self.bad_seen.pop(job_id, None)
 
-        base = {
-            "id": job_id,
-            "label": str(job.get("label") or "")[:60] or None,
-            "submitted_by": str(job.get("submitted_by") or "")[:60] or None,
-            "submitted_at": job.get("submitted_at"),
-        }
+        base = self.base_info(job_id, job)
         try:
             params, length = validate_params(self.cfg, job.get("parameters"), job.get("run_length"))
         except ValueError as e:
@@ -178,15 +202,39 @@ class Worker:
 
         base.update(parameters=params, run_length=length)
         self.running = job_id
-        self.write_result(job_id, {**base, "status": "running", "started_at": now_iso()})
+        started = now_iso()
+        self.write_result(job_id, {**base, "status": "running", "started_at": started})
         self.heartbeat(force=True)
         log.info("Running job %s %s", job_id, params)
-        started = now_iso()
+        cancel_file = self.cancel_dir / f"{job_id}.json"
+        last_write = [0.0]
+
+        def should_cancel() -> str | None:
+            if self.stopping:
+                return "Stopped on the simulator PC before it finished. Please run it again."
+            if cancel_file.exists():
+                return "Cancelled"
+            return None
+
+        def on_progress(fraction: float, model_time: float) -> None:
+            if time.time() - last_write[0] < 10:  # 最多 10 秒寫一次，避免 OneDrive 一直同步
+                return
+            last_write[0] = time.time()
+            dt = model_datetime(self.cfg, model_time)
+            self.write_result(job_id, {**base, "status": "running", "started_at": started,
+                                       "progress": round(fraction, 4),
+                                       "progress_date": dt.strftime("%Y-%m-%d %H:%M") if dt else None})
+            log.info("Job %s: %.0f%%%s", job_id, fraction * 100, f" (simulated to {dt:%Y-%m-%d})" if dt else "")
+
         try:
-            result = self.runner.run(params, length)
+            result = self.runner.run(params, length, should_cancel=should_cancel, on_progress=on_progress)
             self.write_result(job_id, {**base, "status": "done", "started_at": started,
                                        "finished_at": now_iso(), **result})
             log.info("Job %s done", job_id)
+        except Cancelled as e:
+            log.warning("Job %s: %s", job_id, e)
+            self.write_result(job_id, {**base, "status": "error", "started_at": started,
+                                       "finished_at": now_iso(), "error": str(e)})
         except Exception as e:
             log.exception("Job %s failed", job_id)
             self.write_result(job_id, {**base, "status": "error", "started_at": started,
@@ -198,6 +246,7 @@ class Worker:
     # ---------- 主迴圈 ----------
     def loop(self) -> None:
         self.publish()
+        self.recover_interrupted()
         log.info("Watching %s (every %.0fs). Press Ctrl+C to stop.", self.share, self.poll)
         while not self.stopping:
             try:
@@ -219,7 +268,10 @@ def main() -> None:
     w = Worker()
 
     def stop(*_):
+        if w.stopping:  # 第二次 Ctrl+C：立刻結束
+            raise KeyboardInterrupt
         w.stopping = True
+        log.info("Stopping… (closing FlexSim if a run is in progress)")
     signal.signal(signal.SIGINT, stop)
     try:
         signal.signal(signal.SIGTERM, stop)
