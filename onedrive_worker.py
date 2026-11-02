@@ -163,6 +163,7 @@ class Worker:
             "label": str(job.get("label") or "")[:60] or None,
             "submitted_by": str(job.get("submitted_by") or "")[:60] or None,
             "submitted_at": job.get("submitted_at"),
+            "mode": "fast" if job.get("mode") == "fast" else "run",
         }
 
     def recover_interrupted(self) -> None:
@@ -227,7 +228,8 @@ class Worker:
             log.info("Job %s: %.0f%%%s", job_id, fraction * 100, f" (simulated to {dt:%Y-%m-%d})" if dt else "")
 
         try:
-            result = self.runner.run(params, length, should_cancel=should_cancel, on_progress=on_progress)
+            result = self.runner.run(params, length, should_cancel=should_cancel,
+                                     on_progress=None if base["mode"] == "fast" else on_progress)
             self.write_result(job_id, {**base, "status": "done", "started_at": started,
                                        "finished_at": now_iso(), **result})
             log.info("Job %s done", job_id)
