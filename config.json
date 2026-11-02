@@ -12,11 +12,11 @@
     "max_run_seconds": 1800
   },
   "onedrive": {
-    "share_dir": "C:/Users/你的帳號/OneDrive - 公司名稱/FlexSimShare",
+    "share_dir": "%OneDriveCommercial%/FlexSimShare",
     "poll_seconds": 3,
     "heartbeat_seconds": 30
   },
-  "_onedrive說明": "OneDrive 中轉模式才需要：share_dir 填你電腦上那個共用資料夾的完整路徑（在檔案總管對資料夾按右鍵→內容可看到位置）",
+  "_onedrive說明": "OneDrive 中轉模式用。預設 %OneDriveCommercial%/FlexSimShare 會自動指到公司 OneDrive 裡的 FlexSimShare 資料夾（不存在會自動建立），通常不用改。找不到時再改成完整路徑，例如 C:/Users/工號/OneDrive - 公司名稱/FlexSimShare（斜線用 /）",
   "title": "Production Line Simulator",
   "subtitle": "Enter scenario parameters and run the FlexSim model",
   "run_length": {

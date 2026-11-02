@@ -59,6 +59,22 @@ def read_json(path: Path) -> Any | None:
         return None  # 可能還在同步中，下一輪再試
 
 
+def resolve_share_dir(share: str) -> Path:
+    """支援 %OneDriveCommercial% 這類 Windows 環境變數。
+    公司 OneDrive 的位置會存在 OneDriveCommercial（例如 C:\\Users\\工號\\OneDrive - 公司名稱），
+    所以 config 寫 %OneDriveCommercial%/FlexSimShare，每台公司電腦都能自動找到，不用填工號。"""
+    def sub(m: re.Match) -> str:
+        name = m.group(1)
+        val = os.environ.get(name)
+        if not val and name.lower() == "onedrivecommercial":
+            val = os.environ.get("OneDrive")  # 沒有公司版時退回一般 OneDrive
+        if not val:
+            raise SystemExit(f"找不到環境變數 %{name}%（這台電腦可能沒有登入公司 OneDrive）。\n"
+                             f"請在 config.json 的 share_dir 直接填資料夾完整路徑。")
+        return val
+    return Path(os.path.expanduser(re.sub(r"%([^%]+)%", sub, share)))
+
+
 class Worker:
     def __init__(self) -> None:
         self.cfg = load_config()
@@ -66,9 +82,13 @@ class Worker:
         share = od.get("share_dir", "")
         if not share:
             raise SystemExit('config.json 裡 "onedrive" → "share_dir" 還沒設定 OneDrive 共用資料夾路徑')
-        self.share = Path(os.path.expandvars(os.path.expanduser(share)))
+        self.share = resolve_share_dir(share)
         if not self.share.exists():
-            raise SystemExit(f"找不到共用資料夾：{self.share}\n請確認 OneDrive 已同步這個資料夾，或修改 config.json")
+            if self.share.parent.is_dir():  # OneDrive 在，只是還沒建資料夾 → 自動建立
+                self.share.mkdir()
+                log.info("Created shared folder %s — remember to share it with your colleagues in OneDrive.", self.share)
+            else:
+                raise SystemExit(f"找不到共用資料夾：{self.share}\n請確認 OneDrive 已同步這個資料夾，或在 config.json 的 share_dir 填入完整路徑")
         self.poll = float(od.get("poll_seconds", 3))
         self.heartbeat_every = float(od.get("heartbeat_seconds", 30))
         self.jobs_dir = self.share / "jobs"

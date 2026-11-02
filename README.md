@@ -60,31 +60,28 @@ pip install -r requirements.txt
 
 ## A. OneDrive 中轉模式
 
-### A-1. 建立共用資料夾（你這邊）
-1. 在你的 OneDrive 裡建一個資料夾，例如 `FlexSimShare`
-2. 對資料夾按右鍵 → **共用** → 加入美國同事，權限選 **可以編輯**
-3. 建議對資料夾按右鍵 → **一律保留在此裝置上**，避免檔案只在雲端
-4. 對資料夾按右鍵 → **內容**，複製「位置」+ 資料夾名稱，就是完整路徑，例如：
-   `C:\Users\you\OneDrive - 公司名稱\FlexSimShare`
+### A-1. 共用資料夾（你這邊）
+程式預設使用公司 OneDrive 裡的 `FlexSimShare` 資料夾，**不用填路徑**：
+- `config.json` 裡預設是 `"share_dir": "%OneDriveCommercial%/FlexSimShare"`
+- `%OneDriveCommercial%` 是 Windows 內建的設定，會自動指到你的公司 OneDrive（例如 `C:\Users\工號\OneDrive - 公司名稱`）
+- 資料夾不存在的話，第一次啟動會**自動建立**
 
-### A-2. 修改 config.json
-```json
-"onedrive": {
-  "share_dir": "C:/Users/you/OneDrive - 公司名稱/FlexSimShare",
-  "poll_seconds": 3,
-  "heartbeat_seconds": 30
-}
-```
-- 路徑裡的 `\` 請改成 `/`（或寫成 `\\`）
-- `poll_seconds`：你的電腦幾秒檢查一次有沒有新工作
-- `heartbeat_seconds`：幾秒更新一次「模擬電腦在線」狀態
+> 想用別的資料夾，再把 `share_dir` 改成完整路徑，例如 `C:/Users/工號/OneDrive - 公司名稱/MyFolder`（斜線用 `/`）。
+
+### A-2. 分享給美國同事
+1. 先執行一次 A-3 的啟動指令，讓程式建立好 `FlexSimShare`
+2. 檔案總管 → 左邊 **OneDrive - 公司名稱** → 對 `FlexSimShare` 按右鍵 → 有雲朵圖示的 **共用**
+3. 輸入美國同事的 email，權限選 **可以編輯** → 傳送
+4. 建議再對資料夾按右鍵 → **一律保留在此裝置上**
+
+> ⚠️ 不要用資料夾「內容」裡的「共用」或「安全性」分頁，那是 Windows 網路共用和檔案權限，跟 OneDrive 分享無關。
 
 ### A-3. 啟動
 在 VS Code 終端機輸入：
 ```
 python onedrive_worker.py
 ```
-看到 `Watching C:\...\FlexSimShare` 就成功了。程式會自動在共用資料夾裡建立：
+看到 `Watching C:\Users\...\OneDrive - 公司名稱\FlexSimShare` 就成功了。程式會自動在共用資料夾裡建立：
 
 | 自動建立的檔案 | 用途 |
 |---|---|
@@ -193,6 +190,7 @@ FlexSimPy 是 FlexSim 官方的 Python 控制模組，要自己用 Visual Studio
 | `'python' 不是內部或外部命令` | 安裝 Python 時沒勾 Add to PATH，重新安裝並勾選，再重開 VS Code |
 | `'pip' 不是內部或外部命令` | 改用 `python -m pip install -r requirements.txt` |
 | 終端機紅字「已停用指令碼執行」 | 終端機右上角 `+` 旁的下拉選單 → 改選 **Command Prompt** |
+| `找不到環境變數 %OneDriveCommercial%` | 這台電腦沒登入公司 OneDrive；登入後重試，或在 `share_dir` 填完整路徑 |
 | `找不到共用資料夾` | `config.json` 的 `share_dir` 路徑是否正確、OneDrive 是否已同步 |
 | 網頁顯示 This browser can't open local folders | 改用 Edge 或 Chrome 開 `Simulator.html` |
 | 網頁顯示 config.json was not found | 選錯資料夾，或你的電腦還沒啟動過 `onedrive_worker.py` |
