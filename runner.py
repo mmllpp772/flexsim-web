@@ -363,107 +363,6 @@ def parse_util(path: Path) -> dict[str, Any]:
     return {"objects": objects, "missing": missing}
 
 
-# ---------------------------------------------------------------------------
-# 模型佈置圖（俯視）：每個物件的四個角（模型座標）、類別、顏色、是否隱藏
-# ---------------------------------------------------------------------------
-
-LAYOUT_SKIP = {"AGV::ControlPoint", "AGV::ControlArea", "Conveyor::PhotoEye", "Conveyor::DecisionPoint", "AStar::Grid",
-               "AStar::Barrier", "AStar::Divider", "AStar::PreferredPath", "NetworkNode", "StatisticsCollector",
-               "Box", "Cylinder", "Sphere", "Pallet", "Tote", "TextureColoredBox", "Person"}  # 後面幾個是存檔時還在線上的貨物
-
-
-def layout_export_lines(path: Path) -> list[str]:
-    """走過模型裡所有物件（含容器裡的），寫出 @o 名稱、類別、四個角的 x y（投影到模型座標）、z、顏色、是否隱藏。"""
-    return [
-        f'fileopen({_fs_str(str(path))}, "w");',
-        "Array wl_st = [model()];",
-        "Array wl_hd = [0];",
-        "while (wl_st.length > 0) {",
-        "    treenode wl_c = wl_st.pop();",
-        "    int wl_ph = wl_hd.pop();",
-        "    for (int wl_i = 1; wl_i <= wl_c.subnodes.length; wl_i++) {",
-        "        treenode wl_k = wl_c.subnodes[wl_i];",
-        "        if (wl_k.dataType != DATATYPE_OBJECT) continue;",
-        "        Object wl_o = wl_k;",
-        "        int wl_h = wl_ph || switch_hideshape(wl_k, -1);",
-        "        double wl_sx = wl_o.size.x;",
-        "        double wl_sy = wl_o.size.y;",
-        "        Vec3 wl_a = Vec3(0, 0, 0).project(wl_o, model());",
-        "        Vec3 wl_b = Vec3(wl_sx, 0, 0).project(wl_o, model());",
-        "        Vec3 wl_e = Vec3(wl_sx, -wl_sy, 0).project(wl_o, model());",
-        "        Vec3 wl_f = Vec3(0, -wl_sy, 0).project(wl_o, model());",
-        '        fpt("@o\\t" + wl_k.name + "\\t" + getname(classobject(wl_k)));',
-        '        fpt("\\t" + numtostring(wl_a.x, 0, 3) + "\\t" + numtostring(wl_a.y, 0, 3) + "\\t" + numtostring(wl_b.x, 0, 3) + "\\t" + numtostring(wl_b.y, 0, 3));',
-        '        fpt("\\t" + numtostring(wl_e.x, 0, 3) + "\\t" + numtostring(wl_e.y, 0, 3) + "\\t" + numtostring(wl_f.x, 0, 3) + "\\t" + numtostring(wl_f.y, 0, 3));',
-        '        fpt("\\t" + numtostring(wl_a.z, 0, 3) + "\\t" + numtostring(wl_o.color.r, 0, 3) + "\\t" + numtostring(wl_o.color.g, 0, 3) + "\\t" + numtostring(wl_o.color.b, 0, 3));',
-        '        fpt("\\t" + numtostring(wl_h, 0, 0)); fpr();',
-        "        wl_st.push(wl_k);",
-        "        wl_hd.push(wl_h);",
-        "    }",
-        "}",
-        'fpt("@done"); fpr();',
-        "fileclose();",
-    ]
-
-
-def parse_layout(path: Path) -> dict[str, Any] | None:
-    """讀回佈置圖。物件：[名稱, 類別編號, [x1, y1, … x4, y4], 顏色, 是否隱藏]（y 已翻成往下為正，方便畫圖）。"""
-    if not path.exists():
-        return None
-    classes: list[str] = []
-    objs: list[list[Any]] = []
-    done = False
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        parts = line.split("\t")
-        if parts[0] == "@done":
-            done = True
-            break
-        if parts[0] != "@o" or len(parts) < 17:
-            continue
-        name, cls = parts[1], parts[2]
-        if cls in LAYOUT_SKIP:
-            continue
-        try:
-            v = [float(x) for x in parts[3:16]]
-        except ValueError:
-            continue
-        pts = v[0:8]
-        xs, ys = pts[0::2], pts[1::2]
-        if max(xs) - min(xs) < 1e-6 and max(ys) - min(ys) < 1e-6:
-            continue
-        r, g, b = (max(0, min(255, int(round(c * 255)))) for c in v[9:12])
-        if cls not in classes:
-            classes.append(cls)
-        objs.append([name, classes.index(cls), [round(pts[i] if i % 2 == 0 else -pts[i], 2) for i in range(8)],
-                     f"#{r:02x}{g:02x}{b:02x}", 1 if parts[16].strip() not in ("", "0") else 0])
-    if not done or not objs:
-        return None
-    return {"classes": classes, "objects": objs}
-
-
-def mock_layout(cfg: dict[str, Any]) -> dict[str, Any]:
-    """沒有 FlexSim 時的假佈置圖：使用率群組裡的設備排成一條條產線。"""
-    classes = ["VisualTool", "Processor", "Operator", "TaskExecuter", "AGV::StraightPath"]
-    objs: list[list[Any]] = [["Floor", 0, [-5, -5, 125, -5, 125, 75, -5, 75], "#d9dde3", 0]]
-    rnd = random.Random(7)
-    groups = (cfg.get("utilization") or {}).get("groups", [])
-    y = 0.0
-    for g in groups:
-        names = g.get("objects") or [f"{g['name']}_M{i}" for i in range(1, 7)]
-        x = 0.0
-        for n in names:
-            w = rnd.choice([1.2, 1.6, 2.0, 2.4])
-            col = rnd.choice(["#f79444", "#7fc4d6", "#a7d38a", "#b9b9c8"])
-            objs.append([n, 1, [x, y, x + w, y, x + w, y + 1.8, x, y + 1.8], col, 0])
-            if rnd.random() < 0.25:
-                objs.append([f"Operator_{n}", 2, [x + .2, y + 2.2, x + .8, y + 2.2, x + .8, y + 2.8, x + .2, y + 2.8], "#3a62b8", 0])
-            x += w + 0.6
-        y += 5.0
-    objs.append(["AGV_Path", 4, [-3, -2, 120, -2, 120, -1.6, -3, -1.6], "#444444", 0])
-    objs.append(["AGV1", 3, [10, -2.4, 11.2, -2.4, 11.2, -1.2, 10, -1.2], "#f2b01e", 0])
-    return {"classes": classes, "objects": objs}
-
-
 def sync_table_lines(cfg: dict[str, Any]) -> list[str]:
     """Reset 後，把來源表（Bianca 的每日紀錄）的列數、列名和 Date / Weekday 複製到 Strata 的表。
     模型的 On Model Reset 只重建 Bianca 的表，Strata 的表會留著存檔時的舊日期。"""
@@ -888,25 +787,6 @@ class FlexSimRunner:
         out_path, script = run_dir / "tables.txt", run_dir / "script.txt"
         defs = [{"name": n, "table": n} for n in names]
         script.write_text("\n".join(table_export_lines(defs, out_path)) + "\ncmdexit();\n", encoding="utf-8")
-        self._read_run(run_dir, script, out_path, timeout)
-        if not out_path.exists() or "@done" not in out_path.read_text(errors="replace"):
-            raise RuntimeError(f"Could not read the tables (see runs/{run_dir.name})")
-        return parse_tables(out_path, defs)
-
-    def read_layout(self, timeout: float = 300) -> dict[str, Any] | None:
-        """另外開一次 FlexSim 匯出佈置圖（和讀表格分開，佈置圖出問題也不影響 CT 等預設值）。讀不到回傳 None。"""
-        run_dir = RUNS_DIR / ("layout-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
-        run_dir.mkdir(parents=True)
-        out_path, script = run_dir / "layout.txt", run_dir / "script.txt"
-        script.write_text("\n".join(layout_export_lines(out_path)) + "\ncmdexit();\n", encoding="utf-8")
-        try:
-            self._read_run(run_dir, script, out_path, timeout)
-            return parse_layout(out_path)
-        except Exception as e:
-            log.warning("Could not read the layout (see runs/%s): %s", run_dir.name, e)
-            return None
-
-    def _read_run(self, run_dir: Path, script: Path, out_path: Path, timeout: float) -> None:
         cmd = [str(self.exe), str(self.model), "/maintenance", "nogui_disablemsg_runscript", "/scriptpath", str(script)]
         with open(run_dir / "flexsim_output.txt", "wb") as out:
             proc = subprocess.Popen(cmd, cwd=str(run_dir), stdout=out, stderr=subprocess.STDOUT)
@@ -918,10 +798,13 @@ class FlexSimRunner:
                         time.sleep(2)
                         break
                     if time.time() - t0 > timeout:
-                        raise RuntimeError("FlexSim did not finish in time")
+                        raise RuntimeError("FlexSim did not finish reading the tables")
             finally:
                 if proc.poll() is None:
                     proc.kill()
+        if not out_path.exists() or "@done" not in out_path.read_text(errors="replace"):
+            raise RuntimeError(f"Could not read the tables (see runs/{run_dir.name})")
+        return parse_tables(out_path, defs)
 
     def _cleanup(self, keep: int = 30) -> None:
         dirs = sorted(d for d in RUNS_DIR.iterdir() if d.is_dir())
@@ -937,9 +820,6 @@ class MockRunner:
 
     def read_tables(self, names: list[str], timeout: float = 600) -> dict[str, Any]:
         return mock_read_tables(self.cfg, names)
-
-    def read_layout(self, timeout: float = 300) -> dict[str, Any] | None:
-        return mock_layout(self.cfg)
 
     def run(self, params: dict[str, float], length: float | None,
             should_cancel: Callable[[], str | None] | None = None,
