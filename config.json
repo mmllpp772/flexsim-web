@@ -726,6 +726,20 @@
       "Packing"
     ]
   },
+  "sod": {
+    "_help": "Schedule attainment: plan (daily input plan) against good units (output of the last station). Columns refer to the daily record tables.",
+    "products": [
+      "bianca",
+      "strata"
+    ],
+    "record_tables": {
+      "bianca": "bianca",
+      "strata": "strata"
+    },
+    "start_col": "SMT",
+    "good_col": "PK",
+    "scrap_col": "Bonepile"
+  },
   "admin_code": "",
   "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。"
 }

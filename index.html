@@ -362,6 +362,17 @@
   .oee-def dd { margin: 2px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
   .tile .o2 { display: block; font: 600 30px/1.1 var(--cond); font-variant-numeric: tabular-nums; margin-top: 2px; }
   .tile .o2 small { font: 600 13px var(--display); color: var(--muted); }
+  .tiles.sd-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .tile.sd { cursor: default; }
+  .tile.sd .tv { font-size: 28px; }
+  .tile.sd.good .tv { color: var(--ok); } .tile.sd.short .tv { color: var(--err); }
+  .chart .ln { fill: none; stroke-width: 2.5; }
+  .chart .ln.c-plan { stroke: var(--faint); stroke-dasharray: 6 4; } .chart .ln.c-good { stroke: var(--blue); }
+  .chart .pt.c-plan { fill: var(--faint); } .chart .pt.c-good { fill: var(--blue); }
+  .legend .lg-plan, .legend .lg-good { display: inline-block; width: 16px; height: 0; border-top: 2.5px solid; margin: 0 6px 0 14px; vertical-align: 3px; }
+  .legend .lg-plan { border-color: var(--faint); border-top-style: dashed; } .legend .lg-good { border-color: var(--blue); }
+  table.sd-table .neg { color: var(--err); font-weight: 600; } table.sd-table .pos { color: var(--ok); font-weight: 600; }
+  @media (max-width: 900px) { .tiles.sd-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .tile .tk-st { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
   .tile .tk-st.ok { background: var(--ok-soft); color: var(--ok); }
   .tile .tk-st.bad { background: var(--err-soft); color: var(--err); }
@@ -831,6 +842,36 @@
           </section>
         </div>
 
+        <div data-ocat="sd" hidden>
+          <section class="panel view-head">
+            <h2 data-i18n="sdTitle"></h2>
+            <div class="util-segs">
+              <div class="seg" id="sdGranSeg" role="group" data-i18n-aria="granAria"></div>
+              <div class="seg prod" id="sdProdSeg" role="group" data-i18n-aria="product"></div>
+            </div>
+          </section>
+          <p class="panel empty-panel" id="sdEmpty" hidden></p>
+          <section class="panel">
+            <div class="panel-head"><h2 data-i18n="sdSummary"></h2><p class="hint tight" data-i18n="sdSummaryHint"></p></div>
+            <div id="sdTiles" class="tiles sd-tiles"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="sdChartTitle"></h2>
+              <div class="legend"><span class="lg-plan"></span><span data-i18n="sdCumPlan"></span><span class="lg-good"></span><span data-i18n="sdCumGood"></span></div>
+            </div>
+            <div class="chart" id="sdChart"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="sdTableTitle"></h2>
+              <button class="link" id="sdCsvBtn" type="button" data-i18n="tableCsv"></button>
+            </div>
+            <div class="table-wrap"><table id="sdTable" class="daily oee sd-table"></table></div>
+            <p class="hint" data-i18n="sdDef" style="margin-top:10px"></p>
+          </section>
+        </div>
+
         <div data-ocat="rw" hidden>
           <section class="panel view-head">
             <h2>Rework</h2>
@@ -1063,6 +1104,12 @@
       ctUsingStation: "Every machine uses the bottleneck CT ({v} s). Switch to Each workstation's CT to set them one by one; values entered here are kept.",
       ctPerMachine: "Each machine uses its own CT. You can paste a column from Excel.", ctNoFpyr: "This station has no FPYR in the model.",
       sumCtNone: "Model values", sumCt: "{n} changed",
+      sdTitle: "Schedule attainment (SOD)", sdSummary: "Plan against good units", sdSummaryHint: "Over the whole period.",
+      sdPlan: "Planned", sdGood: "Good units", sdStart: "Started (SMT)", sdStarted: "Started at SMT {n}", sdAtt: "Attainment", sdGap: "Gap",
+      sdGapTxt: "Gap {v}", sdYield: "Good unit rate", sdScrap: "Scrap (Bonepile) {n}", sdScrapCol: "Scrap", sdWip: "WIP at the end", sdWipSub: "Started − good − scrap",
+      sdChart: "Cumulative plan vs good units", sdCumPlan: "Cumulative plan", sdCumGood: "Cumulative good units", sdCumGap: "Cumulative gap", sdTable: "Plan vs output",
+      sdNone: "This run has no plan or output data.",
+      sdDef: "Plan = the daily input plan (SMT Input if filled, otherwise Suggest Input). Good units = output of the last station (Packing). Gap = good units − plan. Early days usually trail the plan because of production lead time; the cumulative gap shows whether the line catches up.",
       rwByStation: "Rework by station", rwHint: "Over the whole period. Click a station to chart it.", rwRate: "Repair rate",
       rwOf: "Rework {r} of {o}", rwOut: "Throughput {n}", rwChart: "{s} rework", rwTable: "Rework detail",
       rwMach: "{s} rework by machine (whole run)", rwMachHint: "From the model's rework table at the end of the run.",
@@ -1216,6 +1263,12 @@
       ctUsingStation: "所有機台都用瓶頸 CT（{v} 秒）。要逐台設定，請切到「各工站 CT」，這裡填過的值都會保留。",
       ctPerMachine: "每台機台用自己的 CT。可以從 Excel 複製一整欄貼上。", ctNoFpyr: "模型裡這一站沒有 FPYR。",
       sumCtNone: "使用模型值", sumCt: "已修改 {n} 項",
+      sdTitle: "計畫達成（SOD）", sdSummary: "計畫與良品產出", sdSummaryHint: "整個期間的結果。",
+      sdPlan: "計畫量", sdGood: "良品產出", sdStart: "SMT 投入", sdStarted: "SMT 實際投入 {n}", sdAtt: "達成率", sdGap: "差異",
+      sdGapTxt: "差異 {v}", sdYield: "良品率", sdScrap: "報廢（Bonepile）{n}", sdScrapCol: "報廢", sdWip: "期末在製（WIP）", sdWipSub: "投入 − 良品 − 報廢",
+      sdChart: "累計計畫與累計良品", sdCumPlan: "累計計畫", sdCumGood: "累計良品", sdCumGap: "累計差異", sdTable: "計畫與產出明細",
+      sdNone: "這次模擬沒有計畫或產出資料。",
+      sdDef: "計畫量 = 每日投產計畫（有填 SMT Input 用它，沒填用 Suggest Input）。良品產出 = 最後一站（Packing）的產出。差異 = 良品產出 − 計畫量。因為產線有前置時間，頭幾天通常會落後計畫，看「累計差異」可以知道最後有沒有追上。",
       rwByStation: "各站 Rework", rwHint: "整個期間的結果，點選站別看變化。", rwRate: "維修率",
       rwOf: "Rework {r}／產出 {o}", rwOut: "產出 {n}", rwChart: "{s} Rework", rwTable: "Rework 明細",
       rwMach: "{s} 各維修站 Rework（整次模擬）", rwMachHint: "取自模型的 Rework 表，模擬結束時的數字。",
@@ -2476,6 +2529,7 @@
     const cats = [{ k: "overview", label: t("catOverview"), sub: "" },
       ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", ") })),
       ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2" }] : []),
+      ...(CFG.sod ? [{ k: "sd", label: t("sdTitle"), sub: t("sdGood") }] : []),
       ...(CFG.rework ? [{ k: "rw", label: "Rework", sub: CFG.rework.stations.map(s => s.name).join(", ") }] : []),
       ...(CFG.takt ? [{ k: "tk", label: "Takt Time", sub: CFG.takt.stations.join(", ") }] : []),
       ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: [...new Set(CFG.utilization.groups.map(g => L(g, "label")))].join(", ") }] : [])];
@@ -2484,7 +2538,8 @@
       `<button type="button" data-k="${esc(c.k)}" aria-current="${c.k === OUT_CAT}"><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`).join("");
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
-    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="sd"]').hidden = OUT_CAT !== "sd";
     document.querySelector('[data-ocat="rw"]').hidden = OUT_CAT !== "rw";
     document.querySelector('[data-ocat="tk"]').hidden = OUT_CAT !== "tk";
     document.querySelector('[data-ocat="util"]').hidden = OUT_CAT !== "util";
@@ -2545,6 +2600,8 @@
       renderUtil(job);
     } else if (OUT_CAT === "oee") {
       renderOee(job);
+    } else if (OUT_CAT === "sd") {
+      renderSod(job);
     } else if (OUT_CAT === "rw") {
       renderRework(job);
     } else if (OUT_CAT === "tk") {
@@ -2798,6 +2855,107 @@
     return !p || (iso >= isoDay(p.start) && iso <= isoDay(p.end));
   }
 
+  // ---------- Schedule attainment (SOD) and good unit output ----------
+  // plan = planned input per day (SMT Input if filled, otherwise Suggest Input)
+  // good = output of the last station (Packing); started = SMT output; scrap = Bonepile
+  let sdProd = load("simSdProd"), sdView = null;
+  function sdDays(job, prod) {
+    const S = CFG.sod, rec = job?.tables?.[S.record_tables?.[prod]], plan = job?.plans?.[prod];
+    if (!rec?.rows?.length && !plan?.rows?.length) return null;
+    const byDate = {};
+    (plan?.rows || []).forEach(r => { byDate[r.date] = { d: parseDay(r.date), iso: r.date, plan: r.holiday ? 0 : Number(r.suggest) || 0, off: !!r.holiday, start: 0, good: 0, scrap: 0 }; });
+    if (rec?.rows?.length) {
+      const dates = rowDates(job, rec), col = (n) => rec.columns.indexOf(n);
+      const cs = col(S.start_col), cg = col(S.good_col), cx = col(S.scrap_col);
+      rec.rows.forEach((r, i) => {
+        const d = dates[i]; if (!d) return;
+        const iso = isoDay(d);
+        const x = byDate[iso] ||= { d, iso, plan: 0, off: false, start: 0, good: 0, scrap: 0 };
+        x.start = cs >= 0 ? Number(r.values[cs]) || 0 : 0; x.good = cg >= 0 ? Number(r.values[cg]) || 0 : 0; x.scrap = cx >= 0 ? Number(r.values[cx]) || 0 : 0;
+      });
+    }
+    return Object.values(byDate).sort((a, b) => a.d - b.d).filter(x => inPeriod(job, x.iso));
+  }
+  const sdSum = (days) => days.reduce((a, x) => { a.plan += x.plan; a.start += x.start; a.good += x.good; a.scrap += x.scrap; return a; }, { plan: 0, start: 0, good: 0, scrap: 0 });
+  const signed = (v) => (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), 0);
+  function lineChart(box, labels, series, fmtY, tips) {
+    const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 56, r: 40, t: 12, b: 30 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const peak = Math.max(1, ...series.flatMap(s => s.vals));
+    const raw = peak / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), nn = raw / mag;
+    const stepY = (nn <= 1 ? 1 : nn <= 2 ? 2 : nn <= 5 ? 5 : 10) * mag, ymax = Math.ceil(peak / stepY) * stepY;
+    const n = labels.length, x = (i) => m.l + (n > 1 ? pw * i / (n - 1) : pw / 2), y = (v) => m.t + ph - (v / ymax) * ph;
+    let g = '<g class="grid">', ax = '<g class="axis">';
+    for (let v = 0; v <= ymax + 1e-9; v += stepY) { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`; ax += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmtY(v)}</text>`; }
+    g += "</g>";
+    const every = Math.max(1, Math.ceil(n / Math.floor(pw / 64)));
+    labels.forEach((l, i) => { if (i % every === 0) ax += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${esc(l)}</text>`; });
+    ax += "</g>";
+    const lines = series.map(s => `<polyline class="ln ${s.cls}" points="${s.vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}"/>` +
+      (n <= 40 ? s.vals.map((v, i) => `<circle class="pt ${s.cls}" cx="${x(i)}" cy="${y(v)}" r="3"/>`).join("") : "")).join("");
+    const hits = labels.map((_, i) => `<rect class="hit" data-i="${i}" x="${x(i) - pw / Math.max(1, n - 1) / 2}" y="${m.t}" width="${pw / Math.max(1, n - 1)}" height="${ph}"/>`).join("");
+    box.innerHTML = n ? `<svg viewBox="0 0 ${W} ${H}" role="img">${g}${ax}${lines}${hits}</svg>` : "";
+    const tip = $("tip");
+    box.querySelectorAll(".hit").forEach(h => {
+      h.addEventListener("mousemove", (e) => {
+        tip.innerHTML = tips[+h.dataset.i]; tip.hidden = false;
+        tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + "px";
+        tip.style.top = (e.clientY - tip.offsetHeight - 10) + "px";
+      });
+      h.addEventListener("mouseleave", () => { tip.hidden = true; });
+    });
+  }
+  function sdRows(days) {
+    let cp = 0, cg = 0, cs = 0, cx = 0;
+    return groupByGran(days).map((g, n) => {
+      const s = sdSum(g.days); cp += s.plan; cg += s.good; cs += s.start; cx += s.scrap;
+      return { pn: periodName(g, n), s, cum: { plan: cp, good: cg, gap: cg - cp, wip: cs - cg - cx } };
+    });
+  }
+  function renderSod(job) {
+    const S = CFG.sod, prods = S.products;
+    if (!prods.includes(sdProd)) sdProd = prods[0];
+    prodPills($("sdProdSeg"), prods, sdProd, (p) => { sdProd = p; store("simSdProd", p); renderOutput(); });
+    granPills($("sdGranSeg"));
+    const days = job ? sdDays(job, sdProd) : null;
+    $("sdEmpty").hidden = !(job && !days); $("sdEmpty").textContent = t("sdNone");
+    const all = days || [], tot = sdSum(all), rows = sdRows(all), last = rows[rows.length - 1];
+    const att = tot.plan > 0 ? tot.good / tot.plan : null, yld = tot.good + tot.scrap > 0 ? tot.good / (tot.good + tot.scrap) : null;
+    const tile = (k, v, sub, cls = "") => `<div class="tile sd ${cls}"><span class="nm">${esc(t(k))}</span><span class="tv">${v}</span>${sub ? `<span class="av">${sub}</span>` : ""}</div>`;
+    const gap = days ? tot.good - tot.plan : null;
+    $("sdTiles").innerHTML = [
+      tile("sdPlan", days ? fmt(tot.plan, 0) : "—", ""),
+      tile("sdGood", days ? fmt(tot.good, 0) : "—", days ? esc(t("sdStarted", { n: fmt(tot.start, 0) })) : ""),
+      tile("sdAtt", pct(att), gap == null ? "" : esc(t("sdGapTxt", { v: signed(gap) })), att == null ? "" : att >= 1 ? "good" : "short"),
+      tile("sdYield", pct(yld), days ? esc(t("sdScrap", { n: fmt(tot.scrap, 0) })) : ""),
+      tile("sdWip", last ? fmt(last.cum.wip, 0) : "—", esc(t("sdWipSub"))),
+    ].join("");
+    // cumulative plan vs cumulative good units
+    $("sdChartTitle").textContent = t("sdChart") + unitTxt();
+    lineChart($("sdChart"), rows.map(r => r.pn.label), [{ cls: "c-plan", vals: rows.map(r => r.cum.plan) }, { cls: "c-good", vals: rows.map(r => r.cum.good) }],
+      (v) => fmt(v, 0), rows.map(r => `${esc(r.pn.row)}${r.pn.range ? "  " + esc(r.pn.range) : ""}<br>${esc(t("sdCumPlan"))} <b>${fmt(r.cum.plan, 0)}</b><br>${esc(t("sdCumGood"))} <b>${fmt(r.cum.good, 0)}</b><br>${esc(t("sdCumGap"))} ${signed(r.cum.gap)}`));
+    if (!rows.length) $("sdChart").innerHTML = `<p class="empty">${esc(t("noData"))}</p>`;
+    // detail table
+    $("sdTableTitle").textContent = t("sdTable") + unitTxt();
+    const heads = [t("colPeriod"), ...(outGran === "day" ? [] : [t("colDates")]), t("sdPlan"), t("sdStart"), t("sdGood"), t("sdGap"), t("sdAtt"), t("sdScrapCol"),
+      t("sdCumPlan"), t("sdCumGood"), t("sdCumGap"), "WIP"];
+    const body = rows.map(r => {
+      const a = r.s.plan > 0 ? r.s.good / r.s.plan : null, gp = r.s.good - r.s.plan;
+      return [esc(r.pn.row), ...(outGran === "day" ? [] : [esc(r.pn.range)]), fmt(r.s.plan, 0), fmt(r.s.start, 0), fmt(r.s.good, 0),
+        `<span class="${gp < 0 ? "neg" : gp > 0 ? "pos" : ""}">${signed(gp)}</span>`, pct(a), fmt(r.s.scrap, 0),
+        fmt(r.cum.plan, 0), fmt(r.cum.good, 0), `<span class="${r.cum.gap < 0 ? "neg" : r.cum.gap > 0 ? "pos" : ""}">${signed(r.cum.gap)}</span>`, fmt(r.cum.wip, 0)];
+    });
+    $("sdTable").innerHTML = `<thead><tr>${heads.map((h, i) => `<th class="${i < (outGran === "day" ? 1 : 2) ? "k" : ""}">${esc(h)}</th>`).join("")}</tr></thead><tbody>` +
+      (body.length ? body.map(r => `<tr>${r.map((c, i) => `<td class="${i < (outGran === "day" ? 1 : 2) ? "k" : ""}">${c}</td>`).join("")}</tr>`).join("")
+        : `<tr><td class="k empty" colspan="${heads.length}">${esc(t("noData"))}</td></tr>`) + "</tbody>";
+    sdView = { heads, rows };
+  }
+  $("sdCsvBtn").addEventListener("click", () => {
+    const job = doneRuns().find(r => r.id === outRunId);
+    if (!job || !sdView || !sdView.rows.length) return;
+    downloadCsv(`SOD_${sdProd}_${outGran}`, job, sdView.heads, sdView.rows.map(r => [r.pn.row, ...(outGran === "day" ? [] : [r.pn.range]), r.s.plan, r.s.start, r.s.good,
+      r.s.good - r.s.plan, r.s.plan > 0 ? (r.s.good / r.s.plan * 100).toFixed(1) + "%" : "", r.s.scrap, r.cum.plan, r.cum.good, r.cum.gap, r.cum.wip]));
+  });
+
   // ---------- Rework ----------
   let rwProd = load("simRwProd"), rwStation = load("simRwStation"), rwView = null;
   function rwDays(job, prod) {
@@ -3036,6 +3194,17 @@
       h += chart(totals.map(x => ({ label: x.c, vals: [x.v], tip: "" })), [{ cls: "b2" }], (v) => fmt(v, 0));
       const ag = aggregate(job, tb, def);
       h += T([R.period2, ...ag.tb.columns], ag.tb.rows.map(r => [esc(r.row), ...r.values.map(v => typeof v === "number" ? fmt(v, Number.isInteger(v) ? 0 : 1) : esc(v))]));
+    }
+    // SOD
+    if (CFG.sod) for (const p of CFG.sod.products) {
+      const days = sdDays(job, p);
+      h += `<h3>${esc(prodName(p))}：${esc(t("sdTitle"))}</h3>`;
+      if (!days) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      const tot = sdSum(days), rows = sdRows(days), last = rows[rows.length - 1];
+      h += kv([[t("sdPlan"), fmt(tot.plan, 0)], [t("sdGood"), fmt(tot.good, 0)], [t("sdAtt"), pct(tot.plan > 0 ? tot.good / tot.plan : null)],
+        [t("sdGap"), signed(tot.good - tot.plan)], [t("sdYield"), pct(tot.good + tot.scrap > 0 ? tot.good / (tot.good + tot.scrap) : null)], [t("sdWip"), last ? fmt(last.cum.wip, 0) : "—"]]);
+      h += T([R.period2, t("sdPlan"), t("sdStart"), t("sdGood"), t("sdGap"), t("sdAtt"), t("sdScrapCol"), t("sdCumGap"), "WIP"],
+        rows.map(r => [esc(r.pn.row), fmt(r.s.plan, 0), fmt(r.s.start, 0), fmt(r.s.good, 0), signed(r.s.good - r.s.plan), pct(r.s.plan > 0 ? r.s.good / r.s.plan : null), fmt(r.s.scrap, 0), signed(r.cum.gap), fmt(r.cum.wip, 0)]));
     }
     // OEE
     if (CFG.oee) for (const p of CFG.oee.products) {

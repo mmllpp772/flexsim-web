@@ -78,6 +78,8 @@ def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
         rw = cfg["rework"]
         out["rework"] = {"products": rw["products"],
                          "stations": [{"name": st["name"], "products": list(st["tables"])} for st in rw["stations"]]}
+    if cfg.get("sod"):
+        out["sod"] = {k: v for k, v in cfg["sod"].items() if not k.startswith("_")}
     if cfg.get("takt"):
         out["takt"] = {k: v for k, v in cfg["takt"].items() if not k.startswith("_")}
     sh = cfg.get("shifts")
