@@ -264,6 +264,20 @@
   .chart .bar.hot { fill: #1f4f86; }
   .chart .hit { fill: transparent; cursor: crosshair; }
   .chart .zero { fill: var(--line); }
+  /* OEE */
+  .oee-def { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 24px; margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+  .oee-def dt { font-weight: 700; font-size: 13px; }
+  .oee-def dd { margin: 2px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+  .tile .o2 { display: block; font: 600 30px/1.1 var(--cond); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .tile .o2 small { font: 600 13px var(--display); color: var(--muted); }
+  .tile .o1 { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .legend .lg-o1, .legend .lg-o2 { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 6px 0 14px; vertical-align: -1px; }
+  .legend .lg-o1 { background: var(--st-setup); } .legend .lg-o2 { background: var(--blue); }
+  .chart .b1 { fill: var(--st-setup); } .chart .b2 { fill: var(--blue); } .chart .b1.hot, .chart .b2.hot { filter: brightness(.85); }
+  .chart .ref { stroke: var(--faint); stroke-dasharray: 2 4; }
+  table.oee th.grp { text-align: center; border-bottom: 1px solid var(--line); }
+  table.oee td.rest { color: var(--faint); }
+  @media (max-width: 640px) { .oee-def { grid-template-columns: 1fr; } }
   /* equipment utilization */
   :root { --st-proc: #2f6db0; --st-setup: #2a9d8f; --st-op: #c8463c; --st-tr: #7d5bbf; --st-block: #c98516;
           --st-down: #a0582c; --st-idle: #c3cbd4; --st-other: #7c8a99; }
@@ -660,6 +674,43 @@
           </section>
         </div>
 
+        <div data-ocat="oee" hidden>
+          <section class="panel view-head">
+            <h2>OEE</h2>
+            <div class="util-segs">
+              <div class="seg" id="oeeGranSeg" role="group" data-i18n-aria="granAria"></div>
+              <div class="seg prod" id="oeeProdSeg" role="group" data-i18n-aria="product"></div>
+            </div>
+          </section>
+          <p class="panel empty-panel" id="oeeEmpty" hidden></p>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 data-i18n="oeeByStation"></h2>
+              <p class="hint tight" data-i18n="oeePick"></p>
+            </div>
+            <div id="oeeTiles" class="tiles"></div>
+            <dl class="oee-def">
+              <div><dt>OEE1</dt><dd data-i18n="oee1Def"></dd></div>
+              <div><dt>OEE2</dt><dd data-i18n="oee2Def"></dd></div>
+              <div><dt data-i18n="effTime"></dt><dd data-i18n="effDef"></dd></div>
+            </dl>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="oeeChartTitle"></h2>
+              <div class="legend"><span class="lg-o1"></span>OEE1<span class="lg-o2"></span>OEE2</div>
+            </div>
+            <div class="chart" id="oeeChart"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="oeeTableTitle"></h2>
+              <button class="link" id="oeeCsvBtn" type="button" data-i18n="tableCsv"></button>
+            </div>
+            <div class="table-wrap"><table id="oeeTable" class="daily oee"></table></div>
+          </section>
+        </div>
+
         <div data-ocat="util" hidden>
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
@@ -802,6 +853,12 @@
       tabInput: "Parameters", tabOutput: "Metrics", tabHistory: "Run history",
       inputCats: "Input categories", outputCats: "Metric categories", grpInputs: "Inputs", grpOutputs: "Metrics",
       catBasic: "Period and run info", catPlan: "Daily input plan", catShift: "Shifts", catOverview: "Overview",
+      oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
+      oee1Def: "Effective time ÷ total time (24 h a day, every day).",
+      oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
+      effTime: "Effective time", effDef: "Bottleneck CT × output ÷ 3600, in hours. Computed by the model each day.",
+      oeeTitle: "{s} OEE", oeeTable: "OEE detail", oeeNone: "This run has no OEE data. Runs made before this update don't include it.",
+      restShort: "Rest", colPeriod: "Period",
       catUtil: "Equipment utilization", utilGroups: "Equipment group", utilSort: "Sort by utilization",
       utilAvg: "Average utilization", utilHi: "Highest", utilLo: "Lowest", utilCol: "Utilization", utilEquip: "Equipment",
       utilStates: "Time in each state", utilHint: "Share of each machine's time by state. {ex} time is left out, the same as the FlexSim dashboard.",
@@ -918,6 +975,12 @@
       tabInput: "參數調整", tabOutput: "指標呈現", tabHistory: "執行紀錄",
       inputCats: "輸入類別", outputCats: "指標類別", grpInputs: "輸入", grpOutputs: "指標",
       catBasic: "期間與基本資料", catPlan: "每日投產計畫", catShift: "班別設定", catOverview: "總覽",
+      oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
+      oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
+      oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
+      effTime: "有效時間", effDef: "瓶頸 CT × 產出 ÷ 3600（小時）。由模型每天計算。",
+      oeeTitle: "{s} OEE", oeeTable: "OEE 明細", oeeNone: "這次模擬沒有 OEE 資料。更新之前跑的模擬不會有。",
+      restShort: "休息", colPeriod: "期間",
       catUtil: "設備使用率", utilGroups: "設備群組", utilSort: "依使用率排序",
       utilAvg: "平均使用率", utilHi: "最高", utilLo: "最低", utilCol: "使用率", utilEquip: "設備",
       utilStates: "各狀態時間比例", utilHint: "每台設備在各狀態的時間比例。和 FlexSim 儀表板一樣，已扣除 {ex} 時間。",
@@ -1972,14 +2035,16 @@
   function renderOutNav(job) {
     const cats = [{ k: "overview", label: t("catOverview"), sub: "" },
       ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", ") })),
+      ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2" }] : []),
       ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: [...new Set(CFG.utilization.groups.map(g => L(g, "label")))].join(", ") }] : [])];
     if (!cats.find(c => c.k === OUT_CAT)) OUT_CAT = "overview";
     $("outNav").innerHTML = `<div class="grp">${esc(t("grpOutputs"))}</div>` + cats.map(c =>
       `<button type="button" data-k="${esc(c.k)}" aria-current="${c.k === OUT_CAT}"><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`).join("");
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
-    document.querySelector('[data-ocat="view"]').hidden = OUT_CAT === "overview" || OUT_CAT === "util";
+    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee"].includes(OUT_CAT);
     document.querySelector('[data-ocat="util"]').hidden = OUT_CAT !== "util";
+    document.querySelector('[data-ocat="oee"]').hidden = OUT_CAT !== "oee";
   }
 
   function renderRunInputs(job) {
@@ -2032,6 +2097,8 @@
       renderBars();
     } else if (OUT_CAT === "util") {
       renderUtil(job);
+    } else if (OUT_CAT === "oee") {
+      renderOee(job);
     } else {
       const view = outViews().find(v => v.name === OUT_CAT);
       $("viewTitle").textContent = L(view, "label");
@@ -2056,6 +2123,158 @@
     renderTable();
   }
   $("runSel").addEventListener("change", (e) => { outRunId = e.target.value; renderOutput(); });
+
+  // ---------- OEE ----------
+  let oeeProd = load("simOeeProd"), oeeStation = load("simOeeStation"), oeeView = null;
+  // one entry per simulated day: effective, total and planned hours for every station
+  function oeeDays(job, prod) {
+    const O = CFG.oee, src = O.products[prod];
+    const t1 = job?.tables?.[src?.oee1], t2 = job?.tables?.[src?.oee2];
+    if (!t1?.rows?.length) return null;
+    const dates = rowDates(job, t1);
+    if (dates.some(d => !d)) return null;
+    const rest = {}; (job.plans?.[prod]?.rows || []).forEach(r => { rest[r.date] = !!r.holiday; });
+    const sh = job.shifts?.[prod], S = CFG.shifts;
+    const col = (tb, name) => tb ? tb.columns.findIndex(c => c === name) : -1;
+    return t1.rows.map((r, i) => {
+      const d = dates[i], iso = isoDay(d), off = !!rest[iso];
+      const r2 = t2?.rows?.[i];
+      const st = {};
+      for (const s of O.stations) {
+        const i1 = col(t1, s.name + "_OEE1"), i2 = col(t2, s.name + "_OEE2");
+        const o1 = i1 >= 0 ? Number(r.values[i1]) || 0 : 0, o2 = r2 && i2 >= 0 ? Number(r2.values[i2]) || 0 : 0;
+        const eff = o1 * 24;
+        let planned;
+        if (off) planned = 0;
+        else if (sh && S) {
+          const wr = S.rows.indexOf(WD3[d.getDay()]), sc = S.columns.indexOf(s.shift);
+          planned = wr >= 0 && sc >= 0 ? sh.grids.reduce((a, g) => a + (Number(g?.[wr]?.[sc]) || 0), 0) : (o2 > 0 ? eff / o2 : 0);
+        } else planned = o2 > 0 ? eff / o2 : 0;
+        st[s.name] = { eff, total: 24, planned };
+      }
+      return { d, off, st };
+    });
+  }
+  function oeeGroups(days) {
+    if (outGran === "day") return days.map(x => ({ from: x.d, to: x.d, days: [x], off: x.off }));
+    const groups = []; let cur = null, wk = 0;
+    days.forEach(x => {
+      const d = x.d;
+      const key = outGran === "week" ? wk : outGran === "month" ? `${d.getFullYear()}-${d.getMonth()}` : `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+      if (!cur || cur.key !== key) { cur = { key, from: d, to: d, days: [] }; groups.push(cur); }
+      cur.to = d; cur.days.push(x);
+      if (outGran === "week" && d.getDay() === 0) wk++;
+    });
+    return groups;
+  }
+  function oeeOf(days, name) {
+    let eff = 0, total = 0, planned = 0;
+    days.forEach(x => { const v = x.st[name]; eff += v.eff; total += v.total; planned += v.planned; });
+    return { o1: total > 0 ? eff / total : null, o2: planned > 0 ? eff / planned : null };
+  }
+  function periodName(g, n) {
+    if (outGran === "day") return { row: `${md(g.from)} ${WD3[g.from.getDay()]}`, label: md(g.from) };
+    const range = rangeText(g.from, g.to);
+    if (outGran === "week") return { row: t("weekN", { n: n + 1 }), label: range, range };
+    if (outGran === "month") return { row: LANG === "zh" ? `${g.from.getFullYear()}年${g.from.getMonth() + 1}月` : `${MON3[g.from.getMonth()]} ${g.from.getFullYear()}`,
+      label: LANG === "zh" ? `${g.from.getMonth() + 1}月` : MON3[g.from.getMonth()], range };
+    const q = Math.floor(g.from.getMonth() / 3) + 1;
+    return { row: `${g.from.getFullYear()} Q${q}`, label: `Q${q}`, range };
+  }
+  const pct = (v) => v == null ? "—" : fmt(v * 100, 1) + "%";
+  function renderOee(job) {
+    const O = CFG.oee, prods = Object.keys(O.products);
+    if (!prods.includes(oeeProd)) oeeProd = prods[0];
+    const prodLabel = (n) => { const p = (PD()?.products || CFG.shifts?.products || []).find(x => x.name === n); return p ? L(p, "label") : n; };
+    $("oeeProdSeg").innerHTML = prods.map(n => `<button type="button" data-p="${esc(n)}" aria-pressed="${n === oeeProd}">${esc(prodLabel(n))}</button>`).join("");
+    $("oeeProdSeg").hidden = prods.length < 2;
+    $("oeeProdSeg").querySelectorAll("button").forEach(b => b.onclick = () => { oeeProd = b.dataset.p; store("simOeeProd", oeeProd); renderOutput(); });
+    $("oeeGranSeg").innerHTML = GRANS.map(g => `<button type="button" data-g="${g}" aria-pressed="${g === outGran}">${esc(t("g_" + g))}</button>`).join("");
+    $("oeeGranSeg").querySelectorAll("button").forEach(b => b.onclick = () => { outGran = b.dataset.g; store("simOutGran", outGran); renderOutput(); });
+    if (!O.stations.find(s => s.name === oeeStation)) oeeStation = O.stations[0].name;
+
+    const days = job ? oeeDays(job, oeeProd) : null;
+    $("oeeEmpty").hidden = !(job && !days); $("oeeEmpty").textContent = t("oeeNone");
+    const groups = days ? oeeGroups(days) : [];
+    // tiles: whole period
+    $("oeeTiles").innerHTML = O.stations.map(s => {
+      const v = days ? oeeOf(days, s.name) : { o1: null, o2: null };
+      return `<button type="button" class="tile" data-s="${esc(s.name)}" aria-pressed="${s.name === oeeStation}">
+        <span class="nm">${esc(s.name)}</span><span class="o2">${pct(v.o2)}<small> OEE2</small></span><span class="o1">OEE1 ${pct(v.o1)}</span></button>`;
+    }).join("");
+    $("oeeTiles").querySelectorAll(".tile").forEach(b => b.onclick = () => { oeeStation = b.dataset.s; store("simOeeStation", oeeStation); renderOutput(); });
+
+    // chart: OEE1 and OEE2 side by side for the chosen station
+    const box = $("oeeChart");
+    const unit = outGran === "day" ? "" : LANG === "zh" ? `（${t("g_" + outGran)}）` : ` (${t("g_" + outGran)})`;
+    $("oeeChartTitle").textContent = t("oeeTitle", { s: oeeStation }) + unit;
+    const data = groups.map((g, n) => ({ ...periodName(g, n), ...oeeOf(g.days, oeeStation), off: g.days.every(x => x.off), work: g.days.filter(x => !x.off).length }));
+    const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 46, r: 8, t: 10, b: 30 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const peak = Math.max(1, ...data.map(d => Math.max(d.o1 || 0, d.o2 || 0)));
+    const ymax = Math.ceil(peak * 4) / 4;
+    const y = (v) => m.t + ph - (v / ymax) * ph;
+    let g = '<g class="grid">', ax = '<g class="axis">';
+    for (let v = 0; v <= ymax + 1e-9; v += 0.25) { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`; ax += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`; }
+    g += "</g>";
+    let bars = "", hits = "";
+    if (data.length) {
+      const step = pw / data.length, bw = Math.max(1, Math.min(18, (step - 4) / 2));
+      const every = Math.max(1, Math.ceil(data.length / Math.floor(pw / 64)));
+      data.forEach((d, i) => {
+        const x0 = m.l + step * i + step / 2 - bw - 1;
+        [["b1", d.o1], ["b2", d.o2]].forEach(([cls, v], k) => {
+          if (v > 0) { const h = Math.max(1, m.t + ph - y(v)); bars += `<rect class="${cls}" data-i="${i}" x="${x0 + k * (bw + 2)}" y="${y(v)}" width="${bw}" height="${h}" rx="2"/>`; }
+        });
+        if (i % every === 0) ax += `<text x="${m.l + step * i + step / 2}" y="${H - 8}" text-anchor="middle">${esc(d.label)}</text>`;
+        hits += `<rect class="hit" data-i="${i}" x="${m.l + step * i}" y="${m.t}" width="${step}" height="${ph}"/>`;
+      });
+    } else {
+      ax += `<text x="${(W + m.l) / 2}" y="${m.t + ph / 2}" text-anchor="middle" style="fill:var(--muted);font-size:14px">${esc(t("noData"))}</text>`;
+    }
+    ax += "</g>";
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc($("oeeChartTitle").textContent)}">${g}<line class="ref" x1="${m.l}" x2="${W - m.r}" y1="${y(1)}" y2="${y(1)}"/>${ax}${bars}${hits}</svg>`;
+    const tip = $("tip");
+    box.querySelectorAll(".hit").forEach(h => {
+      h.addEventListener("mousemove", (e) => {
+        const d = data[+h.dataset.i];
+        box.querySelectorAll(".b1,.b2").forEach(b => b.classList.toggle("hot", b.dataset.i === h.dataset.i));
+        tip.innerHTML = `${esc(d.row)}${d.range ? "  " + esc(d.range) : ""}` +
+          `${outGran === "day" ? "" : `<br>${esc(t("workDaysN", { n: d.work }))}`}<br>OEE1 <b>${pct(d.o1)}</b> &nbsp; OEE2 <b>${d.off ? esc(t("restShort")) : pct(d.o2)}</b>`;
+        tip.hidden = false;
+        tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + "px";
+        tip.style.top = (e.clientY - 70) + "px";
+      });
+      h.addEventListener("mouseleave", () => { tip.hidden = true; box.querySelectorAll(".hot").forEach(b => b.classList.remove("hot")); });
+    });
+
+    // table: every station, OEE1 and OEE2 per period
+    $("oeeTableTitle").textContent = t("oeeTable") + unit;
+    const sts = O.stations.map(s => s.name);
+    const head1 = `<tr><th class="k" rowspan="2">${esc(t("colPeriod"))}</th>${outGran === "day" ? "" : `<th class="k" rowspan="2">${esc(t("colDates"))}</th><th rowspan="2">${esc(t("colWorkDays"))}</th>`}` +
+      sts.map(n => `<th class="grp" colspan="2">${esc(n)}</th>`).join("") + "</tr>";
+    const head2 = "<tr>" + sts.map(() => "<th>OEE1</th><th>OEE2</th>").join("") + "</tr>";
+    const rowsOut = groups.map((gp, n) => {
+      const pn = periodName(gp, n), allOff = gp.days.every(x => x.off);
+      const cells = sts.map(nm => { const v = oeeOf(gp.days, nm); return [pct(v.o1), allOff ? t("restShort") : pct(v.o2)]; });
+      return { pn, allOff, work: gp.days.filter(x => !x.off).length, cells };
+    });
+    $("oeeTable").innerHTML = `<thead>${head1}${head2}</thead><tbody>` + (rowsOut.length ? rowsOut.map(r =>
+      `<tr><td class="k${r.allOff ? " rest" : ""}">${esc(r.pn.row)}</td>${outGran === "day" ? "" : `<td class="k">${esc(r.pn.range)}</td><td>${r.work}</td>`}` +
+      r.cells.map(([a, b]) => `<td class="${r.allOff ? "rest" : ""}">${a}</td><td class="${r.allOff ? "rest" : ""}">${esc(b)}</td>`).join("") + "</tr>").join("")
+      : `<tr><td class="k empty" colspan="${sts.length * 2 + 3}">${esc(t("noData"))}</td></tr>`) + "</tbody>";
+    oeeView = { sts, rowsOut };
+  }
+  $("oeeCsvBtn").addEventListener("click", () => {
+    const job = doneRuns().find(r => r.id === outRunId);
+    if (!job || !oeeView || !oeeView.rowsOut.length) return;
+    const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = [t("colPeriod"), ...(outGran === "day" ? [] : [t("colDates"), t("colWorkDays")]), ...oeeView.sts.flatMap(n => [n + " OEE1", n + " OEE2"])];
+    const lines = [head.map(q).join(","), ...oeeView.rowsOut.map(r => [r.pn.row, ...(outGran === "day" ? [] : [r.pn.range, r.work]), ...r.cells.flat()].map(q).join(","))];
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `OEE_${oeeProd}_${outGran}_${(job.label || job.id).replace(/[^\w\u4e00-\u9fff-]+/g, "_")}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
 
   // ---------- equipment utilization ----------
   const ST_VAR = { 2: "proc", 21: "setup", 31: "setup", 9: "op", 49: "op", 10: "tr", 14: "tr", 15: "tr", 4: "block", 26: "block", 48: "block",

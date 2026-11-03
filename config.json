@@ -281,6 +281,106 @@
         "PK",
         "Bonepile"
       ]
+    },
+    {
+      "name": "oee1_bianca",
+      "label": "Bianca OEE1",
+      "label_zh": "Bianca OEE1",
+      "table": "WUS_OEE1_Daily",
+      "skip_rows": [
+        "TOTAL"
+      ],
+      "key_columns": [
+        "Date",
+        "Weekday"
+      ],
+      "view": "oee_source",
+      "product_label": "Bianca",
+      "columns": [
+        "Date",
+        "Weekday",
+        "SMT_OEE1",
+        "DIP_OEE1",
+        "L1_OEE1",
+        "L2_OEE1",
+        "L4_OEE1",
+        "Packing_OEE1"
+      ]
+    },
+    {
+      "name": "oee2_bianca",
+      "label": "Bianca OEE2",
+      "label_zh": "Bianca OEE2",
+      "table": "WUS_OEE2_Daily",
+      "skip_rows": [
+        "TOTAL"
+      ],
+      "key_columns": [
+        "Date",
+        "Weekday"
+      ],
+      "view": "oee_source",
+      "product_label": "Bianca",
+      "columns": [
+        "Date",
+        "Weekday",
+        "SMT_OEE2",
+        "DIP_OEE2",
+        "L1_OEE2",
+        "L2_OEE2",
+        "L4_OEE2",
+        "Packing_OEE2"
+      ]
+    },
+    {
+      "name": "oee1_strata",
+      "label": "Strata OEE1",
+      "label_zh": "Strata OEE1",
+      "table": "WUS_OEE1_Daily_Strata",
+      "skip_rows": [
+        "TOTAL"
+      ],
+      "key_columns": [
+        "Date",
+        "Weekday"
+      ],
+      "view": "oee_source",
+      "product_label": "Strata",
+      "columns": [
+        "Date",
+        "Weekday",
+        "SMT_OEE1",
+        "DIP_OEE1",
+        "L1_OEE1",
+        "L2_OEE1",
+        "L4_OEE1",
+        "Packing_OEE1"
+      ]
+    },
+    {
+      "name": "oee2_strata",
+      "label": "Strata OEE2",
+      "label_zh": "Strata OEE2",
+      "table": "WUS_OEE2_Daily_Strata",
+      "skip_rows": [
+        "TOTAL"
+      ],
+      "key_columns": [
+        "Date",
+        "Weekday"
+      ],
+      "view": "oee_source",
+      "product_label": "Strata",
+      "columns": [
+        "Date",
+        "Weekday",
+        "SMT_OEE2",
+        "DIP_OEE2",
+        "L1_OEE2",
+        "L2_OEE2",
+        "L4_OEE2",
+        "Packing_OEE2"
+      ]
     }
   ],
   "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。 columns 是這張表應有的欄位，還沒有資料時網頁用它畫出空的版面。",
@@ -373,6 +473,45 @@
     "columns": [
       "Date",
       "Weekday"
+    ]
+  },
+  "oee": {
+    "_help": "OEE1 = effective time / total time (24 h a day). OEE2 = effective time / planned production time (shift 1 + shift 2 hours on work days). Effective time = bottleneck CT x output / 3600. The model writes the daily values; the page adds them up for week / month / quarter.",
+    "products": {
+      "bianca": {
+        "oee1": "oee1_bianca",
+        "oee2": "oee2_bianca"
+      },
+      "strata": {
+        "oee1": "oee1_strata",
+        "oee2": "oee2_strata"
+      }
+    },
+    "stations": [
+      {
+        "name": "SMT",
+        "shift": "SMT"
+      },
+      {
+        "name": "DIP",
+        "shift": "DIP"
+      },
+      {
+        "name": "L1",
+        "shift": "FA_L1"
+      },
+      {
+        "name": "L2",
+        "shift": "FA_L2"
+      },
+      {
+        "name": "L4",
+        "shift": "FA_L4"
+      },
+      {
+        "name": "Packing",
+        "shift": "Packing"
+      }
     ]
   },
   "admin_code": "",

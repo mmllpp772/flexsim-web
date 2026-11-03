@@ -71,6 +71,8 @@ def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
     out["tables"] = [{k: v for k, v in tb.items() if k in ("name", "label", "label_zh", "key_columns", "view", "product_label", "product_label_zh", "columns")}
                      for tb in cfg.get("tables", [])]
     out["output_views"] = cfg.get("output_views", [])
+    if cfg.get("oee"):
+        out["oee"] = {k: v for k, v in cfg["oee"].items() if not k.startswith("_")}
     sh = cfg.get("shifts")
     if sh:
         out["shifts"] = {"products": [{k: v for k, v in p.items() if k in ("name", "label", "label_zh")} for p in sh["products"]],
@@ -704,7 +706,7 @@ def mock_tables(cfg: dict[str, Any], params: dict[str, float]) -> dict[str, Any]
     days = max(1, int(round(end_t / 86400)))
     cols = ["Date", "Weekday", "SMT", "DIP", "L1", "L2", "POD", "L4", "PK", "Bonepile"]
     out = {}
-    for k, tb in enumerate(cfg["tables"]):
+    for k, tb in enumerate(t for t in cfg["tables"] if t.get("view") != "oee_source"):
         rows = []
         for d in range(days):
             dt = start + timedelta(days=d)
@@ -715,6 +717,18 @@ def mock_tables(cfg: dict[str, Any], params: dict[str, float]) -> dict[str, Any]
                    [0.0 if off else float(random.randint(0, 12))]
             rows.append({"row": f"DAY{d + 1}", "values": vals})
         out[tb["name"]] = {"columns": cols, "rows": rows}
+    # OEE tables: fractions instead of counts
+    for tb in cfg["tables"]:
+        if tb.get("view") != "oee_source":
+            continue
+        rows = []
+        for d in range(days):
+            dt = start + timedelta(days=d)
+            off = dt.weekday() == 6
+            k = 0.042 if "OEE1" in tb["table"] else 0.075
+            rows.append({"row": f"DAY{d + 1}", "values": [dt.strftime("%b ") + str(dt.day), dt.strftime("%a")] +
+                         [0.0 if off else round(random.uniform(0.75, 1.0) * k * 10, 4) for _ in tb["columns"][2:]]})
+        out[tb["name"]] = {"columns": tb["columns"], "rows": rows}
     return out
 
 
