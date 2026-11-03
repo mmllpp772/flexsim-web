@@ -44,11 +44,11 @@ MAX_RESULT_BYTES = 50 * 1024 * 1024  # 自己寫的結果檔（含每日表格�
 FINAL = {"done", "error"}
 
 
-def write_json_atomic(path: Path, data: Any) -> None:
+def write_json_atomic(path: Path, data: Any, indent: int | None = 2) -> None:
     """先寫暫存檔再改名，避免 OneDrive 同步到寫一半的檔案。
     暫存檔以 ~$ 開頭，OneDrive 不會同步這類檔案。"""
     tmp = path.with_name(f"~${path.name}.tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=indent, separators=None if indent else (",", ":")), encoding="utf-8")
     for attempt in range(10):  # OneDrive 同步中可能短暫鎖住檔案，稍等重試
         try:
             os.replace(tmp, path)
@@ -121,7 +121,9 @@ class Worker:
         self.ct_failed_at = 0.0
         self.param_defaults: dict[str, Any] | None = None
         self.dist_defaults: dict[str, Any] | None = None
+        self.layout: dict[str, Any] | None = None
         self.ct_defaults = self.load_ct_defaults()
+        self.layout = self.load_layout()
         self.bad_seen: dict[str, float] = {}  # 讀不到的檔案第一次出現的時間
         self.queue: list[str] = []
         self.running: str | None = None
@@ -158,6 +160,25 @@ class Worker:
         log.info("CT/FPYR: %d machines read from the model", n)
         return defaults
 
+    # ---------- 佈置圖（從模型讀，模型檔有變才重讀；存在 model_layout.json） ----------
+    def load_layout(self) -> dict[str, Any] | None:
+        cache = BASE_DIR / "model_layout.json"
+        model = Path(self.cfg["flexsim"]["model_path"])
+        if not self.cfg.get("mock_mode"):
+            cached = ctfpyr.load_cached(cache, model)
+            if cached is not None:
+                return cached.get("layout")
+        log.info("Reading the model layout (once per model change)...")
+        layout = self.runner.read_layout()
+        if layout:
+            log.info("Layout: %d objects", len(layout["objects"]))
+        if not self.cfg.get("mock_mode"):
+            try:  # 讀不到也記下來，模型沒變就不再重試
+                ctfpyr.save_cached(cache, model, {"layout": layout})
+            except OSError:
+                pass
+        return layout
+
     def refresh_ct_defaults(self) -> None:
         """模型檔被更新時（例如存了新版本），重新讀預設值並發布。"""
         if self.cfg.get("mock_mode") or not ctfpyr.tables_to_read(self.cfg):
@@ -168,6 +189,7 @@ class Worker:
         cached = ctfpyr.load_cached(BASE_DIR / "model_defaults.json", model)
         if cached is None or cached.get("v") != CACHE_VERSION:
             self.ct_defaults = self.load_ct_defaults()
+            self.layout = self.load_layout()
             self.publish()
 
     # ---------- 共用資料夾初始化 ----------
@@ -183,6 +205,9 @@ class Worker:
         if self.param_defaults and self.cfg.get("param_tables"):
             pub["param_tables"] = [{**{k: v for k, v in g.items() if not k.startswith("_")},
                                     "defaults": self.param_defaults.get(g["name"], {})} for g in self.cfg["param_tables"]]
+        pub["layout"] = bool(self.layout)
+        if self.layout:
+            write_json_atomic(self.share / "layout.json", self.layout, indent=None)
         write_json_atomic(self.share / "config.json", pub)
         page = BASE_DIR / "index.html"
         target = self.share / "Simulator.html"

@@ -362,6 +362,29 @@
   .tile .o2 { display: block; font: 600 30px/1.1 var(--cond); font-variant-numeric: tabular-nums; margin-top: 2px; }
   .tile .o2 small { font: 600 13px var(--display); color: var(--muted); }
   .tiles.sd-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  /* layout (top view of the model) */
+  .lay-panel { padding-bottom: 14px; }
+  .lay-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .lay-zoom { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .lay-zoom button { width: 38px; height: 34px; border: 0; background: var(--panel); color: var(--ink); font: 600 18px var(--display); cursor: pointer; }
+  .lay-zoom button + button { border-left: 1px solid var(--line); }
+  .lay-zoom button:hover { background: var(--steel); }
+  .lay-legend { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .lay-legend .ramp { width: 140px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, #dbe8f6, #5b93cf, #173f73); }
+  .lay-wrap { position: relative; height: min(72vh, 760px); border-radius: 12px; overflow: hidden; background: #f3f5f7; border: 1px solid var(--line);
+    touch-action: none; cursor: grab; }
+  .lay-wrap.drag { cursor: grabbing; }
+  .lay-wrap svg { display: block; width: 100%; height: 100%; user-select: none; }
+  .lay-wrap .empty { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; }
+  .lay-wrap .vt { stroke: none; }
+  .lay-wrap .m { stroke: rgba(20,30,40,.55); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .lay-wrap .top { stroke: none; opacity: .55; pointer-events: none; }
+  .lay-wrap .path { fill: none; stroke: #59626c; stroke-width: 1.2; vector-effect: non-scaling-stroke; stroke-dasharray: 4 3; }
+  .lay-wrap .m:hover, .lay-wrap .m.hl { stroke: var(--amber); stroke-width: 2.5; }
+  .lay-wrap .lbl { font-family: var(--body); fill: #1d2833; pointer-events: none; paint-order: stroke; stroke: rgba(255,255,255,.9); stroke-width: 3px; stroke-linejoin: round; display: none; }
+  .lay-wrap .lbl text { vector-effect: non-scaling-stroke; }
+  .lay-wrap.names svg.zoomed .lbl { display: block; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lay-wrap { background: #e9edf1; } }
   .sd-table .sd-fill { color: var(--faint); font-size: 13px; white-space: nowrap; }
   .sd-table tr.is-fill td { color: var(--muted); }
   .tile.sd { cursor: default; }
@@ -966,6 +989,29 @@
           <p class="hint" data-i18n="tkDef" style="margin:4px 4px 0"></p>
         </div>
 
+        <div data-ocat="layout" hidden>
+          <section class="panel view-head">
+            <h2 data-i18n="layTitle"></h2>
+            <div class="util-segs">
+              <div class="seg" id="layColorSeg" role="group" data-i18n-aria="layColor"></div>
+            </div>
+          </section>
+          <section class="panel lay-panel">
+            <div class="lay-tools">
+              <div class="lay-zoom" role="group" data-i18n-aria="layZoom">
+                <button type="button" id="layIn" data-i18n-aria="layIn">+</button>
+                <button type="button" id="layOut" data-i18n-aria="layOutBtn">−</button>
+              </div>
+              <button type="button" class="link" id="layFitLine" data-i18n="layFitLine"></button>
+              <button type="button" class="link" id="layFitAll" data-i18n="layFitAll"></button>
+              <label class="check"><input type="checkbox" id="layNames" checked> <span data-i18n="layNames"></span></label>
+              <div class="lay-legend" id="layLegend"></div>
+            </div>
+            <div class="lay-wrap" id="layWrap"><p class="empty" id="layEmpty" hidden></p></div>
+            <p class="hint tight" data-i18n="layHint"></p>
+          </section>
+        </div>
+
         <div data-ocat="util" hidden>
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
@@ -1153,6 +1199,11 @@
       reportFailed: "Could not make the PDF: {e}", reportNoLib: "The PDF tools didn't load. Make sure the vendor folder is next to Simulator.html.",
       grpPlanning: "Plan", grpProcess: "Process settings", grpSummary: "Summary", grpProduction: "Production", grpEfficiency: "Efficiency", grpQuality: "Quality",
       ovSub: "Key numbers", tkSub: "Plan pace vs CT", utilSub: "Time in each state", rwSub: "Repair rate by station",
+      layTitle: "Layout", laySub: "Top view of the model", layColor: "Colors", layColorModel: "Model colors", layColorUtil: "Utilization",
+      layZoom: "Zoom", layIn: "Zoom in", layOutBtn: "Zoom out", layFitLine: "Production lines", layFitAll: "Whole model", layNames: "Machine names",
+      layHint: "Drawn from the FlexSim model (position, size and color of each object). Scroll to zoom, drag to move, point at a machine for details.",
+      layNone: "The layout hasn't been read from the model yet. It's read when the simulator PC starts.", layNoUtil: "No utilization in this run",
+      layLow: "Low", layHigh: "High", layUtilOf: "Utilization {v}",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1318,6 +1369,11 @@
       reportFailed: "PDF 產生失敗：{e}", reportNoLib: "PDF 工具沒有載入，請確認 Simulator.html 旁邊有 vendor 資料夾。",
       grpPlanning: "計畫", grpProcess: "製程參數", grpSummary: "摘要", grpProduction: "生產", grpEfficiency: "效率", grpQuality: "品質",
       ovSub: "主要指標", tkSub: "計畫節奏與 CT", utilSub: "各狀態的時間比例", rwSub: "各站維修率",
+      layTitle: "佈置圖", laySub: "模型俯視圖", layColor: "顏色", layColorModel: "模型顏色", layColorUtil: "使用率",
+      layZoom: "縮放", layIn: "放大", layOutBtn: "縮小", layFitLine: "產線", layFitAll: "整個模型", layNames: "機台名稱",
+      layHint: "依 FlexSim 模型畫出（每個物件的位置、大小、顏色）。滾輪縮放、拖曳移動，滑鼠移到機台上可以看名稱和使用率。",
+      layNone: "還沒從模型讀到佈置圖。模擬電腦啟動時會讀一次。", layNoUtil: "這次模擬沒有使用率資料",
+      layLow: "低", layHigh: "高", layUtilOf: "使用率 {v}",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -1503,6 +1559,7 @@
     return {
       kind: "folder",
       pollMs: 3000,
+      async layout() { return await readJson(null, "layout.json"); },
       async getConfig() {
         const c = await readJson(null, "config.json");
         if (!c) throw new Error(t("errNoConfig"));
@@ -2675,6 +2732,7 @@
   function renderOutNav(job) {
     const g0 = t("grpSummary"), g1 = t("grpProduction"), g2 = t("grpEfficiency"), g3 = t("grpQuality");
     const cats = [{ k: "overview", label: t("catOverview"), sub: t("ovSub"), grp: g0, icon: "overview" },
+      ...(CFG.layout ? [{ k: "layout", label: t("layTitle"), sub: t("laySub"), grp: g0 }] : []),
       ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", "), grp: g1, icon: "output" })),
       ...(CFG.sod ? [{ k: "sd", label: t("sdTitle"), sub: t("sdGood"), grp: g1, icon: "sd" }] : []),
       ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2", grp: g2, icon: "oee" }] : []),
@@ -2685,7 +2743,8 @@
     $("outNav").innerHTML = navHtml(cats, OUT_CAT);
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
-    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd", "layout"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="layout"]').hidden = OUT_CAT !== "layout";
     document.querySelector('[data-ocat="sd"]').hidden = OUT_CAT !== "sd";
     document.querySelector('[data-ocat="rw"]').hidden = OUT_CAT !== "rw";
     document.querySelector('[data-ocat="tk"]').hidden = OUT_CAT !== "tk";
@@ -2745,6 +2804,8 @@
       renderBars();
     } else if (OUT_CAT === "util") {
       renderUtil(job);
+    } else if (OUT_CAT === "layout") {
+      renderLayout(job);
     } else if (OUT_CAT === "oee") {
       renderOee(job);
     } else if (OUT_CAT === "sd") {
@@ -3504,6 +3565,200 @@
     setTimeout(() => el.classList.add("out"), 2600); setTimeout(() => el.remove(), 3200);
   }
   $("reportBtn").addEventListener("click", saveReport);
+
+  // ---------- layout (top view of the model) ----------
+  // layout.json: { classes: [...], objects: [[name, classIndex, [x1,y1,x2,y2,x3,y3,x4,y4], "#rrggbb", hidden], ...] } (y already points down)
+  let LAY = null, layLoading = null, layColor = load("simLayColor") || "model", layView = null, layEls = null, layJob = null, layFitDone = false;
+  const SVGNS = "http://www.w3.org/2000/svg";
+  function layKind(cls) {
+    if (cls === "VisualTool") return "vt";
+    if (/^AGV::.*Path/.test(cls) || /Path$/.test(cls)) return "path";
+    if (cls === "Operator") return "person";
+    return "m";
+  }
+  function mixHex(hex, to, k) {
+    const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16);
+    const c = [16, 8, 0].map(s => Math.round(((a >> s) & 255) * (1 - k) + ((b >> s) & 255) * k));
+    return "#" + c.map(v => v.toString(16).padStart(2, "0")).join("");
+  }
+  function rampColor(v) {  // utilization 0..1 → light blue .. dark blue
+    const stops = ["#dbe8f6", "#5b93cf", "#173f73"], x = Math.max(0, Math.min(1, v)) * 2, i = Math.min(1, Math.floor(x));
+    return mixHex(stops[i], stops[i + 1], x - i);
+  }
+  function utilOf(job, name) {
+    const st = job?.utilization?.objects?.[name], U = CFG.utilization; if (!st || !U) return null;
+    const ex = new Set(U.excluded_states.map(String)), used = new Set(U.utilized_states.map(String));
+    const keep = Object.entries(st).filter(([k, v]) => !ex.has(k) && v > 0);
+    const denom = keep.reduce((a, [, v]) => a + v, 0);
+    return denom ? keep.filter(([k]) => used.has(k)).reduce((a, [, v]) => a + v, 0) / denom : null;
+  }
+  const layBox = (pts) => { const xs = pts.filter((_, i) => i % 2 === 0), ys = pts.filter((_, i) => i % 2 === 1);
+    return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) }; };
+  function layApplyView() {
+    const svg = $("layWrap").querySelector("svg"); if (!svg || !layView) return;
+    svg.setAttribute("viewBox", `${layView.x} ${layView.y} ${layView.w} ${layView.h}`);
+    const r = $("layWrap").getBoundingClientRect(), scale = Math.min(r.width / layView.w, r.height / layView.h);
+    svg.classList.toggle("zoomed", scale >= 16);  // names only once machines are big enough to tell apart
+    svg.querySelector("g.lbl")?.setAttribute("font-size", (11 / scale).toFixed(4));  // names stay 11 px at any zoom
+    clearTimeout(layApplyView.t); layApplyView.t = setTimeout(layDeclutter, 120);
+  }
+  function layDeclutter() {  // hide names that would sit on top of another name
+    const svg = $("layWrap").querySelector("svg"); if (!svg || !svg.classList.contains("zoomed")) return;
+    const m = svg.getScreenCTM(), r = $("layWrap").getBoundingClientRect(), grid = new Map(), placed = [];
+    const cells = (b) => { const out = []; for (let gx = Math.floor(b.l / 120); gx <= Math.floor(b.r / 120); gx++) for (let gy = Math.floor(b.t / 40); gy <= Math.floor(b.b / 40); gy++) out.push(gx + "," + gy); return out; };
+    for (const tx of svg.querySelectorAll("g.lbl text")) {
+      const x = +tx.getAttribute("x"), y = +tx.getAttribute("y"), sx = m.a * x + m.c * y + m.e, sy = m.b * x + m.d * y + m.f;
+      const w = (tx.textContent.length * 6.4) + 6;
+      const b = { l: sx - w / 2, r: sx + w / 2, t: sy, b: sy + 15 };
+      if (b.r < r.left || b.l > r.right || b.b < r.top || b.t > r.bottom) { tx.style.display = "none"; continue; }
+      const keys = cells(b), hit = keys.some(k => (grid.get(k) || []).some(o => o.l < b.r && o.r > b.l && o.t < b.b && o.b > b.t));
+      tx.style.display = hit ? "none" : "";
+      if (!hit) keys.forEach(k => { if (!grid.has(k)) grid.set(k, []); grid.get(k).push(b); });
+    }
+  }
+  function layFit(objs) {
+    const vis = objs.filter(o => !o.hidden);
+    if (!vis.length) return;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    vis.forEach(o => { x0 = Math.min(x0, o.b.x0); x1 = Math.max(x1, o.b.x1); y0 = Math.min(y0, o.b.y0); y1 = Math.max(y1, o.b.y1); });
+    const pad = Math.max(x1 - x0, y1 - y0) * 0.04 + 1;
+    layView = { x: x0 - pad, y: y0 - pad, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
+    layApplyView();
+  }
+  function layCore(list) {  // drop far-away strays (e.g. spare objects parked at the model origin)
+    if (list.length < 8) return list;
+    const q = (arr, f) => { const v = arr.slice().sort((a, b) => a - b); return v[Math.floor((v.length - 1) * f)]; };
+    const xs = list.map(o => (o.b.x0 + o.b.x1) / 2), ys = list.map(o => (o.b.y0 + o.b.y1) / 2);
+    const [x1, x3, y1, y3] = [q(xs, .25), q(xs, .75), q(ys, .25), q(ys, .75)];
+    const dx = Math.max(3 * (x3 - x1), 20), dy = Math.max(3 * (y3 - y1), 20);
+    return list.filter((o, i) => xs[i] > x1 - dx && xs[i] < x3 + dx && ys[i] > y1 - dy && ys[i] < y3 + dy);
+  }
+  const layLineObjs = () => {
+    const names = new Set((CFG.utilization?.groups || []).flatMap(g => g.objects));
+    const hit = layEls.filter(o => names.has(o.name) && !o.hidden);
+    return layCore(hit.length ? hit : layEls.filter(o => o.kind === "m" && !o.hidden));
+  };
+  function layBuild() {
+    const wrap = $("layWrap");
+    wrap.querySelector("svg")?.remove();
+    const classes = LAY.classes, svg = document.createElementNS(SVGNS, "svg");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.setAttribute("role", "img"); svg.setAttribute("aria-label", t("layTitle"));
+    const objs = LAY.objects.map(([name, ci, pts, color, hidden], i) => ({ i, name, cls: classes[ci], kind: layKind(classes[ci]), pts, color, hidden: !!hidden, b: layBox(pts) }));
+    objs.forEach(o => { o.area = (o.b.x1 - o.b.x0) * (o.b.y1 - o.b.y0); });
+    // big things (floors, areas) first so machines sit on top
+    const order = objs.filter(o => !o.hidden).sort((a, b) => (a.kind === "vt" ? 0 : 1) - (b.kind === "vt" ? 0 : 1) || b.area - a.area);
+    const frag = document.createDocumentFragment(), labels = document.createElementNS(SVGNS, "g");
+    labels.setAttribute("class", "lbl");
+    const P = (pts) => pts.map((v, i) => (i % 2 ? "," : " ") + v).join("").trim();
+    for (const o of order) {
+      const cx = (o.b.x0 + o.b.x1) / 2, cy = (o.b.y0 + o.b.y1) / 2;
+      let el;
+      if (o.kind === "path") {
+        // a path is a long thin box: draw its centre line
+        const p = o.pts, d1 = Math.hypot(p[2] - p[0], p[3] - p[1]), d2 = Math.hypot(p[6] - p[0], p[7] - p[1]);
+        const [a, b] = d1 >= d2 ? [[(p[0] + p[6]) / 2, (p[1] + p[7]) / 2], [(p[2] + p[4]) / 2, (p[3] + p[5]) / 2]] : [[(p[0] + p[2]) / 2, (p[1] + p[3]) / 2], [(p[6] + p[4]) / 2, (p[7] + p[5]) / 2]];
+        el = document.createElementNS(SVGNS, "line");
+        el.setAttribute("x1", a[0]); el.setAttribute("y1", a[1]); el.setAttribute("x2", b[0]); el.setAttribute("y2", b[1]);
+        el.setAttribute("class", "path");
+      } else if (o.kind === "person") {
+        el = document.createElementNS(SVGNS, "circle");
+        el.setAttribute("cx", cx); el.setAttribute("cy", cy); el.setAttribute("r", Math.max(0.2, Math.min(o.b.x1 - o.b.x0, o.b.y1 - o.b.y0) / 2));
+        el.setAttribute("class", "m");
+      } else {
+        el = document.createElementNS(SVGNS, "polygon");
+        el.setAttribute("points", P(o.pts));
+        el.setAttribute("class", o.kind === "vt" ? "vt" : "m");
+        if (o.kind === "vt") el.setAttribute("fill-opacity", o.area > 400 ? ".25" : ".6");
+      }
+      el.dataset.i = o.i;
+      o.el = el; frag.appendChild(el);
+      if (o.kind === "m" && o.area < 400) {
+        // lighter inner panel, like the top of the machine
+        const k = 0.62, top = document.createElementNS(SVGNS, "polygon");
+        top.setAttribute("points", P(o.pts.map((v, i) => i % 2 ? cy + (v - cy) * k : cx + (v - cx) * k)));
+        top.setAttribute("class", "top"); top.setAttribute("fill", "#ffffff");
+        frag.appendChild(top);
+        const w = o.b.x1 - o.b.x0, h = o.b.y1 - o.b.y0;
+        if (o.cls !== "TaskExecuter" && Math.max(w, h) >= 0.6) {
+          const tx = document.createElementNS(SVGNS, "text");
+          tx.setAttribute("x", cx); tx.setAttribute("y", o.b.y1); tx.setAttribute("text-anchor", "middle"); tx.setAttribute("dy", "1em");
+          tx.textContent = o.name.replace(/^WUS_/, "");
+          labels.appendChild(tx);
+        }
+      }
+    }
+    svg.appendChild(frag); svg.appendChild(labels);
+    wrap.appendChild(svg);
+    layEls = objs;
+    layPaint();
+    if (!layView) layFit(layLineObjs()); else layApplyView();
+    layWire(svg);
+  }
+  function layPaint() {
+    if (!layEls) return;
+    const util = layColor === "util" && layJob?.utilization?.objects;
+    for (const o of layEls) {
+      if (!o.el) continue;
+      if (o.kind === "path") { o.el.style.stroke = util ? "#9aa3ad" : ""; continue; }
+      let fill = o.color;
+      if (util && o.kind !== "vt") { const u = utilOf(layJob, o.name); fill = u == null ? "#d5d9de" : rampColor(u); }
+      if (util && o.kind === "vt") fill = mixHex(o.color, "#ffffff", 0.6);
+      o.el.setAttribute("fill", fill);
+    }
+    $("layLegend").innerHTML = util ? `<span>${esc(t("layLow"))}</span><span class="ramp"></span><span>${esc(t("layHigh"))}</span>` : "";
+  }
+  function layWire(svg) {
+    const wrap = $("layWrap"), tip = $("tip");
+    const toModel = (e) => { const m = svg.getScreenCTM().inverse(); return { x: m.a * e.clientX + m.c * e.clientY + m.e, y: m.b * e.clientX + m.d * e.clientY + m.f }; };
+    const zoomAt = (p, f) => {
+      const w = Math.max(2, Math.min(layView.w * f, 1e6)); f = w / layView.w;
+      layView = { x: p.x - (p.x - layView.x) * f, y: p.y - (p.y - layView.y) * f, w, h: layView.h * f };
+      layApplyView();
+    };
+    wrap.onwheel = (e) => { e.preventDefault(); zoomAt(toModel(e), Math.exp(e.deltaY * 0.0015)); };
+    let drag = null;
+    wrap.onpointerdown = (e) => { if (e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, v: { ...layView }, s: svg.getScreenCTM().a }; wrap.setPointerCapture(e.pointerId); wrap.classList.add("drag"); tip.hidden = true; };
+    wrap.onpointermove = (e) => {
+      if (drag) {
+        layView = { ...drag.v, x: drag.v.x - (e.clientX - drag.x) / drag.s, y: drag.v.y - (e.clientY - drag.y) / drag.s };
+        layApplyView(); return;
+      }
+      const i = e.target?.dataset?.i, o = i != null ? layEls[+i] : null;
+      if (!o || o.kind === "vt" || o.kind === "path") { tip.hidden = true; return; }
+      const u = utilOf(layJob, o.name);
+      tip.innerHTML = `<b>${esc(o.name)}</b><br>${esc(o.cls)}${u != null ? `<br>${esc(t("layUtilOf", { v: pct(u) }))}` : ""}`;
+      tip.hidden = false;
+      tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + "px";
+      tip.style.top = (e.clientY - tip.offsetHeight - 10) + "px";
+    };
+    const end = () => { drag = null; wrap.classList.remove("drag"); };
+    wrap.onpointerup = end; wrap.onpointercancel = end;
+    wrap.onpointerleave = () => { if (!drag) tip.hidden = true; };
+    const center = () => ({ x: layView.x + layView.w / 2, y: layView.y + layView.h / 2 });
+    $("layIn").onclick = () => zoomAt(center(), 0.7);
+    $("layOut").onclick = () => zoomAt(center(), 1 / 0.7);
+    $("layFitLine").onclick = () => layFit(layLineObjs());
+    $("layFitAll").onclick = () => layFit(layCore(layEls.filter(o => o.kind === "m")));
+  }
+  async function renderLayout(job) {
+    layJob = job;
+    const hasUtil = !!job?.utilization?.objects;
+    if (!hasUtil && layColor === "util") layColor = "model";
+    $("layColorSeg").innerHTML = [["model", "layColorModel"], ["util", "layColorUtil"]].map(([v, k]) =>
+      `<button type="button" data-v="${v}" aria-pressed="${v === layColor}" ${v === "util" && !hasUtil ? `disabled title="${esc(t("layNoUtil"))}"` : ""}>${esc(t(k))}</button>`).join("");
+    $("layColorSeg").querySelectorAll("button").forEach(b => b.onclick = () => { layColor = b.dataset.v; store("simLayColor", layColor); renderLayout(layJob); });
+    $("layWrap").classList.toggle("names", $("layNames").checked);
+    if (!LAY) {
+      layLoading ||= T.layout().catch(() => null);
+      LAY = await layLoading; layLoading = null;
+      if (!LAY?.objects?.length) { LAY = null; $("layEmpty").hidden = false; $("layEmpty").textContent = t("layNone"); return; }
+    }
+    $("layEmpty").hidden = true;
+    if (!layEls) layBuild(); else { layPaint(); layApplyView(); }
+  }
+  $("layNames").addEventListener("change", () => $("layWrap").classList.toggle("names", $("layNames").checked));
+  window.addEventListener("resize", () => { if (OUT_CAT === "layout") layApplyView(); });
 
   // ---------- equipment utilization ----------
   const ST_VAR = { 2: "proc", 21: "setup", 31: "setup", 9: "op", 49: "op", 10: "tr", 14: "tr", 15: "tr", 4: "block", 26: "block", 48: "block",
