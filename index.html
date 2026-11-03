@@ -93,6 +93,12 @@
   .run-inputs dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
   .ct-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
   .ct-h { font-size: 15px; margin: 18px 0 8px; }
+  .ct-mode { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--steel); }
+  .ct-mode .lbl { font-weight: 700; font-size: 14px; }
+  .ct-mode .hint { margin: 0; }
+  table.ct-table .seg button { padding: 4px 12px; font-size: 13px; }
+  table.ct-table td .auto { display: block; font-size: 11px; color: var(--faint); text-align: right; }
   .ct-mhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
   .ct-mhead .ct-h { margin-bottom: 4px; }
   .ct-wrap { max-height: 520px; overflow: auto; }
@@ -162,6 +168,16 @@
   .ctl:focus-visible { outline-color: var(--amber); }
 
   .state { display: flex; align-items: center; gap: 12px; margin: 22px 0 14px; min-height: 28px; }
+  .state-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
+  .state-row .state { flex: 1 1 360px; min-width: 0; }
+  .timer { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 8px; background: var(--console-2);
+    color: var(--console-ink); white-space: nowrap; }
+  .timer svg { width: 18px; height: 18px; color: var(--console-muted); }
+  .timer .tl { font-size: 13px; color: var(--console-muted); }
+  .timer .tv { font: 600 20px var(--cond); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
+  .timer.ticking svg { color: var(--amber); }
+  .timer.paused .tv { color: var(--console-muted); }
+  .timer.done svg { color: #5fc58d; }
   .state .tag { font: 600 13px var(--display); letter-spacing: .02em; padding: 4px 11px; border-radius: 6px; background: var(--console-2); color: var(--console-muted); white-space: nowrap; }
   .state .tag.running { background: var(--amber); color: var(--amber-ink); }
   .state .tag.done { background: #23553d; color: #c6f0d7; }
@@ -555,7 +571,13 @@
           <span data-i18n="stop"></span></button>
       </div>
 
-      <div class="state" id="state" aria-live="polite"></div>
+      <div class="state-row">
+        <div class="state" id="state" aria-live="polite"></div>
+        <div class="timer" id="runTimer" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6M12 2v3"/></svg>
+          <span class="tl" id="runTimerLabel"></span><span class="tv" id="runTimerValue">0:00</span>
+        </div>
+      </div>
 
       <div class="timeline">
         <div class="ends"><span id="endStart">—</span><span id="endEnd">—</span></div>
@@ -662,6 +684,11 @@
           <div class="ct-bar">
             <p class="hint tight" data-i18n="ctHint"></p>
             <button type="button" class="link" id="ctResetBtn" data-i18n="ctReset"></button>
+          </div>
+          <div class="ct-mode">
+            <span class="lbl" data-i18n="ctModeAll"></span>
+            <div class="seg" id="ctModeSeg" role="group" data-i18n-aria="ctModeAll"></div>
+            <span class="hint tight" id="ctModeNote"></span>
           </div>
           <h3 class="ct-h" data-i18n="ctStations"></h3>
           <div class="table-wrap"><table class="ct-table" id="ctStationTable"></table></div>
@@ -870,6 +897,7 @@
       runTip: "Run the simulation and show progress",
       fastTip: "Run to the end with progress only, no live metrics",
       stopTip: "Stop the run in progress. FlexSim is closed and no results are kept.",
+      tmRunning: "Running for", tmPaused: "Paused at", tmDone: "Run took", tmStopped: "Ran for",
       idle: "Idle", idleMsg: "Set the period and press Run.", resetMsg: "Ready. Your inputs are kept; press Run to start again.",
       sent: "Sent", sentMsg: "Waiting for OneDrive to deliver the request.", sentSub: "Usually under a minute.",
       queued: "Queued", queuePos: "Position {n} in line.", queueNext: "Next in line.",
@@ -890,10 +918,14 @@
       ctTitle: "Cycle time (CT) and FPYR",
       ctHint: "Starting values are read from the FlexSim model. Changed cells are highlighted and only they are sent with the run.",
       ctReset: "Restore model values for this product", ctConfirmReset: "Restore all CT and FPYR values of {p} to the model's values?",
-      ctStations: "Station CT", ctMachines: "Machine CT and FPYR", ctUse: "Same CT for the whole station",
-      ctStation: "Station", ctCt: "Cycle time (s)", ctTarget: "Target CT (s)", ctImprove: "Weekly improvement (%)",
+      ctStations: "Station CT", ctMachines: "Machine CT and FPYR", ctUse: "CT input",
+      ctModeAll: "CT input for all stations", ctModeBn: "Bottleneck CT", ctModeMc: "Each workstation's CT",
+      ctModeBnHelp: "Enter one bottleneck CT per station; every machine in the station uses it. Use this when per-workstation CT isn't available.",
+      ctModeMcHelp: "Enter the CT of each workstation below. The bottleneck is the largest of them.",
+      ctModeMixed: "Stations use different modes. Pick one to set them all.", ctAutoMax: "Largest workstation CT",
+      ctStation: "Station", ctCt: "Bottleneck CT (s)", ctTarget: "Target CT (s)", ctImprove: "Weekly improvement (%)",
       ctMachine: "Machine", ctDesc: "Description", ctMct: "CT (s)", ctFpyr: "FPYR (%)", ctWas: "Model {v}",
-      ctUsingStation: "This station uses the same CT ({v} s) for every machine. Untick Same CT for the whole station above to set machines one by one.",
+      ctUsingStation: "This station uses its bottleneck CT ({v} s) for every machine. Switch it to Each workstation's CT above to set machines one by one. Values you entered here are kept.",
       ctPerMachine: "Each machine uses its own CT. You can paste a column from Excel.", ctNoFpyr: "This station has no FPYR in the model.",
       sumCtNone: "Model values", sumCt: "{n} changed",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
@@ -1001,6 +1033,7 @@
       runTip: "執行模擬並顯示進度",
       fastTip: "直接跑到結束，只顯示進度，不顯示即時指標",
       stopTip: "停止這次模擬，FlexSim 會被關閉，不保留結果。",
+      tmRunning: "已執行", tmPaused: "暫停於", tmDone: "總共花了", tmStopped: "執行了",
       idle: "待命", idleMsg: "設定期間後按「執行」。", resetMsg: "已重設，參數都保留著。按「執行」重新開始。",
       sent: "已送出", sentMsg: "等待 OneDrive 把需求送到模擬電腦。", sentSub: "通常不到一分鐘。",
       queued: "排隊中", queuePos: "排在第 {n} 位。", queueNext: "下一個就輪到你。",
@@ -1021,10 +1054,14 @@
       ctTitle: "CT（週期時間）與 FPYR",
       ctHint: "預設值是從 FlexSim 模型讀出來的。改過的格子會標示出來，只有改過的值會隨模擬送出。",
       ctReset: "這個產品全部恢復模型值", ctConfirmReset: "要把 {p} 的 CT 和 FPYR 全部恢復成模型的值嗎？",
-      ctStations: "站別 CT", ctMachines: "各機台 CT 與 FPYR", ctUse: "整站使用同一個 CT",
-      ctStation: "站別", ctCt: "Cycle Time（秒）", ctTarget: "目標 CT（秒）", ctImprove: "每週改善（%）",
+      ctStations: "站別 CT", ctMachines: "各機台 CT 與 FPYR", ctUse: "CT 輸入方式",
+      ctModeAll: "全部站別的 CT 輸入方式", ctModeBn: "瓶頸 CT", ctModeMc: "各工站 CT",
+      ctModeBnHelp: "每站只填一個瓶頸 CT，整站機台都用這個值。拿不到各工站 CT 時用這個。",
+      ctModeMcHelp: "在下方逐台填各工站 CT，瓶頸 CT 自動取其中最大值。",
+      ctModeMixed: "目前各站的方式不同。點選其中一個可以一次套用到所有站別。", ctAutoMax: "各工站最大值",
+      ctStation: "站別", ctCt: "瓶頸 CT（秒）", ctTarget: "目標 CT（秒）", ctImprove: "每週改善（%）",
       ctMachine: "機台", ctDesc: "說明", ctMct: "CT（秒）", ctFpyr: "FPYR（%）", ctWas: "模型 {v}",
-      ctUsingStation: "這一站所有機台都用同一個 CT（{v} 秒）。要逐台設定，請在上方取消勾選「整站使用同一個 CT」。",
+      ctUsingStation: "這一站用瓶頸 CT（{v} 秒），所有機台都用這個值。要逐台設定，請在上方把這站切到「各工站 CT」。你在這裡填過的值都會保留。",
       ctPerMachine: "每台機台用自己的 CT。可以從 Excel 複製一整欄貼上。", ctNoFpyr: "模型裡這一站沒有 FPYR。",
       sumCtNone: "使用模型值", sumCt: "已修改 {n} 項",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
@@ -1709,25 +1746,45 @@
     const D = CT().defaults[ctProd], stations = CT().stations.filter(n => D.stations[n] || (D.machines[n] || []).length);
     const was = (v) => `<span class="was">${esc(t("ctWas", { v: nf(v) }))}</span>`;
     const label = { ct: "ctCt", target: "ctTarget", improve: "ctImprove" };
+    const isBn = (n) => D.stations[n] ? !!ctStationVal(ctProd, n, "use") : false;
+    const maxMc = (n) => Math.max(0, ...(D.machines[n] || []).map(m => Number(ctMachineVal(ctProd, n, m, "ct")) || 0));
+    // mode for all stations
+    const modal = stations.filter(n => D.stations[n]?.use != null);
+    const allBn = modal.length && modal.every(isBn), allMc = modal.length && modal.every(n => !isBn(n));
+    $("ctModeSeg").innerHTML = [["bn", "ctModeBn", allBn], ["mc", "ctModeMc", allMc]]
+      .map(([k, key, on]) => `<button type="button" data-m="${k}" aria-pressed="${!!on}">${esc(t(key))}</button>`).join("");
+    $("ctModeNote").textContent = allBn ? t("ctModeBnHelp") : allMc ? t("ctModeMcHelp") : t("ctModeMixed");
+    $("ctModeSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
+      modal.forEach(n => ctSet(ctProd, "station", n, "use", b.dataset.m === "bn" ? 1 : 0));
+      renderCt(); renderInNav();
+    });
     const cell = (n, key) => {
       const d = D.stations[n]?.[key];
       if (d === undefined || d === null) return "<td>—</td>";
+      if (key === "ct" && D.stations[n]?.use != null && !isBn(n)) {
+        // workstation mode: the bottleneck is the largest machine CT; the bottleneck value typed earlier is kept for later
+        return `<td><input type="number" value="${esc(maxMc(n))}" disabled aria-label="${esc(n)} ${esc(t("ctAutoMax"))}"><span class="auto">${esc(t("ctAutoMax"))}</span></td>`;
+      }
       const v = ctStationVal(ctProd, n, key), ch = v !== d;
       return `<td><input type="number" step="0.1" data-st="${esc(n)}" data-key="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(n)} ${esc(t(label[key]))}">${ch ? was(d) : ""}</td>`;
     };
     $("ctStationTable").innerHTML = `<thead><tr><th class="l">${esc(t("ctStation"))}</th><th class="l">${esc(t("ctUse"))}</th><th>${esc(t("ctCt"))}</th><th>${esc(t("ctTarget"))}</th><th>${esc(t("ctImprove"))}</th></tr></thead><tbody>` +
       stations.map(n => {
         const s0 = D.stations[n];
-        const use = s0 ? !!ctStationVal(ctProd, n, "use") : false;
-        const useCell = s0 && s0.use != null
-          ? `<input type="checkbox" data-st="${esc(n)}" data-key="use" ${use ? "checked" : ""} aria-label="${esc(n)} ${esc(t("ctUse"))}">${use !== !!s0.use ? ` <small style="color:var(--hold)">${esc(t("ctWas", { v: s0.use ? "✓" : "✗" }))}</small>` : ""}`
+        const bn = isBn(n);
+        const modeCell = s0 && s0.use != null
+          ? `<div class="seg" role="group" aria-label="${esc(n)} ${esc(t("ctUse"))}">${[["1", "ctModeBn", bn], ["0", "ctModeMc", !bn]].map(([v, key, on]) =>
+              `<button type="button" data-st="${esc(n)}" data-use="${v}" aria-pressed="${on}">${esc(t(key))}</button>`).join("")}</div>` +
+            (bn !== !!s0.use ? `<small style="color:var(--hold);display:block;margin-top:2px">${esc(t("ctWas", { v: t(s0.use ? "ctModeBn" : "ctModeMc") }))}</small>` : "")
           : "—";
-        return `<tr><td class="l"><b>${esc(n)}</b></td><td class="l">${useCell}</td>${cell(n, "ct")}${cell(n, "target")}${cell(n, "improve")}</tr>`;
+        return `<tr><td class="l"><b>${esc(n)}</b></td><td class="l">${modeCell}</td>${cell(n, "ct")}${cell(n, "target")}${cell(n, "improve")}</tr>`;
       }).join("") + "</tbody>";
-    $("ctStationTable").querySelectorAll("input").forEach(inp => inp.addEventListener("change", () => {
-      const n = inp.dataset.st, key = inp.dataset.key;
-      if (key === "use") ctSet(ctProd, "station", n, "use", inp.checked ? 1 : 0);
-      else { const v = numIn(inp.value); ctSet(ctProd, "station", n, key, v == null ? D.stations[n][key] : v); }
+    $("ctStationTable").querySelectorAll("button[data-use]").forEach(b => b.onclick = () => {
+      ctSet(ctProd, "station", b.dataset.st, "use", +b.dataset.use); renderCt(); renderInNav();
+    });
+    $("ctStationTable").querySelectorAll("input[data-key]").forEach(inp => inp.addEventListener("change", () => {
+      const n = inp.dataset.st, key = inp.dataset.key, v = numIn(inp.value);
+      ctSet(ctProd, "station", n, key, v == null ? D.stations[n][key] : v);
       renderCt(); renderInNav();
     }));
     if (!stations.includes(ctStation)) ctStation = stations[0];
@@ -1858,12 +1915,52 @@
   }
   function setIdle(msgKey = "idleMsg") {
     stateMode = "idle"; shownJob = null;
+    tmStop(); TM = null; $("runTimer").hidden = true;
     setState("", t("idle"), t(msgKey), "", false);
     updatePeriodPreview();
   }
 
+  // ---------- run timer ----------
+  // counts from when the simulator started the run; time spent paused is left out; stops when the run ends
+  let TM = null, tmTick = null;
+  const clock = (sec) => {
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, x = sec % 60;
+    return h ? `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}` : `${m}:${String(x).padStart(2, "0")}`;
+  };
+  function tmShow(kind, sec) {
+    const el = $("runTimer");
+    el.hidden = false; el.className = `timer ${kind}`;
+    $("runTimerLabel").textContent = t({ ticking: "tmRunning", paused: "tmPaused", done: "tmDone", stopped: "tmStopped" }[kind]);
+    $("runTimerValue").textContent = clock(sec);
+  }
+  const tmElapsed = () => TM ? ((TM.pausedSince ?? Date.now()) - TM.start - TM.pausedMs) / 1000 : 0;
+  function tmStop() { clearInterval(tmTick); tmTick = null; }
+  function updateTimer(job) {
+    if (!job || ["submitted", "queued"].includes(job.status)) { tmStop(); $("runTimer").hidden = true; TM = null; return; }
+    const now = Date.now();
+    if (job.status === "running") {
+      if (!TM || TM.id !== job.id) {
+        const st = Date.parse(job.started_at || "") || now;
+        TM = { id: job.id, start: Math.min(st, now), pausedMs: 0, pausedSince: null };
+      }
+      if (job.paused && TM.pausedSince == null) TM.pausedSince = now;
+      if (!job.paused && TM.pausedSince != null) { TM.pausedMs += now - TM.pausedSince; TM.pausedSince = null; }
+      if (job.paused) { tmStop(); tmShow("paused", tmElapsed()); return; }
+      tmShow("ticking", tmElapsed());
+      if (!tmTick) tmTick = setInterval(() => { if (TM && TM.pausedSince == null) $("runTimerValue").textContent = clock(tmElapsed()); }, 1000);
+      return;
+    }
+    tmStop();
+    if (job.status === "done" && job.wall_seconds != null) { tmShow("done", job.wall_seconds); TM = null; return; }
+    if (TM && TM.id === job.id) { tmShow("stopped", tmElapsed()); TM = null; return; }
+    if (job.wall_seconds != null) { tmShow(job.status === "done" ? "done" : "stopped", job.wall_seconds); return; }
+    $("runTimer").hidden = true;
+  }
+
   function renderJob(job) {
     shownJob = job; stateMode = "job";
+    updateTimer(job);
     const p = periodOf(job.parameters);
     switch (job.status) {
       case "submitted":
