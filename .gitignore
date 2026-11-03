@@ -17,3 +17,5 @@ model_defaults.json
 *.dwg
 *.dxf
 cad_report.txt
+layout3d.html
+layout3d_map.json

@@ -362,6 +362,8 @@
   .tile .o2 { display: block; font: 600 30px/1.1 var(--cond); font-variant-numeric: tabular-nums; margin-top: 2px; }
   .tile .o2 small { font: 600 13px var(--display); color: var(--muted); }
   .tiles.sd-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .panel.l3d-panel { padding: 0; overflow: hidden; }
+  .l3d-panel iframe { display: block; width: 100%; height: min(78vh, 860px); border: 0; }
   .sd-table .sd-fill { color: var(--faint); font-size: 13px; white-space: nowrap; }
   .sd-table tr.is-fill td { color: var(--muted); }
   .tile.sd { cursor: default; }
@@ -966,6 +968,14 @@
           <p class="hint" data-i18n="tkDef" style="margin:4px 4px 0"></p>
         </div>
 
+        <div data-ocat="l3d" hidden>
+          <section class="panel view-head">
+            <h2 data-i18n="l3dTitle"></h2>
+            <a class="link" id="l3dOpen" href="layout3d.html" target="_blank" rel="noopener" data-i18n="l3dOpen"></a>
+          </section>
+          <section class="panel l3d-panel"><iframe id="l3dFrame" title="3D" loading="lazy"></iframe></section>
+        </div>
+
         <div data-ocat="util" hidden>
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
@@ -1153,6 +1163,7 @@
       reportFailed: "Could not make the PDF: {e}", reportNoLib: "The PDF tools didn't load. Make sure the vendor folder is next to Simulator.html.",
       grpPlanning: "Plan", grpProcess: "Process settings", grpSummary: "Summary", grpProduction: "Production", grpEfficiency: "Efficiency", grpQuality: "Quality",
       ovSub: "Key numbers", tkSub: "Plan pace vs CT", utilSub: "Time in each state", rwSub: "Repair rate by station",
+      l3dTitle: "3D layout", l3dSub: "Plant model from CAD", l3dOpen: "Open in a new tab",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1318,6 +1329,7 @@
       reportFailed: "PDF 產生失敗：{e}", reportNoLib: "PDF 工具沒有載入，請確認 Simulator.html 旁邊有 vendor 資料夾。",
       grpPlanning: "計畫", grpProcess: "製程參數", grpSummary: "摘要", grpProduction: "生產", grpEfficiency: "效率", grpQuality: "品質",
       ovSub: "主要指標", tkSub: "計畫節奏與 CT", utilSub: "各狀態的時間比例", rwSub: "各站維修率",
+      l3dTitle: "3D 佈置", l3dSub: "依 CAD 建立的廠區", l3dOpen: "在新分頁開啟",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -1503,6 +1515,7 @@
     return {
       kind: "folder",
       pollMs: 3000,
+      async hasFile(name) { try { await root.getFileHandle(name); return true; } catch (e) { return false; } },
       async getConfig() {
         const c = await readJson(null, "config.json");
         if (!c) throw new Error(t("errNoConfig"));
@@ -1576,6 +1589,7 @@
   // =====================================================================
   // UI
   // =====================================================================
+  let HAS_L3D = false;
   let T = null, CFG = null, DI = null, history = [], selectedId = null, activeId = null, pollTimer = null;
   let shownJob = null, stateMode = "idle", activeJob = null, pending = null;
   let TAB = "input", outRunId = null, outTable = load("simOutTable"), outStation = load("simOutStation");
@@ -2675,6 +2689,7 @@
   function renderOutNav(job) {
     const g0 = t("grpSummary"), g1 = t("grpProduction"), g2 = t("grpEfficiency"), g3 = t("grpQuality");
     const cats = [{ k: "overview", label: t("catOverview"), sub: t("ovSub"), grp: g0, icon: "overview" },
+      ...(HAS_L3D ? [{ k: "l3d", label: t("l3dTitle"), sub: t("l3dSub"), grp: g0 }] : []),
       ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", "), grp: g1, icon: "output" })),
       ...(CFG.sod ? [{ k: "sd", label: t("sdTitle"), sub: t("sdGood"), grp: g1, icon: "sd" }] : []),
       ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2", grp: g2, icon: "oee" }] : []),
@@ -2685,7 +2700,8 @@
     $("outNav").innerHTML = navHtml(cats, OUT_CAT);
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
-    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd", "l3d"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="l3d"]').hidden = OUT_CAT !== "l3d";
     document.querySelector('[data-ocat="sd"]').hidden = OUT_CAT !== "sd";
     document.querySelector('[data-ocat="rw"]').hidden = OUT_CAT !== "rw";
     document.querySelector('[data-ocat="tk"]').hidden = OUT_CAT !== "tk";
@@ -2745,6 +2761,11 @@
       renderBars();
     } else if (OUT_CAT === "util") {
       renderUtil(job);
+    } else if (OUT_CAT === "l3d") {
+      // the 3D page is a separate file next to this one; load it once, in the current language
+      const src = `layout3d.html?lang=${LANG}`;
+      if ($("l3dFrame").getAttribute("src") !== src) $("l3dFrame").setAttribute("src", src);
+      $("l3dOpen").setAttribute("href", src);
     } else if (OUT_CAT === "oee") {
       renderOee(job);
     } else if (OUT_CAT === "sd") {
@@ -3862,6 +3883,7 @@
     try {
       T = folderTransport(await connectFolder());
       CFG = await T.getConfig();
+      HAS_L3D = await T.hasFile("layout3d.html");
       DI = CFG.date_inputs || null;
       renderConfigText();
       $("mockBanner").hidden = !CFG.mock_mode;
