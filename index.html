@@ -899,9 +899,9 @@
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
-      effTime: "Effective time", effDef: "Bottleneck CT × output ÷ 3600, in hours. Computed by the model each day.",
+      effTime: "Effective time", effDef: "Bottleneck CT × output ÷ 3600, in hours. Bottleneck CT is the station's largest machine CT, recorded once per simulated day.",
       oeeTitle: "{s} OEE", oeeTable: "OEE detail", oeeNone: "This run has no OEE data. Runs made before this update don't include it.",
-      restShort: "Rest", colPeriod: "Period",
+      restShort: "Rest", colPeriod: "Period", tipOut: "Output {n}", tipCt: "Bottleneck CT {v} s",
       catUtil: "Equipment utilization", utilGroups: "Equipment group", utilSort: "Sort by utilization",
       utilAvg: "Average utilization", utilHi: "Highest", utilLo: "Lowest", utilCol: "Utilization", utilEquip: "Equipment",
       utilStates: "Time in each state", utilHint: "Share of each machine's time by state. {ex} time is left out, the same as the FlexSim dashboard.",
@@ -1030,9 +1030,9 @@
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
-      effTime: "有效時間", effDef: "瓶頸 CT × 產出 ÷ 3600（小時）。由模型每天計算。",
+      effTime: "有效時間", effDef: "瓶頸 CT × 產出 ÷ 3600（小時）。瓶頸 CT 是這站機台 CT 的最大值，模擬時每天記錄一次。",
       oeeTitle: "{s} OEE", oeeTable: "OEE 明細", oeeNone: "這次模擬沒有 OEE 資料。更新之前跑的模擬不會有。",
-      restShort: "休息", colPeriod: "期間",
+      restShort: "休息", colPeriod: "期間", tipOut: "產出 {n}", tipCt: "瓶頸 CT {v} 秒",
       catUtil: "設備使用率", utilGroups: "設備群組", utilSort: "依使用率排序",
       utilAvg: "平均使用率", utilHi: "最高", utilLo: "最低", utilCol: "使用率", utilEquip: "設備",
       utilStates: "各狀態時間比例", utilHint: "每台設備在各狀態的時間比例。和 FlexSim 儀表板一樣，已扣除 {ex} 時間。",
@@ -2313,30 +2313,31 @@
   // ---------- OEE ----------
   let oeeProd = load("simOeeProd"), oeeStation = load("simOeeStation"), oeeView = null;
   // one entry per simulated day: effective, total and planned hours for every station
+  // one entry per simulated day: effective, total and planned hours for every station
+  //   effective = bottleneck CT (recorded each simulated day) x output / 3600
   function oeeDays(job, prod) {
-    const O = CFG.oee, src = O.products[prod];
-    const t1 = job?.tables?.[src?.oee1], t2 = job?.tables?.[src?.oee2];
-    if (!t1?.rows?.length) return null;
-    const dates = rowDates(job, t1);
+    const O = CFG.oee, rec = job?.tables?.[O.record_tables?.[prod]], bn = job?.bottleneck;
+    if (!rec?.rows?.length || !bn?.ct?.[prod]) return null;
+    const dates = rowDates(job, rec);
     if (dates.some(d => !d)) return null;
+    const at = Object.fromEntries((bn.dates || []).map((d, i) => [d, i]));
     const rest = {}; (job.plans?.[prod]?.rows || []).forEach(r => { rest[r.date] = !!r.holiday; });
     const sh = job.shifts?.[prod], S = CFG.shifts;
-    const col = (tb, name) => tb ? tb.columns.findIndex(c => c === name) : -1;
-    return t1.rows.map((r, i) => {
+    return rec.rows.map((r, i) => {
       const d = dates[i], iso = isoDay(d), off = !!rest[iso];
-      const r2 = t2?.rows?.[i];
       const st = {};
       for (const s of O.stations) {
-        const i1 = col(t1, s.name + "_OEE1"), i2 = col(t2, s.name + "_OEE2");
-        const o1 = i1 >= 0 ? Number(r.values[i1]) || 0 : 0, o2 = r2 && i2 >= 0 ? Number(r2.values[i2]) || 0 : 0;
-        const eff = o1 * 24;
-        let planned;
-        if (off) planned = 0;
-        else if (sh && S) {
+        const oi = rec.columns.indexOf(s.output);
+        const out = oi >= 0 ? Number(r.values[oi]) || 0 : 0;
+        const arr = bn.ct[prod][s.name] || [];
+        const ct = arr[at[iso]] ?? arr[arr.length - 1] ?? 0;
+        const eff = ct * out / 3600;
+        let planned = 0;
+        if (!off && sh && S) {
           const wr = S.rows.indexOf(WD3[d.getDay()]), sc = S.columns.indexOf(s.shift);
-          planned = wr >= 0 && sc >= 0 ? sh.grids.reduce((a, g) => a + (Number(g?.[wr]?.[sc]) || 0), 0) : (o2 > 0 ? eff / o2 : 0);
-        } else planned = o2 > 0 ? eff / o2 : 0;
-        st[s.name] = { eff, total: 24, planned };
+          if (wr >= 0 && sc >= 0) planned = sh.grids.reduce((a, g) => a + (Number(g?.[wr]?.[sc]) || 0), 0);
+        }
+        st[s.name] = { eff, total: 24, planned, ct, out };
       }
       return { d, off, st };
     });
@@ -2369,7 +2370,7 @@
   }
   const pct = (v) => v == null ? "—" : fmt(v * 100, 1) + "%";
   function renderOee(job) {
-    const O = CFG.oee, prods = Object.keys(O.products);
+    const O = CFG.oee, prods = O.products;
     if (!prods.includes(oeeProd)) oeeProd = prods[0];
     const prodLabel = (n) => { const p = (PD()?.products || CFG.shifts?.products || []).find(x => x.name === n); return p ? L(p, "label") : n; };
     $("oeeProdSeg").innerHTML = prods.map(n => `<button type="button" data-p="${esc(n)}" aria-pressed="${n === oeeProd}">${esc(prodLabel(n))}</button>`).join("");
@@ -2394,7 +2395,11 @@
     const box = $("oeeChart");
     const unit = outGran === "day" ? "" : LANG === "zh" ? `（${t("g_" + outGran)}）` : ` (${t("g_" + outGran)})`;
     $("oeeChartTitle").textContent = t("oeeTitle", { s: oeeStation }) + unit;
-    const data = groups.map((g, n) => ({ ...periodName(g, n), ...oeeOf(g.days, oeeStation), off: g.days.every(x => x.off), work: g.days.filter(x => !x.off).length }));
+    const data = groups.map((g, n) => {
+      const cts = g.days.map(x => x.st[oeeStation].ct);
+      return { ...periodName(g, n), ...oeeOf(g.days, oeeStation), off: g.days.every(x => x.off), work: g.days.filter(x => !x.off).length,
+        out: g.days.reduce((a, x) => a + x.st[oeeStation].out, 0), ctLo: Math.min(...cts), ctHi: Math.max(...cts) };
+    });
     const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 46, r: 8, t: 10, b: 30 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
     const peak = Math.max(1, ...data.map(d => Math.max(d.o1 || 0, d.o2 || 0)));
     const ymax = Math.ceil(peak * 4) / 4;
@@ -2425,7 +2430,8 @@
         const d = data[+h.dataset.i];
         box.querySelectorAll(".b1,.b2").forEach(b => b.classList.toggle("hot", b.dataset.i === h.dataset.i));
         tip.innerHTML = `${esc(d.row)}${d.range ? "  " + esc(d.range) : ""}` +
-          `${outGran === "day" ? "" : `<br>${esc(t("workDaysN", { n: d.work }))}`}<br>OEE1 <b>${pct(d.o1)}</b> &nbsp; OEE2 <b>${d.off ? esc(t("restShort")) : pct(d.o2)}</b>`;
+          `${outGran === "day" ? "" : `<br>${esc(t("workDaysN", { n: d.work }))}`}<br>OEE1 <b>${pct(d.o1)}</b> &nbsp; OEE2 <b>${d.off ? esc(t("restShort")) : pct(d.o2)}</b>` +
+          `<br>${esc(t("tipOut", { n: fmt(d.out, 0) }))} &nbsp; ${esc(t("tipCt", { v: d.ctLo === d.ctHi ? fmt(d.ctLo, 1) : fmt(d.ctLo, 1) + "–" + fmt(d.ctHi, 1) }))}`;
         tip.hidden = false;
         tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + "px";
         tip.style.top = (e.clientY - 70) + "px";
