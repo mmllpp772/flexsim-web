@@ -14,3 +14,6 @@ runs/
 history_archive/
 util_csv/
 model_defaults.json
+*.dwg
+*.dxf
+cad_report.txt
