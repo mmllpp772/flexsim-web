@@ -609,7 +609,7 @@
     ]
   },
   "ct_fpyr": {
-    "_help": "CT and FPYR inputs. Station CT comes from the CT setting table (USE=1 makes every machine in the station use that CT at Reset). Machine CT is column 1 of each parameter table; FPYR (%) is column 2 of the SMT and DIP tables. Defaults are read from the model whenever the model file changes.",
+    "_help": "Machine CT and FPYR inputs. Each machine has its own CT (column 1 of each parameter table; FPYR is the column whose name contains FPYR). Runs set USE to 0 in the CT setting table and write every machine's CT to the parameter table and its '_User saved' copy, so the model uses per-machine CT. When USE is 1 in the model, defaults come from '_User saved'. distribution_table holds the CT variation per station (0 constant, 1 uniform +/-5%, 2 triangular +/-5%; shared by both products). Defaults are read from the model whenever the model file changes.",
     "products": {
       "bianca": {
         "setting_table": "WUS_CT_Setting"
@@ -626,7 +626,8 @@
           "bianca": "WUS_SMT Parameter",
           "strata": "WUS_SMT Parameter_Strata"
         },
-        "fpyr": true
+        "fpyr": true,
+        "dist_row": "SMT_distType"
       },
       {
         "name": "DIP",
@@ -635,7 +636,8 @@
           "bianca": "WUS_DIP Parameter",
           "strata": "WUS_DIP Parameter_Strata"
         },
-        "fpyr": true
+        "fpyr": true,
+        "dist_row": "DIP_distType"
       },
       {
         "name": "L1",
@@ -643,7 +645,8 @@
         "tables": {
           "bianca": "WUS_FA_L1_Parameter",
           "strata": "WUS_FA_L1_Parameter_Strata"
-        }
+        },
+        "dist_row": "L1_distType"
       },
       {
         "name": "L2",
@@ -651,7 +654,8 @@
         "tables": {
           "bianca": "WUS_FA_L2_Parameter",
           "strata": "WUS_FA_L2_Parameter_Strata"
-        }
+        },
+        "dist_row": "L2_distType"
       },
       {
         "name": "L4",
@@ -659,7 +663,8 @@
         "tables": {
           "bianca": "WUS_FA_L4_Parameter",
           "strata": "WUS_FA_L4_Parameter_Strata"
-        }
+        },
+        "dist_row": "L4_distType"
       },
       {
         "name": "Packing",
@@ -667,7 +672,8 @@
         "tables": {
           "bianca": "WUS_packing Parameter",
           "strata": "WUS_packing Parameter_Strata"
-        }
+        },
+        "dist_row": "Packing_distType"
       },
       {
         "name": "POD",
@@ -675,7 +681,8 @@
         "tables": {},
         "bottleneck_only": true
       }
-    ]
+    ],
+    "distribution_table": "WUS_CT_Distribution"
   },
   "rework": {
     "_help": "Rework tables: one row per rework machine, column 1 = rework quantity, column 2 = throughput. The run records the station totals once per simulated day (so the page can show day/week/month/quarter) and exports the tables at the end for the per-machine breakdown.",

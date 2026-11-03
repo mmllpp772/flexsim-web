@@ -2,16 +2,16 @@
 CT 與 FPYR（輸入參數）
 =====================
 
-模型裡有兩層：
-  1. 站別設定 WUS_CT_Setting / WUS_CT_Setting_Strata：每站的瓶頸 CT、USE 開關、目標 CT、每週改善 %。
-     USE = 1 時，模型在 Reset 會把這一站所有機台的 CT 都改成這個 Cycle Time。
-  2. 機台參數 WUS_SMT Parameter、WUS_DIP Parameter、WUS_FA_L1_Parameter …（Strata 各有一張）：
-     第 1 欄是每台機台的 CT（秒）；欄名含 FPYR 的那一欄是 FPYR（%）。目前 SMT / DIP 有，
-     其他站的參數表日後加上 FPYR 欄，網頁會自動開放。
+網頁上填的是每台機台真實的 CT（秒），每台都可以不同：
+  - 機台參數 WUS_SMT Parameter、WUS_DIP Parameter、WUS_FA_L1_Parameter …（Strata 各有一張）：
+    第 1 欄是機台 CT；欄名含 FPYR 的那一欄是 FPYR（%）。
+  - 模型另外有 "<參數表>_User saved"，存使用者自己的機台 CT。站別設定 WUS_CT_Setting 的 USE = 1 時，
+    模型在 Reset 會把整站機台都改成同一個 CT，真實值只留在 User saved 裡；所以預設值在 USE = 1 時從 User saved 讀。
+  - 網頁送出的模擬一律把 USE 設成 0，並把每台機台 CT 寫進參數表和 User saved，模型就照各機台自己的 CT 跑。
+  - CT 變異 WUS_CT_Distribution（各站一列，Bianca / Strata 共用）：0 = 固定、1 = 均勻 ±5%、2 = 三角 ±5%，
+    模型的加工時間程式（SMT_CT_Distribution 等）依這個值抽每一件的加工時間。
 
-網頁的預設值直接從模型讀（模型檔有變動才重新讀一次，存在 model_defaults.json），
-使用者改過的值隨工作送來，在 Reset 前寫進模型；USE = 0 的站別在 Reset 後再寫一次機台 CT，
-避免模型的 On Model Reset 用它保存的舊值蓋掉。
+網頁的預設值直接從模型讀（模型檔有變動才重新讀一次，存在 model_defaults.json）。
 """
 
 from __future__ import annotations
@@ -23,6 +23,8 @@ from typing import Any
 
 # 只用 USE 和 Cycle Time（Target Cycle Time、Weekly improvement percentage 已不使用）
 SETTING_COLS = {"use": "USE", "ct": "Cycle Time"}
+SAVED = "_User saved"
+DIST_CHOICES = (0, 1, 2)  # 固定 / 均勻 ±5% / 三角 ±5%
 
 
 def _s(text: str) -> str:
@@ -38,6 +40,9 @@ def tables_to_read(cfg: dict[str, Any]) -> list[str]:
         names.append(p["setting_table"])
     for st in cf["stations"]:
         names += list(st["tables"].values())
+        names += [t + SAVED for t in st["tables"].values()]
+    if cf.get("distribution_table"):
+        names.append(cf["distribution_table"])
     names += param_tables(cfg)
     return list(dict.fromkeys(names))
 
@@ -67,6 +72,14 @@ def build_defaults(cfg: dict[str, Any], tables: dict[str, Any]) -> dict[str, Any
             ptb = tables.get(st["tables"].get(prod, ""))
             if not ptb:
                 continue
+            # USE = 1 時參數表被模型統一成同一個 CT，真實的機台 CT 在 User saved
+            stb = tables.get(st["tables"][prod] + SAVED)
+            saved = {}
+            if stb:
+                for ri, r in enumerate(stb["rows"], 1):
+                    if r["values"] and isinstance(r["values"][0], float):
+                        saved[r["row"]] = (ri, r["values"][0])
+            use_saved = bool(saved) and bool((stations.get(name) or {}).get("use"))
             cols = ptb["columns"]
             fcol = next((i for i, c in enumerate(cols) if "fpyr" in str(c).lower()), None)  # 0-based
             rows = []
@@ -76,14 +89,50 @@ def build_defaults(cfg: dict[str, Any], tables: dict[str, Any]) -> dict[str, Any
                     continue
                 fv = vals[fcol] if fcol is not None and len(vals) > fcol else None
                 desc = next((v for i, v in enumerate(vals) if i not in (0, fcol) and isinstance(v, str) and v.strip()), "")
-                rows.append({"name": r["row"], "row": ri, "ct": vals[0],
+                sv = saved.get(r["row"])
+                rows.append({"name": r["row"], "row": ri, "ct": sv[1] if use_saved and sv else vals[0],
+                             "saved_row": sv[0] if sv else None,
                              "fpyr": fv if isinstance(fv, float) and fv > 0 else None,  # 0 或空白 = 還沒設定
                              "desc": desc})
             machines[name] = rows
+            if stb:
+                stations.setdefault(name, {})["saved_table"] = st["tables"][prod] + SAVED
             if fcol is not None:
                 stations.setdefault(name, {})["fpyr_col"] = fcol + 1
         out[prod] = {"stations": stations, "machines": machines}
     return out
+
+
+def build_dist_defaults(cfg: dict[str, Any], tables: dict[str, Any]) -> dict[str, Any]:
+    """CT 變異（各站一個值，Bianca / Strata 共用）：{站別: {"row": 列號, "value": 0|1|2}}"""
+    cf = cfg.get("ct_fpyr") or {}
+    tb = tables.get(cf.get("distribution_table", ""))
+    if not tb:
+        return {}
+    out: dict[str, Any] = {}
+    for st in cf["stations"]:
+        for ri, r in enumerate(tb["rows"], 1):
+            if st.get("dist_row") and r["row"].strip() == st["dist_row"] and r["values"] and isinstance(r["values"][0], float):
+                v = int(r["values"][0])
+                out[st["name"]] = {"row": ri, "value": v if v in DIST_CHOICES else 0}
+    return out
+
+
+def validate_dist(given: Any, defaults: dict[str, Any] | None) -> dict[str, int] | None:
+    if not defaults or not isinstance(given, dict):
+        return None
+    out = {}
+    for name, v in given.items():
+        if name in defaults and not isinstance(v, bool) and v in DIST_CHOICES:
+            out[name] = int(v)
+    return out or None
+
+
+def dist_script(cfg: dict[str, Any], clean: dict[str, int] | None, defaults: dict[str, Any] | None) -> list[str]:
+    if not clean or not defaults:
+        return []
+    tb = _s(cfg["ct_fpyr"]["distribution_table"])
+    return ["// ---- CT variation ----"] + [f"Table({tb})[{defaults[n]['row']}][1] = {v};" for n, v in clean.items()]
 
 
 def load_cached(path: Path, model: Path) -> dict[str, Any] | None:
@@ -119,21 +168,22 @@ def _num(v: Any, what: str, lo: float, hi: float) -> float:
 
 def validate(cfg: dict[str, Any], ct: Any, defaults: dict[str, Any] | None) -> dict[str, Any] | None:
     """只接受模型裡真的有的站別和機台；回傳要寫進模型的值。"""
-    if not cfg.get("ct_fpyr") or not defaults or not isinstance(ct, dict):
+    if not cfg.get("ct_fpyr") or not defaults:
         return None
+    if not isinstance(ct, dict):
+        ct = {}
+    only = {st["name"] for st in cfg["ct_fpyr"]["stations"] if st.get("bottleneck_only")}
     out: dict[str, Any] = {}
     for prod, d in defaults.items():
         p = ct.get(prod)
         if not isinstance(p, dict):
-            continue
+            p = {}
         clean: dict[str, Any] = {"stations": {}, "machines": {}}
         for name, st in d["stations"].items():
             v = (p.get("stations") or {}).get(name)
-            if not isinstance(v, dict):
+            if not isinstance(v, dict) or name not in only:  # 只有沒有機台表的站別（POD）填站別 CT
                 continue
             rec = {}
-            if "use" in v and st.get("use_col"):
-                rec["use"] = 1.0 if v["use"] else 0.0
             if "ct" in v and st.get("ct_col"):
                 rec["ct"] = _num(v["ct"], f"{name} CT", 0.1, 100000)
             if rec:
@@ -150,48 +200,56 @@ def validate(cfg: dict[str, Any], ct: Any, defaults: dict[str, Any] | None) -> d
                     continue
                 rec = {}
                 if "ct" in v:
-                    rec["ct"] = _num(v["ct"], f"{name} {m['name']} CT", 0.1, 100000)
+                    rec["ct"] = _num(v["ct"], f"{name} {m['name']} CT", 0, 100000)
                 if "fpyr" in v and fpyr_ok and m["fpyr"] is not None:  # 只有模型裡本來就有 FPYR 的機台（測試站）
                     rec["fpyr"] = _num(v["fpyr"], f"{name} {m['name']} FPYR", 0, 100)
                 if rec:
                     recs[m["name"]] = rec
             if recs:
                 clean["machines"][name] = recs
-        out[prod] = clean
-    return out
+        if clean["stations"] or clean["machines"]:
+            out[prod] = clean
+    return out or None
 
 
 def script(cfg: dict[str, Any], clean: dict[str, Any] | None, defaults: dict[str, Any] | None,
            after_reset: bool = False) -> list[str]:
-    """Reset 前寫全部；Reset 後只再寫 USE = 0 站別的機台 CT 和 FPYR（USE = 1 的站別由模型統一）。"""
-    if not clean or not defaults:
+    """每台機台都用自己的 CT：USE 設 0，所有機台 CT（改過的用新值，其餘用預設值）寫進參數表和 User saved。
+    Reset 後再寫一次參數表，以防模型 Reset 時改回去。"""
+    if not defaults or not cfg.get("ct_fpyr"):
         return []
     cf = cfg["ct_fpyr"]
-    lines = ["// ---- CT and FPYR" + (" (after reset)" if after_reset else "") + " ----"]
-    for prod, c in clean.items():
-        d = defaults[prod]
+    clean = clean or {}
+    only = {st["name"] for st in cf["stations"] if st.get("bottleneck_only")}
+    lines = ["// ---- machine CT and FPYR" + (" (after reset)" if after_reset else "") + " ----"]
+    for prod, d in defaults.items():
+        c = clean.get(prod) or {"stations": {}, "machines": {}}
         pc = cf["products"][prod]
         tables = {st["name"]: st["tables"].get(prod) for st in cf["stations"]}
         if not after_reset:
-            for name, rec in c["stations"].items():
-                st = d["stations"][name]
-                for key, val in rec.items():
-                    if key + "_col" not in st:
-                        continue
-                    lines.append(f'Table({_s(pc["setting_table"])})[{st["row"]}][{st[key + "_col"]}] = {val!r};')
-        for name, recs in c["machines"].items():
-            st_rec = c["stations"].get(name, {})
-            use = st_rec.get("use", d["stations"].get(name, {}).get("use"))
-            if after_reset and use:
+            for name, st in d["stations"].items():
+                if name in only:
+                    rec = c["stations"].get(name, {})
+                    if "ct" in rec and st.get("ct_col"):
+                        lines.append(f'Table({_s(pc["setting_table"])})[{st["row"]}][{st["ct_col"]}] = {rec["ct"]!r};')
+                elif st.get("use_col") and d["machines"].get(name):
+                    lines.append(f'Table({_s(pc["setting_table"])})[{st["row"]}][{st["use_col"]}] = 0;')
+        for name, rows in d["machines"].items():
+            if not rows or not tables.get(name):
                 continue
-            by_name = {m["name"]: m for m in d["machines"][name]}
-            for mname, rec in recs.items():
-                m = by_name[mname]
-                tb = _s(tables[name])
-                if "ct" in rec:
-                    lines.append(f"Table({tb})[{m['row']}][1] = {rec['ct']!r};")
-                if "fpyr" in rec:
-                    lines.append(f"Table({tb})[{m['row']}][{d['stations'][name]['fpyr_col']}] = {rec['fpyr']!r};")
+            st = d["stations"].get(name, {})
+            given = c["machines"].get(name, {})
+            tb, sv = _s(tables[name]), st.get("saved_table")
+            for m in rows:
+                rec = given.get(m["name"], {})
+                ct = rec.get("ct", m["ct"])
+                lines.append(f"Table({tb})[{m['row']}][1] = {ct!r};")
+                if not after_reset and sv and m.get("saved_row"):
+                    lines.append(f"Table({_s(sv)})[{m['saved_row']}][1] = {ct!r};")
+                if "fpyr" in rec and st.get("fpyr_col"):
+                    lines.append(f"Table({tb})[{m['row']}][{st['fpyr_col']}] = {rec['fpyr']!r};")
+                    if not after_reset and sv and m.get("saved_row"):
+                        lines.append(f"Table({_s(sv)})[{m['saved_row']}][{st['fpyr_col']}] = {rec['fpyr']!r};")
     return lines if len(lines) > 1 else []
 
 
