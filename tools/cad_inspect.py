@@ -69,9 +69,26 @@ def libredwg_convert(exe: str, dwg: Path, out: Path) -> bool:
     if dst.exists() and dst.stat().st_size > 1000:
         shutil.move(str(dst), out)
         return True
-    msg = (r.stderr or r.stdout or b"").decode("utf-8", "replace").strip().splitlines()[-3:]
+    text = (r.stderr or b"").decode("utf-8", "replace") + (r.stdout or b"").decode("utf-8", "replace")
+    msg = [ln for ln in text.strip().splitlines() if ln.strip()][-2:]
     print("  轉檔失敗：" + " / ".join(msg))
+    try:  # 完整訊息存起來，需要時可以看
+        (dwg.parent / "dwg2dxf_log.txt").write_text(text, encoding="utf-8")
+    except OSError:
+        pass
     return False
+
+
+DWG_VERSIONS = {"AC1012": "R13", "AC1014": "R14", "AC1015": "2000", "AC1018": "2004", "AC1021": "2007",
+                "AC1024": "2010", "AC1027": "2013", "AC1032": "2018"}
+
+
+def dwg_version(dwg: Path) -> str:
+    try:
+        code = dwg.read_bytes()[:6].decode("ascii", "replace")
+    except OSError:
+        return "?"
+    return f"AutoCAD {DWG_VERSIONS[code]} 格式" if code in DWG_VERSIONS else code
 
 
 def dwg_to_dxf(dwg: Path) -> Path | None:
@@ -82,6 +99,7 @@ def dwg_to_dxf(dwg: Path) -> Path | None:
 
     lib = find_libredwg()
     if lib:
+        print(f"  檔案是 {dwg_version(dwg)}，{dwg.stat().st_size / 1e6:.0f} MB")
         print("  用程式附的 LibreDWG 轉檔（不需要 AutoCAD），大檔案可能要幾分鐘…")
         if libredwg_convert(lib, dwg, out):
             return out
@@ -101,6 +119,8 @@ def dwg_to_dxf(dwg: Path) -> Path | None:
         print("  ODA 轉檔沒有產生檔案，改試 AutoCAD。")
 
     acc = find_accore()
+    if acc and "trueview" in acc.lower():
+        acc = None  # DWG TrueView 只能看圖，不能匯出 DXF
     if acc:
         print(f"  用 AutoCAD（背景模式）轉檔：{acc}")
         scr = Path(tempfile.mkdtemp()) / "todxf.scr"
@@ -112,9 +132,14 @@ def dwg_to_dxf(dwg: Path) -> Path | None:
             return out
         print("  AutoCAD 轉檔沒有產生檔案。")
 
-    print("\n  ✗ 這台電腦找不到可以自動轉檔的程式（AutoCAD 或 ODA File Converter）。")
-    print("    請用 AutoCAD 或 DWG TrueView 打開 DWG → 另存新檔 → 檔案類型選「AutoCAD 2018 DXF」，")
-    print("    存在同一個資料夾，再執行一次這支程式（第一個參數改成 .dxf）。")
+    print("\n  ✗ 這個 DWG 沒辦法自動轉成 DXF。")
+    if glob.glob(r"C:\Program Files\Autodesk\DWG TrueView*"):
+        print("    你的電腦有 DWG TrueView，可以先把檔案轉成舊版 DWG（轉檔程式讀舊版比較穩）：")
+        print("      1. 開 DWG TrueView → 左上角「DWG 轉換」(DWG Convert)")
+        print("      2. 加入這個 DWG → 轉換設定選「AutoCAD 2010」或「AutoCAD 2004」格式 → 轉換")
+        print("      3. 轉好的 DWG 放在這個資料夾，再雙擊 build_layout3d.bat")
+    else:
+        print("    請用 AutoCAD 另存成「AutoCAD 2018 DXF」放在同一個資料夾，再執行一次。")
     return None
 
 
@@ -123,18 +148,26 @@ def dwg_to_dxf(dwg: Path) -> Path | None:
 # ---------------------------------------------------------------------------
 
 def read_pairs(path: Path):
-    raw = path.read_bytes()
-    if raw.startswith(b"AutoCAD Binary DXF"):
+    """逐行讀（DXF 可能有好幾百 MB，不一次載入記憶體）"""
+    with open(path, "rb") as f:
+        head = f.read(4096)
+    if head.startswith(b"AutoCAD Binary DXF"):
         raise SystemExit("這是二進位 DXF，請另存成一般（ASCII）DXF。")
-    for enc in ("utf-8", "cp950", "latin-1"):
-        try:
-            text = raw.decode(enc)
-            break
-        except UnicodeDecodeError:
-            continue
-    lines = text.splitlines()
-    for i in range(0, len(lines) - 1, 2):
-        yield lines[i].strip(), lines[i + 1].rstrip()
+    enc = "utf-8"
+    with open(path, "rb") as f:  # 新版 DXF 是 UTF-8；舊版可能是 Big5（cp950）
+        chunk = f.read(4_000_000)
+    try:
+        chunk.decode("utf-8")
+    except UnicodeDecodeError as e:
+        if e.start < len(chunk) - 4:
+            enc = "cp950"
+    with open(path, "r", encoding=enc, errors="replace", newline=None) as f:
+        while True:
+            code = f.readline()
+            if not code:
+                return
+            val = f.readline()
+            yield code.strip(), val.rstrip("\r\n")
 
 
 def inspect_dxf(path: Path) -> dict:
