@@ -1121,7 +1121,7 @@
       ctDistHelp: "Each unit's processing time varies between {lo} and {hi} of the machine's CT.",
       ctDistShared: "Bianca and Strata share this setting.",
       ctBnOnly: "{s} has no machine CT table. Enter its CT here; OEE and takt time use it for this station.",
-      ptItem: "Item", ptCol: "Column {n}", ptReset: "Restore model values", ptConfirmReset: "Restore all these values to the model's values?",
+      ptItem: "Item", ptValue: "Value", ptCol: "Column {n}", ptReset: "Restore model values", ptConfirmReset: "Restore all these values to the model's values?",
       ptHint: "Starting values are read from the FlexSim model. Changed cells are highlighted and only they are sent with the run. Text cells (such as distributions) are shown but can't be changed here.",
       ctFpyrHow: "FPYR can be changed only on test stations (machines that have an FPYR in the model); the others are locked.",
       ctFpyrNone: "This machine has no FPYR in the model.",
@@ -1286,7 +1286,7 @@
       ctDistHelp: "每一件的加工時間會在機台 CT 的 {lo}～{hi} 之間變動。",
       ctDistShared: "Bianca 和 Strata 共用這個設定。",
       ctBnOnly: "{s} 沒有機台 CT 表，在這裡填一個 CT，OEE 和 Takt Time 會用這個值。",
-      ptItem: "項目", ptCol: "第 {n} 欄", ptReset: "全部恢復模型值", ptConfirmReset: "要把這些值全部恢復成模型的值嗎？",
+      ptItem: "項目", ptValue: "數值", ptCol: "第 {n} 欄", ptReset: "全部恢復模型值", ptConfirmReset: "要把這些值全部恢復成模型的值嗎？",
       ptHint: "預設值是從 FlexSim 模型讀出來的。改過的格子會標示出來，只有改過的值會隨模擬送出。文字格（例如分配公式）只顯示、不能在這裡改。",
       ctFpyrHow: "只有測試站（模型裡本來就有 FPYR 的機台）可以改 FPYR，其他機台鎖住，避免誤填。",
       ctFpyrNone: "模型裡這台機台沒有 FPYR。",
@@ -1943,14 +1943,26 @@
   let PTS = {};
   try { PTS = JSON.parse(load("simPt") || "{}") || {}; } catch (e) { PTS = {}; }
   const savePt = () => store("simPt", JSON.stringify(PTS));
+  // rows the page shows for a table: the config's "rows" list (named, column 1 only), otherwise every row
+  function ptRows(g, tn) {
+    const tb = g.defaults?.[tn]; if (!tb) return [];
+    const spec = g.rows?.[tn];
+    if (!spec) return tb.rows.map(r => ({ r, label: r.name, cols: r.cells.map((_, i) => i) }));
+    return spec.map(sp => { const r = tb.rows.find(x => x.name === sp.row); return r && { r, label: L(sp, "label"), cols: [0] }; }).filter(Boolean);
+  }
+  function ptShown(g, tn, key) {
+    const [r, c] = key.split(",").map(Number);
+    return ptRows(g, tn).some(x => x.r.row === r && x.cols.includes(c - 1));
+  }
   const ptCount = (g) => Object.values(PTS[g] || {}).reduce((a, x) => a + Object.keys(x).length, 0);
   function ptChangedItems(gname) {  // row names (e.g. UPH, FPY) that have a changed cell
     const g = PTG().find(x => x.name === gname), out = [];
+    if (!g) return out;
     for (const [tn, cells] of Object.entries(PTS[gname] || {})) {
-      const rows = g?.defaults?.[tn]?.rows || [];
+      const rows = ptRows(g, tn);
       for (const key of Object.keys(cells)) {
-        const r = rows.find(x => x.row === +key.split(",")[0]);
-        if (r && !out.includes(r.name)) out.push(r.name);
+        const x = ptShown(g, tn, key) && rows.find(y => y.r.row === +key.split(",")[0]);
+        if (x && !out.includes(x.label)) out.push(x.label);
       }
     }
     return out;
@@ -1959,7 +1971,8 @@
     const out = {};
     for (const g of PTG()) for (const [tn, cells] of Object.entries(PTS[g.name] || {})) {
       if (!g.defaults?.[tn]) continue;
-      if (Object.keys(cells).length) (out[g.name] ||= {})[tn] = { ...cells };
+      const keep = Object.fromEntries(Object.entries(cells).filter(([k]) => ptShown(g, tn, k)));
+      if (Object.keys(keep).length) (out[g.name] ||= {})[tn] = keep;
     }
     return Object.keys(out).length ? out : null;
   }
@@ -1968,12 +1981,16 @@
     const box = $("pt_" + gname);
     const tables = Object.entries(g.defaults || {});
     box.innerHTML = tables.map(([tn, tb]) => {
-      const cols = tb.columns.map((c, i) => /^col\s*\d+$/i.test(String(c)) ? t("ptCol", { n: i + 1 }) : c);
-      return `<h3 class="ct-h">${esc(tn)}</h3><div class="table-wrap"><table class="ct-table pt-table"><thead><tr><th class="l">${esc(t("ptItem"))}</th>${cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
-        tb.rows.map(r => `<tr><td class="l">${esc(r.name)}</td>${r.cells.map((d, ci) => {
+      const named = !!g.rows?.[tn], rows = ptRows(g, tn);
+      const allCols = tb.columns.map((c, i) => /^col\s*\d+$/i.test(String(c)) ? t("ptCol", { n: i + 1 }) : c);
+      const heads = named ? [t("ptValue")] : allCols;
+      const title = g.table_labels?.[tn] ? L(g.table_labels[tn], "label") : tn;
+      return `<h3 class="ct-h">${esc(title)}</h3><div class="table-wrap"><table class="ct-table pt-table"><thead><tr><th class="l">${esc(t("ptItem"))}</th>${heads.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
+        rows.map(({ r, label, cols }) => `<tr><td class="l">${esc(label)}</td>${cols.map(ci => {
+          const d = r.cells[ci];
           if (typeof d !== "number") return `<td class="txt" title="${esc(d || "")}">${esc(d || "")}</td>`;
           const key = `${r.row},${ci + 1}`, cur = PTS[gname]?.[tn]?.[key], v = cur ?? d, ch = cur != null && cur !== d;
-          return `<td><input type="number" step="any" data-t="${esc(tn)}" data-k="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(r.name)} ${esc(cols[ci])}">${ch ? `<span class="was">${esc(t("ctWas", { v: nf(d) }))}</span>` : ""}</td>`;
+          return `<td><input type="number" step="any" data-t="${esc(tn)}" data-k="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(label)} ${esc(heads[named ? 0 : ci])}">${ch ? `<span class="was">${esc(t("ctWas", { v: nf(d) }))}</span>` : ""}</td>`;
         }).join("")}</tr>`).join("") + "</tbody></table></div>";
     }).join("") || `<p class="empty">${esc(t("noData"))}</p>`;
     box.querySelectorAll("input[data-k]").forEach(inp => inp.addEventListener("change", () => {

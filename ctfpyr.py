@@ -288,6 +288,7 @@ def validate_params_tables(cfg: dict[str, Any], given: Any, defaults: dict[str, 
     if not defaults or not isinstance(given, dict):
         return None
     out: dict[str, Any] = {}
+    groups = {grp["name"]: grp for grp in cfg.get("param_tables", [])}
     for gname, tbs in defaults.items():
         g = given.get(gname)
         if not isinstance(g, dict):
@@ -296,6 +297,9 @@ def validate_params_tables(cfg: dict[str, Any], given: Any, defaults: dict[str, 
             cells = g.get(tname)
             if not isinstance(cells, dict):
                 continue
+            # 有指定 rows 的表：只接受網頁上顯示的那幾列的第 1 欄
+            spec = (groups.get(gname, {}).get("rows") or {}).get(tname)
+            allowed = {r["name"] for r in tb["rows"] if any(sp["row"] == r["name"] for sp in spec)} if spec else None
             ok = {}
             for key, v in cells.items():
                 try:
@@ -304,6 +308,8 @@ def validate_params_tables(cfg: dict[str, Any], given: Any, defaults: dict[str, 
                     continue
                 row = next((x for x in tb["rows"] if x["row"] == r), None)
                 if not row or not (1 <= c <= len(row["cells"])) or not isinstance(row["cells"][c - 1], float):
+                    continue
+                if allowed is not None and (row["name"] not in allowed or c != 1):
                     continue
                 ok[f"{r},{c}"] = _num(v, f"{tname} {row['name']}", -1e9, 1e9)
             if ok:

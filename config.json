@@ -768,7 +768,43 @@
       "tables": [
         "WUS_POD Parameter",
         "WUS_POD TestTime"
-      ]
+      ],
+      "_help": "rows: show only these rows of a table, with these names on the page (column 1 only). Tables not listed under rows show every row and column.",
+      "rows": {
+        "WUS_POD Parameter": [
+          {
+            "row": "ASRS對接接駁台",
+            "label": "ASRS docking time",
+            "label_zh": "ASRS對接時間"
+          },
+          {
+            "row": "ASRS推入燒機架",
+            "label": "ASRS push into tester time",
+            "label_zh": "ASRS推入Tester時間"
+          },
+          {
+            "row": "可裝載數量",
+            "label": "ASRS capacity",
+            "label_zh": "ASRS Capacity"
+          },
+          {
+            "row": "ASRS從平台取單個",
+            "label": "ASRS pick-up time",
+            "label_zh": "ASRS拿取時間"
+          },
+          {
+            "row": "ASRS卸單個到平台",
+            "label": "ASRS unload time",
+            "label_zh": "ASRS卸載時間"
+          }
+        ]
+      },
+      "table_labels": {
+        "WUS_POD Parameter": {
+          "label": "ASRS",
+          "label_zh": "ASRS"
+        }
+      }
     }
   ],
   "admin_code": "",

@@ -884,6 +884,9 @@ def mock_read_tables(cfg: dict[str, Any], names: list[str]) -> dict[str, Any]:
     for n in names:
         if n == "WUS_POD Parameter":
             out[n] = {"columns": ["Col 1", "Col 2"], "rows": [{"row": "UPH", "values": [200.0, 288.0]}, {"row": "轉彎時間", "values": [10.0, 0.0]},
+                      {"row": "ASRS對接接駁台", "values": [10.0, 0.0]}, {"row": "ASRS推入燒機架", "values": [15.0, 0.0]},
+                      {"row": "可裝載數量", "values": [2.0, 0.0]}, {"row": "ASRS從平台取單個", "values": [12.0, 0.0]},
+                      {"row": "ASRS卸單個到平台", "values": [12.0, 0.0]},
                       {"row": "等待AGV時間", "values": [300.0, 0.0]}, {"row": "POD_AGVquantity", "values": [8.0, 0.0]}, {"row": "是否考量FAE回流", "values": [1.0, 0.0]}]}
             continue
         if n == "WUS_POD TestTime":
