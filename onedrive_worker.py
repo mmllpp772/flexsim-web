@@ -270,6 +270,7 @@ class Worker:
         base.update(parameters=params, run_length=length, plans=plans, shifts=shifts, ct=ct)
         self.running = job_id
         started = now_iso()
+        t_start = time.time()
         self.write_result(job_id, {**base, "status": "running", "started_at": started})
         self.heartbeat(force=True)
         log.info("Running job %s %s", job_id, params)
@@ -345,11 +346,13 @@ class Worker:
         except Cancelled as e:
             log.warning("Job %s: %s", job_id, e)
             self.write_result(job_id, {**base, "status": "error", "started_at": started,
-                                       "finished_at": now_iso(), "error": str(e)})
+                                       "finished_at": now_iso(), "error": str(e),
+                                       "wall_seconds": round(time.time() - t_start, 1)})
         except Exception as e:
             log.exception("Job %s failed", job_id)
             self.write_result(job_id, {**base, "status": "error", "started_at": started,
-                                       "finished_at": now_iso(), "error": str(e)})
+                                       "finished_at": now_iso(), "error": str(e),
+                                       "wall_seconds": round(time.time() - t_start, 1)})
 
         finally:
             self.running = None

@@ -150,7 +150,7 @@ def validate(cfg: dict[str, Any], ct: Any, defaults: dict[str, Any] | None) -> d
                 rec = {}
                 if "ct" in v:
                     rec["ct"] = _num(v["ct"], f"{name} {m['name']} CT", 0.1, 100000)
-                if "fpyr" in v and fpyr_ok:
+                if "fpyr" in v and fpyr_ok and m["fpyr"] is not None:  # 只有模型裡本來就有 FPYR 的機台（測試站）
                     rec["fpyr"] = _num(v["fpyr"], f"{name} {m['name']} FPYR", 0, 100)
                 if rec:
                     recs[m["name"]] = rec

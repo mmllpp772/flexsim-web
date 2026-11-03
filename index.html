@@ -186,6 +186,49 @@
   .ctl:focus-visible { outline-color: var(--amber); }
 
   .state { display: flex; align-items: center; gap: 12px; margin: 22px 0 14px; min-height: 28px; }
+  .hist-stats { display: flex; flex-wrap: wrap; gap: 8px 32px; margin: 4px 0 14px; }
+  .hist-stats:empty { display: none; }
+  .hist-stats dt { color: var(--muted); font-size: 13px; }
+  .hist-stats dd { margin: 0; font: 600 22px/1.2 var(--cond); font-variant-numeric: tabular-nums; }
+  .report-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 8px;
+    border: 1.5px solid var(--console); background: var(--panel); color: var(--ink); font: 600 14px var(--display); cursor: pointer; white-space: nowrap; }
+  .report-btn svg { width: 18px; height: 18px; }
+  .report-btn:hover { background: var(--console); color: #fff; }
+  .report-btn:disabled { opacity: .45; cursor: default; }
+  #report { display: none; }
+  @media print {
+    @page { size: A4; margin: 12mm 11mm; }
+    body.printing { background: #fff !important; }
+    body.printing > *:not(#report) { display: none !important; }
+    body.printing #report { display: block; }
+  }
+  #report { --ink: #17202b; --muted: #5b6673; --faint: #8a95a2; --line: #d4dae1; --panel: #fff; --steel: #f2f4f7; --blue: #2f6db0;
+    --st-setup: #2a9d8f; color: var(--ink); font: 10.5px/1.45 var(--display); }
+  #report h1 { font-size: 20px; margin: 0 0 8px; }
+  #report h2 { font-size: 15px; margin: 0 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--ink); break-after: avoid; }
+  #report h3 { font-size: 12.5px; margin: 14px 0 6px; break-after: avoid; }
+  #report .r-sec { margin-top: 14px; }
+  #report .r-sec + .r-sec { break-before: page; margin-top: 0; }
+  #report .r-cols { display: flex; gap: 10px; align-items: flex-start; }
+  #report .r-cols .r-t { flex: 1; }
+  #report .r-head { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  #report .r-sub { font-weight: 600; margin: 8px 0 4px; break-after: avoid; }
+  #report .r-note { color: var(--muted); margin: 6px 0 0; }
+  #report .r-kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 18px; margin: 0 0 8px; }
+  #report .r-kv dt { color: var(--muted); font-size: 9.5px; }
+  #report .r-kv dd { margin: 0; font-weight: 600; }
+  #report .r-t { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-variant-numeric: tabular-nums; }
+  #report .r-t th, #report .r-t td { border: 1px solid var(--line); padding: 2px 5px; text-align: left; }
+  #report .r-t th { background: var(--steel); font-weight: 600; }
+  #report .r-t td.n { text-align: right; }
+  #report .r-t tr { break-inside: avoid; }
+  #report .r-t small { color: var(--faint); }
+  #report .r-plan td, #report .r-plan th { padding: 1px 4px; font-size: 9.5px; }
+  #report .r-chart svg { width: 100%; height: auto; max-height: 200px; }
+  #report .r-chart .grid line { stroke: var(--line); } #report .r-chart .axis text { fill: var(--muted); font-size: 11px; }
+  #report .r-bar { display: inline-block; width: 120px; height: 8px; background: var(--steel); margin-right: 8px; vertical-align: middle; }
+  #report .r-bar i { display: block; height: 100%; background: var(--blue); }
+  #report .r-util td.n { white-space: nowrap; }
   .state-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
   .state-row .state { flex: 1 1 360px; min-width: 0; }
   .timer { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 8px; background: var(--console-2);
@@ -723,6 +766,9 @@
         <select id="runSel"></select>
       </div>
       <div class="results-meta" id="outMeta"></div>
+      <button type="button" class="report-btn" id="reportBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M12 11v6M9 14l3 3 3-3"/></svg>
+        <span data-i18n="reportBtn"></span></button>
     </section>
 
     <div id="outEmpty" class="panel empty-panel" hidden></div>
@@ -928,11 +974,13 @@
         </div>
       </div>
       <div class="err-box warn" id="adminMsg" hidden></div>
+      <dl class="hist-stats" id="histStats"></dl>
       <div class="table-wrap"><table id="hist"></table></div>
     </section>
   </main>
 </div>
 <div class="tip" id="tip" hidden></div>
+<div id="report"></div>
 
 <script>
 (() => {
@@ -1006,7 +1054,8 @@
       ctModeMcHelp: "Enter the CT of each workstation below. The bottleneck is the largest of them.",
       ctModeMixed: "Stations use different modes. Pick one to set them all.", ctAutoMax: "Largest workstation CT",
       ctApplyAll: "Use this mode for all stations",
-      ctFpyrHow: "FPYR cells shown dashed have no value yet; click one to fill it in.",
+      ctFpyrHow: "FPYR can be changed only on test stations (machines that have an FPYR in the model); the others are locked.",
+      ctFpyrNone: "This machine has no FPYR in the model.",
       ctNoFpyrCol: "This station's parameter table has no FPYR column yet, so FPYR is locked. Add one in the model (a column whose name contains FPYR) and it opens here automatically.",
       ctFpyrUnset: "Not set. Click to enter FPYR.",
       ctStation: "Station", ctCt: "Bottleneck CT (s)", ctTarget: "Target CT (s)", ctImprove: "Weekly improvement (%)",
@@ -1024,6 +1073,7 @@
       tkChart: "{s} takt time vs bottleneck CT", tkTable: "Takt time detail (s)", tkDemand: "Planned input {n}", tkDemandCol: "Planned input",
       tkCtLg: "Bottleneck CT", secUnit: "s", tkNone: "This run has no plan, so takt time can't be calculated.",
       tkDef: "Takt time = planned production time (shift 1 + shift 2 hours on work days) ÷ planned input (SMT Input if filled, otherwise Suggest Input). When the bottleneck CT is above takt time, the station can't keep up with the plan.",
+      reportBtn: "Download PDF report",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1065,7 +1115,7 @@
       historyHint: "Every run sent from this page, with who sent it and from which device. Click a finished run to see its metrics.",
       nameHelp: "Required, so others can see who ran each scenario. Remembered on this browser.",
       eName: "Enter your name.",
-      thDevice: "Device", thTz: "Time zone", thSent: "Sent", thDuration: "Run time", thMode: "Mode",
+      thDevice: "Device", thTz: "Time zone", thSent: "Sent", thDuration: "Run time", hsDone: "Finished runs", hsAvg: "Average run time", hsMin: "Shortest", hsMax: "Longest", thMode: "Mode",
       modeRun: "Run", modeFast: "Fast forward",
       outRun: "Run", product: "Product", station: "Station",
       outEmpty: "No finished runs yet. Set a period on the Parameters page and press Run.",
@@ -1157,7 +1207,8 @@
       ctModeMcHelp: "在下方逐台填各工站 CT，瓶頸 CT 自動取其中最大值。",
       ctModeMixed: "目前各站的方式不同。點選其中一個可以一次套用到所有站別。", ctAutoMax: "各工站最大值",
       ctApplyAll: "所有站別都用這個方式",
-      ctFpyrHow: "虛線的 FPYR 格子代表還沒設定，點一下就能填。",
+      ctFpyrHow: "只有測試站（模型裡本來就有 FPYR 的機台）可以改 FPYR，其他機台鎖住，避免誤填。",
+      ctFpyrNone: "模型裡這台機台沒有 FPYR。",
       ctNoFpyrCol: "這段的參數表還沒有 FPYR 欄，所以 FPYR 先鎖住。在模型裡加一欄（欄名含 FPYR），網頁就會自動開放。",
       ctFpyrUnset: "尚未設定，點一下可以填 FPYR。",
       ctStation: "站別", ctCt: "瓶頸 CT（秒）", ctTarget: "目標 CT（秒）", ctImprove: "每週改善（%）",
@@ -1175,6 +1226,7 @@
       tkChart: "{s} Takt Time 與瓶頸 CT", tkTable: "Takt Time 明細（秒）", tkDemand: "計畫投入 {n}", tkDemandCol: "計畫投入",
       tkCtLg: "瓶頸 CT", secUnit: "秒", tkNone: "這次模擬沒有投產計畫，無法計算 Takt Time。",
       tkDef: "Takt Time = 計畫生產時間（工作日的班別一 + 班別二時數）÷ 計畫投入量（有填 SMT Input 用它，沒填用 Suggest Input）。瓶頸 CT 超過 Takt Time，代表這站跟不上計畫。",
+      reportBtn: "下載 PDF 報告",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -1216,7 +1268,7 @@
       historyHint: "所有從這個網頁送出的模擬，包含誰送的、用哪台裝置。點一下已完成的紀錄可以看它的指標。",
       nameHelp: "必填，讓大家知道每個情境是誰跑的。瀏覽器會記住。",
       eName: "請輸入你的名字。",
-      thDevice: "裝置", thTz: "時區", thSent: "送出時間", thDuration: "執行時間", thMode: "模式",
+      thDevice: "裝置", thTz: "時區", thSent: "送出時間", thDuration: "執行時間", hsDone: "已完成次數", hsAvg: "平均執行時間", hsMin: "最短", hsMax: "最長", thMode: "模式",
       modeRun: "執行", modeFast: "快轉",
       outRun: "模擬", product: "產品", station: "站別",
       outEmpty: "還沒有完成的模擬。到「參數調整」頁設定期間，然後按「執行」。",
@@ -1892,19 +1944,19 @@
       ms.map((m, i) => {
         const v = bn ? ctVal : ctMachineVal(ctProd, n, m, "ct"), ch = !bn && v !== m.ct;
         let fcell;
-        if (!fcol) fcell = `<td><input type="number" disabled class="frozen" placeholder="—" aria-label="${esc(m.name)} FPYR"></td>`;
-        else {
-          const f = ctMachineVal(ctProd, n, m, "fpyr"), chf = f !== m.fpyr && f != null, unset = f == null;
-          fcell = `<td><input type="number" step="0.01" min="0" max="100" data-i="${i}" data-key="fpyr" value="${unset ? "" : esc(f)}" placeholder="—"
-            class="${unset ? "frozen" : chf ? "changed" : ""}" title="${esc(unset ? t("ctFpyrUnset") : "")}" aria-label="${esc(m.name)} FPYR">${chf ? was(m.fpyr) : ""}</td>`;
+        if (!fcol || m.fpyr == null) {
+          // only test stations (machines that have an FPYR in the model) can be edited, so nothing is filled in by mistake
+          fcell = `<td><input type="number" disabled class="frozen" placeholder="—" title="${esc(t("ctFpyrNone"))}" aria-label="${esc(m.name)} FPYR"></td>`;
+        } else {
+          const f = ctMachineVal(ctProd, n, m, "fpyr"), chf = f !== m.fpyr;
+          fcell = `<td><input type="number" step="0.01" min="0" max="100" data-i="${i}" data-key="fpyr" value="${esc(f)}"
+            class="${chf ? "changed" : ""}" aria-label="${esc(m.name)} FPYR">${chf ? was(m.fpyr) : ""}</td>`;
         }
         return `<tr><td class="l">${esc(m.name)}</td>${hasDesc ? `<td class="l desc" title="${esc(m.desc)}">${esc(m.desc)}</td>` : ""}` +
           `<td><input type="number" step="0.1" data-i="${i}" data-key="ct" value="${esc(v)}" ${bn ? "disabled" : ""} class="${ch ? "changed" : ""}" aria-label="${esc(m.name)} CT">${ch ? was(m.ct) : ""}</td>${fcell}</tr>`;
       }).join("") + "</tbody>";
     const inputs = [...$("ctMachineTable").querySelectorAll("input[data-key]:not([disabled])")];
     inputs.forEach(inp => {
-      inp.addEventListener("focus", () => inp.classList.remove("frozen"));
-      inp.addEventListener("blur", () => { if (inp.dataset.key === "fpyr" && inp.value.trim() === "") inp.classList.add("frozen"); });
       inp.addEventListener("change", () => {
         const m = ms[+inp.dataset.i], key = inp.dataset.key, v = numIn(inp.value);
         ctSet(ctProd, "machine", n, key, v == null ? m[key] : v, m);
@@ -2306,6 +2358,11 @@
 
   function renderTable() {
     $("histCount").textContent = history.length ? String(history.length) : "";
+    // run-time summary of finished runs
+    const done = history.filter(h => h.status === "done" && h.wall_seconds != null).map(h => h.wall_seconds);
+    $("histStats").innerHTML = done.length ? [["hsDone", String(done.length)], ["hsAvg", clock(done.reduce((a, v) => a + v, 0) / done.length)],
+      ["hsMin", clock(Math.min(...done))], ["hsMax", clock(Math.max(...done))]]
+      .map(([k, v]) => `<div><dt>${esc(t(k))}</dt><dd>${esc(v)}</dd></div>`).join("") : "";
     if (!history.length) { $("hist").innerHTML = `<tbody><tr><td class="l empty" colspan="99">${esc(t("noRuns"))}</td></tr></tbody>`; return; }
     const head = (o) => L(o, "label") + (L(o, "unit") ? ` (${L(o, "unit")})` : "");
     const pcols = otherParams().map(p => ({ name: p.name, label: head(p), d: p.type === "integer" ? 0 : 1 }));
@@ -2330,7 +2387,8 @@
         <td class="l dev">${tz(h.client)}</td>
         <td class="l">${esc(when(h.submitted_at))}</td>
         <td class="l">${esc(t(h.mode === "fast" ? "modeFast" : "modeRun"))}</td>
-        <td>${h.wall_seconds != null ? esc(t("tookRun", { s: fmt(h.wall_seconds, 0) }).replace(/[。.]$/, "")) : "—"}</td>
+        <td class="dur">${h.wall_seconds != null ? esc(clock(h.wall_seconds))
+          : h.status === "running" && h.started_at ? `<span class="live">${esc(clock((Date.now() - Date.parse(h.started_at)) / 1000))}</span>` : "—"}</td>
         ${pcols.map(c => `<td>${fmt(h.parameters?.[c.name], c.d, false)}</td>`).join("")}
         ${mcols.map(c => `<td>${fmt(h.metrics?.[c.name], c.d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
     document.querySelectorAll("#hist tbody tr[data-id]").forEach(tr => {
@@ -2463,6 +2521,7 @@
       $("runSel").innerHTML = runs.map(r => `<option value="${esc(r.id)}">${esc(runName(r))}, ${esc(periodLabel(r.parameters))}</option>`).join("");
       $("runSel").value = outRunId;
       $("runSel").disabled = false;
+      $("reportBtn").disabled = false;
       job = runs.find(r => r.id === outRunId);
       selectedId = job.id;
       const bits = [periodLabel(job.parameters)];
@@ -2472,6 +2531,7 @@
     } else {
       $("runSel").innerHTML = `<option>${esc(t("noRunOpt"))}</option>`;
       $("runSel").disabled = true;
+      $("reportBtn").disabled = true;
       $("outMeta").textContent = t("outEmpty");
     }
     renderOutNav(job);
@@ -2884,6 +2944,158 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
+  // ---------- PDF report (print to PDF) ----------
+  // Builds a printable report of the selected run: every input and every metric. The browser's
+  // print dialog saves it as PDF ("Save as PDF" / "另存為 PDF"); nothing has to be installed.
+  const RT = {
+    en: { title: "Simulation report", run: "Run", period: "Period", by: "Run by", device: "Device", finished: "Finished", took: "Run time",
+      unitNote: "Periodic tables are by {u}.", inputs: "1. Inputs", outputs: "2. Results", plan: "Daily input plan", shifts: "Shifts ({n}, hours)",
+      ct: "CT and FPYR changes", ctNone: "No changes; the model's CT and FPYR were used.", target: "Target", satOff: "Saturdays off", sunOff: "Sundays off",
+      workDays: "Work days", planned: "Planned input", perDay: "Suggested per open day", exceptions: "Rest-day exceptions", none: "None",
+      yes: "Yes", no: "No", shiftN: "Shift {n}", oneShift: "1 shift", twoShifts: "2 shifts", station: "Station", mode: "CT input", bnCt: "Bottleneck CT (s)",
+      machine: "Machine", mct: "CT (s)", fpyr: "FPYR (%)", model: "Model", output: "Output", totals: "Total output by station",
+      oee: "OEE", rework: "Rework", takt: "Takt time", util: "Equipment utilization", utilAvg: "Average utilization", noData: "No data in this run.",
+      rate: "Repair rate", throughput: "Throughput", taktS: "Takt (s)", bnS: "Bottleneck CT (s)", status: "Status", ok: "OK", short: "CT above takt",
+      demand: "Planned input", period2: "Period", dates: "Dates", wd: "Work days", generated: "Generated {d}" },
+    zh: { title: "模擬報告", run: "模擬", period: "期間", by: "執行者", device: "裝置", finished: "完成時間", took: "執行時間",
+      unitNote: "期間明細以「{u}」為單位。", inputs: "一、輸入參數", outputs: "二、模擬結果", plan: "每日投產計畫", shifts: "班別（{n}，單位：小時）",
+      ct: "CT 與 FPYR 修改", ctNone: "沒有修改，使用模型原本的 CT 和 FPYR。", target: "目標量", satOff: "週六休息", sunOff: "週日休息",
+      workDays: "工作天數", planned: "已填投入", perDay: "每個未填工作日建議", exceptions: "休息例外", none: "無",
+      yes: "是", no: "否", shiftN: "班別 {n}", oneShift: "一班", twoShifts: "兩班", station: "站別", mode: "CT 輸入方式", bnCt: "瓶頸 CT（秒）",
+      machine: "機台", mct: "CT（秒）", fpyr: "FPYR（%）", model: "模型", output: "產出", totals: "各站總產出",
+      oee: "OEE", rework: "Rework", takt: "Takt Time", util: "設備使用率", utilAvg: "平均使用率", noData: "這次模擬沒有這項資料。",
+      rate: "維修率", throughput: "產出", taktS: "Takt（秒）", bnS: "瓶頸 CT（秒）", status: "狀態", ok: "未超過", short: "CT 超過 Takt",
+      demand: "計畫投入", period2: "期間", dates: "日期區間", wd: "工作天數", generated: "產生於 {d}" },
+  };
+  function buildReport(job) {
+    const R = RT[LANG] || RT.en, rt = (k, v) => (R[k] || k).replace(/\{(\w+)\}/g, (_, x) => v?.[x] ?? "");
+    const T = (head, rows, cls = "") => `<table class="r-t ${cls}"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>` +
+      (rows.length ? rows.map(r => `<tr>${r.map((c, i) => `<td class="${i ? "n" : ""}">${c ?? "—"}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${head.length}">${esc(R.noData)}</td></tr>`) + "</tbody></table>";
+    const kv = (pairs) => `<dl class="r-kv">${pairs.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+    const prodName = (n) => ctProdLabel(n);
+    const chart = (data, series, fmtY) => { const box = document.createElement("div"); box.style.width = "680px"; groupChart(box, data, series, fmtY); box.querySelectorAll(".hit").forEach(x => x.remove()); return `<div class="r-chart chart">${box.innerHTML}</div>`; };
+    const prods = Object.keys(job.plans || {}).length ? Object.keys(job.plans) : (PD()?.products || []).map(p => p.name);
+    const unit = t("g_" + outGran);
+    let h = "";
+
+    // ---- cover ----
+    const c = job.client || {};
+    h += `<header class="r-head"><h1>${esc(L(CFG, "title") || "FlexSim")} ${esc(R.title)}</h1>
+      ${kv([[R.run, esc(runName(job))], [R.period, esc(periodLabel(job.parameters))], [R.by, esc(job.submitted_by || "—")],
+            [R.device, esc([c.os, c.browser].filter(Boolean).join(", ") || "—")], [R.finished, esc(when(job.finished_at))],
+            [R.took, job.wall_seconds != null ? esc(clock(job.wall_seconds)) : "—"]])}
+      <p class="r-note">${esc(rt("unitNote", { u: unit }))} ${esc(rt("generated", { d: new Date().toLocaleString(LANG === "zh" ? "zh-TW" : "en-US") }))}</p></header>`;
+
+    // ---- inputs ----
+    h += `<section class="r-sec"><h2>${esc(R.inputs)}</h2>`;
+    for (const p of prods) {
+      const pl = job.plans?.[p];
+      if (!pl) continue;
+      const ex = (pl.rows || []).filter(r => r.override).map(r => `${r.date}（${r.override === "work" ? t("workDay") : t("hManual")}）`);
+      h += `<h3>${esc(prodName(p))}：${esc(R.plan)}</h3>` + kv([[R.target, fmt(pl.target, 0)], [R.satOff, pl.sat_off ? R.yes : R.no], [R.sunOff, pl.sun_off ? R.yes : R.no],
+        [R.workDays, `${fmt(pl.total_work_day, 0)} / ${fmt(pl.total_day, 0)}`], [R.planned, fmt(pl.filled, 0)], [R.perDay, fmt(pl.per_day, 2)],
+        [R.exceptions, ex.length ? esc(ex.join("、")) : R.none]]);
+      const prow = (pl.rows || []).map(r => [esc(r.date.slice(5)), esc(r.weekday), r.input > 0 ? fmt(r.input, 0) : "", fmt(r.suggest, Number.isInteger(r.suggest) ? 0 : 1), r.holiday ? "Y" : ""]);
+      const per = Math.ceil(prow.length / 3) || 1, head = [t("thDate"), t("thWeekday"), "Input", "Suggest", t("thRest")];
+      h += `<div class="r-cols">${[0, 1, 2].map(k => prow.slice(k * per, (k + 1) * per)).filter(x => x.length).map(x => T(head, x, "r-plan")).join("")}</div>`;
+      const sh = job.shifts?.[p], S = CFG.shifts;
+      if (sh && S) {
+        h += `<h3>${esc(prodName(p))}：${esc(rt("shifts", { n: sh.count === 1 ? R.oneShift : R.twoShifts }))}</h3>`;
+        sh.grids.slice(0, sh.count).forEach((g, gi) => {
+          h += `<p class="r-sub">${esc(rt("shiftN", { n: gi + 1 }))}</p>` + T([t("thWeekday"), ...S.columns], S.rows.map((wd, ri) => [esc(wd), ...g[ri].map(v => fmt(v, 1))]));
+        });
+      }
+    }
+    // CT / FPYR changes
+    h += `<h3>${esc(R.ct)}</h3>`;
+    const ctc = job.ct, D = CT()?.defaults;
+    if (!ctc || !Object.keys(ctc).length) h += `<p>${esc(R.ctNone)}</p>`;
+    else for (const [p, cc] of Object.entries(ctc)) {
+      const st = Object.entries(cc.stations || {}).map(([n, r]) => [esc(n),
+        r.use != null ? esc(t(r.use ? "ctModeBn" : "ctModeMc")) : "", r.ct != null ? `${fmt(r.ct, 1)}${D?.[p]?.stations?.[n]?.ct != null ? ` <small>(${esc(R.model)} ${fmt(D[p].stations[n].ct, 1)})</small>` : ""}` : ""]);
+      if (st.length) h += `<p class="r-sub">${esc(prodName(p))}</p>` + T([R.station, R.mode, R.bnCt], st);
+      const mc = [];
+      for (const [n, ms] of Object.entries(cc.machines || {})) for (const [mn, r] of Object.entries(ms)) {
+        const d0 = (D?.[p]?.machines?.[n] || []).find(m => m.name === mn);
+        mc.push([esc(`${n} ${mn}`), r.ct != null ? `${fmt(r.ct, 1)}${d0 ? ` <small>(${esc(R.model)} ${fmt(d0.ct, 1)})</small>` : ""}` : "",
+          r.fpyr != null ? `${fmt(r.fpyr, 2)}${d0?.fpyr != null ? ` <small>(${esc(R.model)} ${fmt(d0.fpyr, 2)})</small>` : ""}` : ""]);
+      }
+      if (mc.length) h += T([R.machine, R.mct, R.fpyr], mc);
+    }
+    h += "</section>";
+
+    // ---- results ----
+    h += `<section class="r-sec"><h2>${esc(R.outputs)}</h2>`;
+    // output
+    for (const def of tableDefs().filter(d => d.view === "daily_output")) {
+      const tb = job.tables?.[def.name];
+      h += `<h3>${esc(L(def, "product_label") || L(def, "label"))}：${esc(R.output)}</h3>`;
+      if (!tb?.rows?.length) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      const cols = numericCols(tb, def);
+      const totals = cols.map(({ c, i }) => ({ c, v: tb.rows.reduce((a, r) => a + (Number(r.values[i]) || 0), 0) }));
+      h += chart(totals.map(x => ({ label: x.c, vals: [x.v], tip: "" })), [{ cls: "b2" }], (v) => fmt(v, 0));
+      const ag = aggregate(job, tb, def);
+      h += T([R.period2, ...ag.tb.columns], ag.tb.rows.map(r => [esc(r.row), ...r.values.map(v => typeof v === "number" ? fmt(v, Number.isInteger(v) ? 0 : 1) : esc(v))]));
+    }
+    // OEE
+    if (CFG.oee) for (const p of CFG.oee.products) {
+      const days = oeeDays(job, p);
+      h += `<h3>${esc(prodName(p))}：OEE</h3>`;
+      if (!days) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      const sts = CFG.oee.stations.map(s => s.name);
+      h += chart(sts.map(n => { const v = oeeOf(days, n); return { label: n, vals: [v.o1, v.o2], tip: "" }; }), [{ cls: "b1" }, { cls: "b2" }], (v) => Math.round(v * 100) + "%");
+      const groups = oeeGroups(days);
+      h += T([R.period2, ...sts.flatMap(n => [n + " OEE1", n + " OEE2"])], groups.map((g, n) => [esc(periodName(g, n).row), ...sts.flatMap(nm => { const v = oeeOf(g.days, nm); return [pct(v.o1), g.days.every(x => x.off) ? t("restShort") : pct(v.o2)]; })]));
+    }
+    // Rework
+    if (CFG.rework) for (const p of CFG.rework.products) {
+      const items = rwDays(job, p);
+      h += `<h3>${esc(prodName(p))}：Rework</h3>`;
+      if (!items) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      const sts = CFG.rework.stations.filter(s => s.products.includes(p)).map(s => s.name);
+      h += T([R.station, "Rework", R.throughput, R.rate], sts.map(n => { const s = rwSum(items, n); return [esc(n), fmt(s.rw, 0), fmt(s.out, 0), pct(rate(s))]; }));
+      h += T([R.period2, ...sts.flatMap(n => [n + " Rework", n + " " + R.rate])], groupByGran(items).map((g, n) => [esc(periodName(g, n).row), ...sts.flatMap(nm => { const s = rwSum(g.days, nm); return [fmt(s.rw, 0), pct(rate(s))]; })]));
+    }
+    // Takt
+    if (CFG.takt) for (const p of prods) {
+      const items = tkDays(job, p);
+      h += `<h3>${esc(prodName(p))}：Takt Time</h3>`;
+      if (!items) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      const sts = CFG.takt.stations;
+      h += T([R.station, R.taktS, R.bnS, R.status], sts.map(n => { const v = tkOf(items, n); const ok = v.takt != null && v.ct != null ? v.ct <= v.takt : null;
+        return [esc(n), secTxt(v.takt), secTxt(v.ct), ok == null ? "—" : ok ? `✓ ${esc(R.ok)}` : `! ${esc(R.short)}`]; }));
+      h += T([R.period2, R.demand, ...sts.map(n => n + " Takt")], groupByGran(items).map((g, n) => [esc(periodName(g, n).row),
+        fmt(g.days.reduce((a, x) => a + (x.off ? 0 : x.demand), 0), 0), ...sts.map(nm => secTxt(tkOf(g.days, nm).takt))]));
+    }
+    // Utilization
+    if (CFG.utilization) {
+      const groups = CFG.utilization.groups.filter(g => g.objects.length);
+      if (groups.length) h += `<h3>${esc(R.util)}</h3>`;
+      for (const g of groups) {
+        const rows = job.utilization?.objects ? utilRows(job, g) : [];
+        const vals = rows.filter(r => r.util != null);
+        h += `<p class="r-sub">${esc(prodName(g.product || ""))} ${esc(L(g, "label"))}${vals.length ? `：${esc(R.utilAvg)} ${pct(vals.reduce((a, r) => a + r.util, 0) / vals.length)}` : ""}</p>`;
+        h += vals.length ? T([R.machine, t("utilCol")], vals.map(r => [esc(r.name), `<span class="r-bar"><i style="width:${Math.round(r.util * 100)}%"></i></span>${pct(r.util)}`]), "r-util")
+          : `<p>${esc(R.noData)}</p>`;
+      }
+    }
+    h += "</section>";
+    return h;
+  }
+  function printReport() {
+    const job = doneRuns().find(r => r.id === outRunId);
+    if (!job) return;
+    const box = $("report");
+    box.innerHTML = buildReport(job);
+    const oldTitle = document.title;
+    document.title = `${runName(job)} ${periodLabel(job.parameters)}`.replace(/[\\/:*?"<>|]+/g, "_");
+    document.body.classList.add("printing");
+    const done = () => { document.body.classList.remove("printing"); document.title = oldTitle; box.innerHTML = ""; window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    setTimeout(() => window.print(), 50);
+  }
+  $("reportBtn").addEventListener("click", printReport);
+
   // ---------- equipment utilization ----------
   const ST_VAR = { 2: "proc", 21: "setup", 31: "setup", 9: "op", 49: "op", 10: "tr", 14: "tr", 15: "tr", 4: "block", 26: "block", 48: "block",
     11: "down", 20: "down", 12: "down", 32: "down", 33: "down", 1: "idle", 6: "idle", 29: "idle", 37: "idle", 42: "idle" };
@@ -3221,11 +3433,13 @@
   });
 
   $("csvBtn").addEventListener("click", () => {
-    const head = ["scenario", "submitted_by", "device_id", "os", "browser", "timezone", "utc_offset", "submitted_at", "status", "mode", "run_seconds", ...(DI ? ["period"] : []),
+    const head = ["scenario", "submitted_by", "device_id", "os", "browser", "timezone", "utc_offset", "submitted_at", "status", "mode",
+      "started_at", "finished_at", "run_seconds", "run_time", ...(DI ? ["period"] : []),
       ...CFG.parameters.map(p => p.name), ...CFG.metrics.map(m => m.name)];
     const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const rows = history.map(h => [runName(h), h.submitted_by, h.client?.device_id, h.client?.os, h.client?.browser, h.client?.timezone, h.client?.utc_offset,
-      h.submitted_at, h.status, h.mode || "run", h.wall_seconds, ...(DI ? [periodLabel(h.parameters)] : []),
+      h.submitted_at, h.status, h.mode || "run", h.started_at, h.finished_at, h.wall_seconds,
+      h.wall_seconds != null ? clock(h.wall_seconds) : "", ...(DI ? [periodLabel(h.parameters)] : []),
       ...CFG.parameters.map(p => h.parameters?.[p.name]), ...CFG.metrics.map(m => h.metrics?.[m.name])].map(q).join(","));
     const blob = new Blob(["﻿" + [head.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
