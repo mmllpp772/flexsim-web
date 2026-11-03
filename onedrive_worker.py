@@ -183,6 +183,16 @@ class Worker:
             if not target.exists() or target.read_bytes() != page.read_bytes():
                 shutil.copyfile(page, target)
                 log.info("Published %s", target)
+        # PDF 報告用的程式庫（jsPDF、html2canvas），放在 Simulator.html 旁邊的 vendor 資料夾
+        vendor = BASE_DIR / "vendor"
+        if vendor.is_dir():
+            dest = self.share / "vendor"
+            dest.mkdir(exist_ok=True)
+            for f in vendor.glob("*.js"):
+                t = dest / f.name
+                if not t.exists() or t.stat().st_size != f.stat().st_size:
+                    shutil.copyfile(f, t)
+                    log.info("Published %s", t)
 
     def heartbeat(self, force: bool = False, online: bool = True) -> None:
         if not force and time.time() - self.last_heartbeat < self.heartbeat_every:

@@ -197,40 +197,37 @@
   .report-btn svg { width: 18px; height: 18px; }
   .report-btn:hover { background: var(--console); color: #fff; }
   .report-btn:disabled { opacity: .45; cursor: default; }
-  #report { display: none; }
-  @media print {
-    @page { size: A4; margin: 12mm 11mm; }
-    body.printing { background: #fff !important; }
-    body.printing > *:not(#report) { display: none !important; }
-    body.printing #report { display: block; }
-  }
-  #report { --ink: #17202b; --muted: #5b6673; --faint: #8a95a2; --line: #d4dae1; --panel: #fff; --steel: #f2f4f7; --blue: #2f6db0;
+  .r-host { position: fixed; left: -12000px; top: 0; width: 760px; }
+  .flash { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 20; background: var(--console); color: var(--console-ink);
+    padding: 10px 18px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.25); font-size: 14px; transition: opacity .5s; }
+  .flash.out { opacity: 0; }
+  .r-doc { width: 760px; padding: 2px 4px; background: #fff; --ink: #17202b; --muted: #5b6673; --faint: #8a95a2; --line: #d4dae1; --panel: #fff; --steel: #f2f4f7; --blue: #2f6db0;
     --st-setup: #2a9d8f; color: var(--ink); font: 10.5px/1.45 var(--display); }
-  #report h1 { font-size: 20px; margin: 0 0 8px; }
-  #report h2 { font-size: 15px; margin: 0 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--ink); break-after: avoid; }
-  #report h3 { font-size: 12.5px; margin: 14px 0 6px; break-after: avoid; }
-  #report .r-sec { margin-top: 14px; }
-  #report .r-sec + .r-sec { break-before: page; margin-top: 0; }
-  #report .r-cols { display: flex; gap: 10px; align-items: flex-start; }
-  #report .r-cols .r-t { flex: 1; }
-  #report .r-head { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
-  #report .r-sub { font-weight: 600; margin: 8px 0 4px; break-after: avoid; }
-  #report .r-note { color: var(--muted); margin: 6px 0 0; }
-  #report .r-kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 18px; margin: 0 0 8px; }
-  #report .r-kv dt { color: var(--muted); font-size: 9.5px; }
-  #report .r-kv dd { margin: 0; font-weight: 600; }
-  #report .r-t { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-variant-numeric: tabular-nums; }
-  #report .r-t th, #report .r-t td { border: 1px solid var(--line); padding: 2px 5px; text-align: left; }
-  #report .r-t th { background: var(--steel); font-weight: 600; }
-  #report .r-t td.n { text-align: right; }
-  #report .r-t tr { break-inside: avoid; }
-  #report .r-t small { color: var(--faint); }
-  #report .r-plan td, #report .r-plan th { padding: 1px 4px; font-size: 9.5px; }
-  #report .r-chart svg { width: 100%; height: auto; max-height: 200px; }
-  #report .r-chart .grid line { stroke: var(--line); } #report .r-chart .axis text { fill: var(--muted); font-size: 11px; }
-  #report .r-bar { display: inline-block; width: 120px; height: 8px; background: var(--steel); margin-right: 8px; vertical-align: middle; }
-  #report .r-bar i { display: block; height: 100%; background: var(--blue); }
-  #report .r-util td.n { white-space: nowrap; }
+  .r-doc h1 { font-size: 20px; margin: 0 0 8px; }
+  .r-doc h2 { font-size: 15px; margin: 0 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--ink); break-after: avoid; }
+  .r-doc h3 { font-size: 12.5px; margin: 14px 0 6px; break-after: avoid; }
+  .r-doc .r-sec { margin-top: 14px; }
+  .r-doc .r-sec + .r-sec { break-before: page; margin-top: 0; }
+  .r-doc .r-cols { display: flex; gap: 10px; align-items: flex-start; }
+  .r-doc .r-cols .r-t { flex: 1; }
+  .r-doc .r-head { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .r-doc .r-sub { font-weight: 600; margin: 8px 0 4px; break-after: avoid; }
+  .r-doc .r-note { color: var(--muted); margin: 6px 0 0; }
+  .r-doc .r-kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 18px; margin: 0 0 8px; }
+  .r-doc .r-kv dt { color: var(--muted); font-size: 9.5px; }
+  .r-doc .r-kv dd { margin: 0; font-weight: 600; }
+  .r-doc .r-t { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-variant-numeric: tabular-nums; }
+  .r-doc .r-t th, .r-doc .r-t td { border: 1px solid var(--line); padding: 2px 5px; text-align: left; }
+  .r-doc .r-t th { background: var(--steel); font-weight: 600; }
+  .r-doc .r-t td.n { text-align: right; }
+  .r-doc .r-t tr { break-inside: avoid; }
+  .r-doc .r-t small { color: var(--faint); }
+  .r-doc .r-plan td, .r-doc .r-plan th { padding: 1px 4px; font-size: 9.5px; }
+  .r-doc .r-chart svg { width: 100%; height: auto; max-height: 200px; }
+  .r-doc .r-chart .grid line { stroke: var(--line); } .r-doc .r-chart .axis text { fill: var(--muted); font-size: 11px; }
+  .r-doc .r-bar { display: inline-block; width: 120px; height: 8px; background: var(--steel); margin-right: 8px; vertical-align: middle; }
+  .r-doc .r-bar i { display: block; height: 100%; background: var(--blue); }
+  .r-doc .r-util td.n { white-space: nowrap; }
   .state-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
   .state-row .state { flex: 1 1 360px; min-width: 0; }
   .timer { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 8px; background: var(--console-2);
@@ -948,8 +945,8 @@
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
             <div class="util-segs">
-              <div class="seg prod" id="utilProdSeg" role="group" data-i18n-aria="product"></div>
               <div class="seg" id="utilSeg" role="group" data-i18n-aria="utilGroups"></div>
+              <div class="seg prod" id="utilProdSeg" role="group" data-i18n-aria="product"></div>
             </div>
           </section>
           <p class="panel empty-panel" id="utilEmpty" hidden></p>
@@ -1024,7 +1021,6 @@
   </main>
 </div>
 <div class="tip" id="tip" hidden></div>
-<div id="report"></div>
 
 <script>
 (() => {
@@ -1109,7 +1105,7 @@
       ctMachine: "Machine", ctDesc: "Description", ctMct: "CT (s)", ctFpyr: "FPYR (%)", ctWas: "Model {v}",
       ctUsingStation: "Every machine uses the bottleneck CT ({v} s). Switch to Each workstation's CT to set them one by one; values entered here are kept.",
       ctPerMachine: "Each machine uses its own CT. You can paste a column from Excel.", ctNoFpyr: "This station has no FPYR in the model.",
-      sumCtNone: "Model values", sumCt: "{n} changed",
+      sumCtNone: "Model values", sumCt: "Changed: {n}",
       sdTitle: "Schedule attainment (SOD)", sdSummary: "Plan against good units", sdSummaryHint: "Over the whole period.",
       sdPlan: "Planned", sdGood: "Good units", sdStart: "Started (SMT)", sdStarted: "Started at SMT {n}", sdAtt: "Attainment", sdGap: "Gap",
       sdGapTxt: "Gap {v}", sdYield: "Good unit rate", sdScrap: "Scrap (Bonepile) {n}", sdScrapCol: "Scrap", sdWip: "WIP at the end", sdWipSub: "Started − good − scrap",
@@ -1126,7 +1122,8 @@
       tkChart: "{s} takt time vs bottleneck CT", tkTable: "Takt time detail (s)", tkDemand: "Planned input {n}", tkDemandCol: "Planned input",
       tkCtLg: "Bottleneck CT", secUnit: "s", tkNone: "This run has no plan, so takt time can't be calculated.",
       tkDef: "Takt time = planned production time (shift 1 + shift 2 hours on work days) ÷ planned input (SMT Input if filled, otherwise Suggest Input). When the bottleneck CT is above takt time, the station can't keep up with the plan.",
-      reportBtn: "Download PDF report",
+      reportBtn: "Download PDF report", reportMaking: "Making PDF {p}%", reportSaved: "Saved {f}",
+      reportFailed: "Could not make the PDF: {e}", reportNoLib: "The PDF tools didn't load. Make sure the vendor folder is next to Simulator.html.",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1271,7 +1268,7 @@
       ctMachine: "機台", ctDesc: "說明", ctMct: "CT（秒）", ctFpyr: "FPYR（%）", ctWas: "模型 {v}",
       ctUsingStation: "所有機台都用瓶頸 CT（{v} 秒）。要逐台設定，請切到「各工站 CT」，這裡填過的值都會保留。",
       ctPerMachine: "每台機台用自己的 CT。可以從 Excel 複製一整欄貼上。", ctNoFpyr: "模型裡這一站沒有 FPYR。",
-      sumCtNone: "使用模型值", sumCt: "已修改 {n} 項",
+      sumCtNone: "使用模型值", sumCt: "已調整：{n}",
       sdTitle: "計畫達成（SOD）", sdSummary: "計畫與良品產出", sdSummaryHint: "整個期間的結果。",
       sdPlan: "計畫量", sdGood: "良品產出", sdStart: "SMT 投入", sdStarted: "SMT 實際投入 {n}", sdAtt: "達成率", sdGap: "差異",
       sdGapTxt: "差異 {v}", sdYield: "良品率", sdScrap: "報廢（Bonepile）{n}", sdScrapCol: "報廢", sdWip: "期末在製（WIP）", sdWipSub: "投入 − 良品 − 報廢",
@@ -1288,7 +1285,8 @@
       tkChart: "{s} Takt Time 與瓶頸 CT", tkTable: "Takt Time 明細（秒）", tkDemand: "計畫投入 {n}", tkDemandCol: "計畫投入",
       tkCtLg: "瓶頸 CT", secUnit: "秒", tkNone: "這次模擬沒有投產計畫，無法計算 Takt Time。",
       tkDef: "Takt Time = 計畫生產時間（工作日的班別一 + 班別二時數）÷ 計畫投入量（有填 SMT Input 用它，沒填用 Suggest Input）。瓶頸 CT 超過 Takt Time，代表這站跟不上計畫。",
-      reportBtn: "下載 PDF 報告",
+      reportBtn: "下載 PDF 報告", reportMaking: "產生 PDF 中 {p}%", reportSaved: "已儲存 {f}",
+      reportFailed: "PDF 產生失敗：{e}", reportNoLib: "PDF 工具沒有載入，請確認 Simulator.html 旁邊有 vendor 資料夾。",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -1892,8 +1890,9 @@
     if (k === "basic") { const p = currentPeriod(); return p ? `${dayFmt(p.start, false)} – ${dayFmt(p.end)}` : "—"; }
     if (k === "plan") return PD().products.map(p => `${L(p, "label")} ${fmt(Number(planFor(p.name).target) || 0, 0)}`).join(", ");
     if (k === "shift") return SH().products.map(p => t("sumShift", { p: L(p, "label"), n: shiftFor(p.name).count })).join(", ");
-    if (k === "ct") { const n = ctChangedCount(); return n ? t("sumCt", { n }) : t("sumCtNone"); }
-    if (k.startsWith("pt_")) { const n = ptCount(k.slice(3)); return n ? t("sumCt", { n }) : t("sumCtNone"); }
+    const list = (a) => a.join(LANG === "zh" ? "、" : ", ");
+    if (k === "ct") { const n = ctChangedStations(); return n.length ? t("sumCt", { n: list(n) }) : t("sumCtNone"); }
+    if (k.startsWith("pt_")) { const n = ptChangedItems(k.slice(3)); return n.length ? t("sumCt", { n: list(n) }) : t("sumCtNone"); }
     return "";
   }
   function renderInNav() {
@@ -1914,6 +1913,17 @@
   try { PTS = JSON.parse(load("simPt") || "{}") || {}; } catch (e) { PTS = {}; }
   const savePt = () => store("simPt", JSON.stringify(PTS));
   const ptCount = (g) => Object.values(PTS[g] || {}).reduce((a, x) => a + Object.keys(x).length, 0);
+  function ptChangedItems(gname) {  // row names (e.g. UPH, FPY) that have a changed cell
+    const g = PTG().find(x => x.name === gname), out = [];
+    for (const [tn, cells] of Object.entries(PTS[gname] || {})) {
+      const rows = g?.defaults?.[tn]?.rows || [];
+      for (const key of Object.keys(cells)) {
+        const r = rows.find(x => x.row === +key.split(",")[0]);
+        if (r && !out.includes(r.name)) out.push(r.name);
+      }
+    }
+    return out;
+  }
   function ptForSubmit() {
     const out = {};
     for (const g of PTG()) for (const [tn, cells] of Object.entries(PTS[g.name] || {})) {
@@ -1991,6 +2001,15 @@
       if (!Object.keys(st).length) delete c.machines[name];
     }
     saveCt();
+  }
+  function ctChangedStations() {  // station names that have any change, in the station order
+    if (!CT()) return [];
+    const set = new Set();
+    for (const p of Object.keys(CT().defaults)) {
+      Object.keys(CTS[p]?.stations || {}).forEach(n => set.add(n));
+      Object.keys(CTS[p]?.machines || {}).forEach(n => set.add(n));
+    }
+    return CT().stations.filter(n => set.has(n));
   }
   function ctChangedCount() {
     if (!CT()) return 0;
@@ -2889,7 +2908,7 @@
     const stepY = (nn <= 1 ? 1 : nn <= 2 ? 2 : nn <= 5 ? 5 : 10) * mag, ymax = Math.max(stepY, Math.ceil((peak || 1) / stepY) * stepY);
     const y = (v) => m.t + ph - (v / ymax) * ph;
     let g = '<g class="grid">', ax = '<g class="axis">';
-    for (let v = 0; v <= ymax + 1e-9; v += stepY) { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`; ax += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v, stepY >= 1 ? 0 : 1)}</text>`; }
+    for (let v = 0; v <= ymax + 1e-9; v += stepY) { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`; ax += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmtY(v)}</text>`; }
     g += "</g>";
     let bars = "", hits = "";
     if (data.length) {
@@ -3066,7 +3085,7 @@
     groupChart($("rwChart"), groups.map((g, n) => {
       const pn = periodName(g, n), s = rwSum(g.days, rwStation);
       return { label: pn.label, vals: [s.rw], tip: `${esc(pn.row)}${pn.range ? "  " + esc(pn.range) : ""}<br>Rework <b>${fmt(s.rw, 0)}</b><br>${esc(t("rwOut", { n: fmt(s.out, 0) }))}  ${esc(t("rwRate"))} ${pct(rate(s))}` };
-    }), [{ cls: "b2" }], (v) => fmt(v, v < 10 ? 1 : 0));
+    }), [{ cls: "b2" }], (v) => fmt(v, Number.isInteger(v) ? 0 : 1));
     // table
     $("rwTableTitle").textContent = t("rwTable") + unitTxt();
     const head1 = `<tr><th class="k" rowspan="2">${esc(t("colPeriod"))}</th>${outGran === "day" ? "" : `<th class="k" rowspan="2">${esc(t("colDates"))}</th>`}` +
@@ -3146,7 +3165,7 @@
     groupChart($("tkChart"), groups.map((g, n) => {
       const pn = periodName(g, n), v = tkOf(g.days, tkStation);
       return { label: pn.label, vals: [v.takt, v.ct], tip: `${esc(pn.row)}${pn.range ? "  " + esc(pn.range) : ""}<br>Takt <b>${secTxt(v.takt)}</b> ${esc(t("secUnit"))}  ${esc(t("tkCt", { v: secTxt(v.ct) }))}<br>${esc(t("tkDemand", { n: fmt(v.demand, 0) }))}` };
-    }), [{ cls: "b2" }, { cls: "b1" }], (v) => fmt(v, v < 10 ? 1 : 0));
+    }), [{ cls: "b2" }, { cls: "b1" }], (v) => fmt(v, Number.isInteger(v) ? 0 : 1));
     $("tkTableTitle").textContent = t("tkTable") + unitTxt();
     const rowsOut = groups.map((g, n) => {
       const pn = periodName(g, n), dem = g.days.reduce((a, x) => a + (x.off ? 0 : x.demand), 0);
@@ -3197,11 +3216,17 @@
   };
   function buildReport(job) {
     const R = RT[LANG] || RT.en, rt = (k, v) => (R[k] || k).replace(/\{(\w+)\}/g, (_, x) => v?.[x] ?? "");
-    const T = (head, rows, cls = "") => `<table class="r-t ${cls}"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>` +
+    const SEP = "\u0001", PAGE = "\u0002";  // block separator / start a new page
+    const T1 = (head, rows, cls = "") => `<table class="r-t ${cls}"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>` +
       (rows.length ? rows.map(r => `<tr>${r.map((c, i) => `<td class="${i ? "n" : ""}">${c ?? "—"}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${head.length}">${esc(R.noData)}</td></tr>`) + "</tbody></table>";
+    const T = (head, rows, cls = "") => {  // tables longer than a page are split, header repeated
+      if (rows.length <= 28) return T1(head, rows, cls) + SEP;
+      const parts = []; for (let i = 0; i < rows.length; i += 28) parts.push(T1(head, rows.slice(i, i + 28), cls));
+      return parts.join(SEP) + SEP;
+    };
     const kv = (pairs) => `<dl class="r-kv">${pairs.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
     const prodName = (n) => ctProdLabel(n);
-    const chart = (data, series, fmtY) => { const box = document.createElement("div"); box.style.width = "680px"; groupChart(box, data, series, fmtY); box.querySelectorAll(".hit").forEach(x => x.remove()); return `<div class="r-chart chart">${box.innerHTML}</div>`; };
+    const chart = (data, series, fmtY) => { const box = document.createElement("div"); box.style.width = "680px"; groupChart(box, data, series, fmtY); box.querySelectorAll(".hit").forEach(x => x.remove()); return `<div class="r-chart chart">${box.innerHTML}</div>` + SEP; };
     const prods = Object.keys(job.plans || {}).length ? Object.keys(job.plans) : (PD()?.products || []).map(p => p.name);
     const unit = t("g_" + outGran);
     let h = "";
@@ -3212,20 +3237,23 @@
       ${kv([[R.run, esc(runName(job))], [R.period, esc(periodLabel(job.parameters))], [R.by, esc(job.submitted_by || "—")],
             [R.device, esc([c.os, c.browser].filter(Boolean).join(", ") || "—")], [R.finished, esc(when(job.finished_at))],
             [R.took, job.wall_seconds != null ? esc(clock(job.wall_seconds)) : "—"]])}
-      <p class="r-note">${esc(rt("unitNote", { u: unit }))} ${esc(rt("generated", { d: new Date().toLocaleString(LANG === "zh" ? "zh-TW" : "en-US") }))}</p></header>`;
+      <p class="r-note">${esc(rt("unitNote", { u: unit }))} ${esc(rt("generated", { d: new Date().toLocaleString(LANG === "zh" ? "zh-TW" : "en-US") }))}</p></header>` + SEP;
 
     // ---- inputs ----
-    h += `<section class="r-sec"><h2>${esc(R.inputs)}</h2>`;
+    h += `<h2>${esc(R.inputs)}</h2>`;
     for (const p of prods) {
       const pl = job.plans?.[p];
       if (!pl) continue;
       const ex = (pl.rows || []).filter(r => r.override).map(r => `${r.date}（${r.override === "work" ? t("workDay") : t("hManual")}）`);
       h += `<h3>${esc(prodName(p))}：${esc(R.plan)}</h3>` + kv([[R.target, fmt(pl.target, 0)], [R.satOff, pl.sat_off ? R.yes : R.no], [R.sunOff, pl.sun_off ? R.yes : R.no],
         [R.workDays, `${fmt(pl.total_work_day, 0)} / ${fmt(pl.total_day, 0)}`], [R.planned, fmt(pl.filled, 0)], [R.perDay, fmt(pl.per_day, 2)],
-        [R.exceptions, ex.length ? esc(ex.join("、")) : R.none]]);
+        [R.exceptions, ex.length ? esc(ex.join("、")) : R.none]]) + SEP;
       const prow = (pl.rows || []).map(r => [esc(r.date.slice(5)), esc(r.weekday), r.input > 0 ? fmt(r.input, 0) : "", fmt(r.suggest, Number.isInteger(r.suggest) ? 0 : 1), r.holiday ? "Y" : ""]);
-      const per = Math.ceil(prow.length / 3) || 1, head = [t("thDate"), t("thWeekday"), "Input", "Suggest", t("thRest")];
-      h += `<div class="r-cols">${[0, 1, 2].map(k => prow.slice(k * per, (k + 1) * per)).filter(x => x.length).map(x => T(head, x, "r-plan")).join("")}</div>`;
+      const head = [t("thDate"), t("thWeekday"), "Input", "Suggest", t("thRest")];
+      for (let i = 0; i < prow.length; i += 90) {  // three columns of up to 30 days per block
+        const part = prow.slice(i, i + 90), per = Math.ceil(part.length / 3) || 1;
+        h += `<div class="r-cols">${[0, 1, 2].map(k => part.slice(k * per, (k + 1) * per)).filter(x => x.length).map(x => T1(head, x, "r-plan")).join("")}</div>` + SEP;
+      }
       const sh = job.shifts?.[p], S = CFG.shifts;
       if (sh && S) {
         h += `<h3>${esc(prodName(p))}：${esc(rt("shifts", { n: sh.count === 1 ? R.oneShift : R.twoShifts }))}</h3>`;
@@ -3237,7 +3265,7 @@
     // CT / FPYR changes
     h += `<h3>${esc(R.ct)}</h3>`;
     const ctc = job.ct, D = CT()?.defaults;
-    if (!ctc || !Object.keys(ctc).length) h += `<p>${esc(R.ctNone)}</p>`;
+    if (!ctc || !Object.keys(ctc).length) h += `<p>${esc(R.ctNone)}</p>` + SEP;
     else for (const [p, cc] of Object.entries(ctc)) {
       const st = Object.entries(cc.stations || {}).map(([n, r]) => [esc(n),
         r.use != null ? esc(t(r.use ? "ctModeBn" : "ctModeMc")) : "", r.ct != null ? `${fmt(r.ct, 1)}${D?.[p]?.stations?.[n]?.ct != null ? ` <small>(${esc(R.model)} ${fmt(D[p].stations[n].ct, 1)})</small>` : ""}` : ""]);
@@ -3250,15 +3278,13 @@
       }
       if (mc.length) h += T([R.machine, R.mct, R.fpyr], mc);
     }
-    h += "</section>";
-
-    // ---- results ----
-    h += `<section class="r-sec"><h2>${esc(R.outputs)}</h2>`;
+    // ---- results (new page) ----
+    h += SEP + PAGE + SEP + `<h2>${esc(R.outputs)}</h2>`;
     // output
     for (const def of tableDefs().filter(d => d.view === "daily_output")) {
       const tb = job.tables?.[def.name];
       h += `<h3>${esc(L(def, "product_label") || L(def, "label"))}：${esc(R.output)}</h3>`;
-      if (!tb?.rows?.length) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      if (!tb?.rows?.length) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
       const cols = numericCols(tb, def);
       const totals = cols.map(({ c, i }) => ({ c, v: tb.rows.reduce((a, r) => a + (Number(r.values[i]) || 0), 0) }));
       h += chart(totals.map(x => ({ label: x.c, vals: [x.v], tip: "" })), [{ cls: "b2" }], (v) => fmt(v, 0));
@@ -3269,10 +3295,10 @@
     if (CFG.sod) for (const p of CFG.sod.products) {
       const days = sdDays(job, p);
       h += `<h3>${esc(prodName(p))}：${esc(t("sdTitle"))}</h3>`;
-      if (!days) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      if (!days) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
       const tot = sdSum(days), rows = sdRows(days), last = rows[rows.length - 1];
       h += kv([[t("sdPlan"), fmt(tot.plan, 0)], [t("sdGood"), fmt(tot.good, 0)], [t("sdAtt"), pct(tot.plan > 0 ? tot.good / tot.plan : null)],
-        [t("sdGap"), signed(tot.good - tot.plan)], [t("sdYield"), pct(tot.good + tot.scrap > 0 ? tot.good / (tot.good + tot.scrap) : null)], [t("sdWip"), last ? fmt(last.cum.wip, 0) : "—"]]);
+        [t("sdGap"), signed(tot.good - tot.plan)], [t("sdYield"), pct(tot.good + tot.scrap > 0 ? tot.good / (tot.good + tot.scrap) : null)], [t("sdWip"), last ? fmt(last.cum.wip, 0) : "—"]]) + SEP;
       h += T([R.period2, t("sdPlan"), t("sdStart"), t("sdGood"), t("sdGap"), t("sdAtt"), t("sdScrapCol"), t("sdCumGap"), "WIP"],
         rows.map(r => [esc(r.pn.row), fmt(r.s.plan, 0), fmt(r.s.start, 0), fmt(r.s.good, 0), signed(r.s.good - r.s.plan), pct(r.s.plan > 0 ? r.s.good / r.s.plan : null), fmt(r.s.scrap, 0), signed(r.cum.gap), fmt(r.cum.wip, 0)]));
     }
@@ -3280,7 +3306,7 @@
     if (CFG.oee) for (const p of CFG.oee.products) {
       const days = oeeDays(job, p);
       h += `<h3>${esc(prodName(p))}：OEE</h3>`;
-      if (!days) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      if (!days) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
       const sts = CFG.oee.stations.map(s => s.name);
       h += chart(sts.map(n => { const v = oeeOf(days, n); return { label: n, vals: [v.o1, v.o2], tip: "" }; }), [{ cls: "b1" }, { cls: "b2" }], (v) => Math.round(v * 100) + "%");
       const groups = oeeGroups(days);
@@ -3290,7 +3316,7 @@
     if (CFG.rework) for (const p of CFG.rework.products) {
       const items = rwDays(job, p);
       h += `<h3>${esc(prodName(p))}：Rework</h3>`;
-      if (!items) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      if (!items) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
       const sts = CFG.rework.stations.filter(s => s.products.includes(p)).map(s => s.name);
       h += T([R.station, "Rework", R.throughput, R.rate], sts.map(n => { const s = rwSum(items, n); return [esc(n), fmt(s.rw, 0), fmt(s.out, 0), pct(rate(s))]; }));
       h += T([R.period2, ...sts.flatMap(n => [n + " Rework", n + " " + R.rate])], groupByGran(items).map((g, n) => [esc(periodName(g, n).row), ...sts.flatMap(nm => { const s = rwSum(g.days, nm); return [fmt(s.rw, 0), pct(rate(s))]; })]));
@@ -3299,7 +3325,7 @@
     if (CFG.takt) for (const p of prods) {
       const items = tkDays(job, p);
       h += `<h3>${esc(prodName(p))}：Takt Time</h3>`;
-      if (!items) { h += `<p>${esc(R.noData)}</p>`; continue; }
+      if (!items) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
       const sts = CFG.takt.stations;
       h += T([R.station, R.taktS, R.bnS, R.status], sts.map(n => { const v = tkOf(items, n); const ok = v.takt != null && v.ct != null ? v.ct <= v.takt : null;
         return [esc(n), secTxt(v.takt), secTxt(v.ct), ok == null ? "—" : ok ? `✓ ${esc(R.ok)}` : `! ${esc(R.short)}`]; }));
@@ -3315,25 +3341,76 @@
         const vals = rows.filter(r => r.util != null);
         h += `<p class="r-sub">${esc(prodName(g.product || ""))} ${esc(L(g, "label"))}${vals.length ? `：${esc(R.utilAvg)} ${pct(vals.reduce((a, r) => a + r.util, 0) / vals.length)}` : ""}</p>`;
         h += vals.length ? T([R.machine, t("utilCol")], vals.map(r => [esc(r.name), `<span class="r-bar"><i style="width:${Math.round(r.util * 100)}%"></i></span>${pct(r.util)}`]), "r-util")
-          : `<p>${esc(R.noData)}</p>`;
+          : `<p>${esc(R.noData)}</p>` + SEP;
       }
     }
-    h += "</section>";
-    return h;
+    // split into blocks; a heading-only block is joined to the block after it so headings never sit alone at a page end
+    const raw = h.split(SEP).map(x => x.trim()).filter(Boolean), blocks = [];
+    let carry = "";
+    for (const b of raw) {
+      if (b === PAGE) { if (carry) { blocks.push(carry); carry = ""; } blocks.push(PAGE); continue; }
+      if (!/<table|<svg|<dl|<p>/.test(b)) { carry += b; continue; }
+      blocks.push(carry + b); carry = "";
+    }
+    if (carry) blocks.push(carry);
+    return blocks;
   }
-  function printReport() {
+  async function saveReport() {
     const job = doneRuns().find(r => r.id === outRunId);
     if (!job) return;
-    const box = $("report");
-    box.innerHTML = buildReport(job);
-    const oldTitle = document.title;
-    document.title = `${runName(job)} ${periodLabel(job.parameters)}`.replace(/[\\/:*?"<>|]+/g, "_");
-    document.body.classList.add("printing");
-    const done = () => { document.body.classList.remove("printing"); document.title = oldTitle; box.innerHTML = ""; window.removeEventListener("afterprint", done); };
-    window.addEventListener("afterprint", done);
-    setTimeout(() => window.print(), 50);
+    const name = `${runName(job)} ${periodLabel(job.parameters)}`.replace(/[\\/:*?"<>|]+/g, "_").trim() + ".pdf";
+    // ask where to save first (the browser only allows this right after the click)
+    let handle = null;
+    if (window.showSaveFilePicker) {
+      try { handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: "PDF", accept: { "application/pdf": [".pdf"] } }] }); }
+      catch (e) { if (e.name === "AbortError") return; handle = null; }
+    }
+    if (!window.jspdf || !window.html2canvas) { alert(t("reportNoLib")); return; }
+    const btn = $("reportBtn"), label = btn.querySelector("span"), old = label.textContent;
+    btn.disabled = true;
+    const host = document.createElement("div");
+    host.className = "r-host";
+    document.body.appendChild(host);
+    try {
+      const blocks = buildReport(job);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const PW = 210, PH = 297, M = 12, CW = PW - 2 * M, BOTTOM = PH - M - 6;
+      let y = M, k = 0;
+      for (const b of blocks) {
+        k++; label.textContent = t("reportMaking", { p: Math.round(k / blocks.length * 100) });
+        if (b === "\u0002") { if (y > M) { pdf.addPage(); y = M; } continue; }
+        const el = document.createElement("div");
+        el.className = "r-doc"; el.innerHTML = b;
+        host.replaceChildren(el);
+        const canvas = await window.html2canvas(el, { scale: 2, backgroundColor: "#ffffff", logging: false });
+        const h = canvas.height * CW / canvas.width;
+        if (y + h > BOTTOM && y > M) { pdf.addPage(); y = M; }
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", M, y, CW, Math.min(h, BOTTOM - M));
+        y += h + 3;
+      }
+      const n = pdf.getNumberOfPages();
+      for (let i = 1; i <= n; i++) { pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(140); pdf.text(`${i} / ${n}`, PW - M, PH - 6, { align: "right" }); }
+      const blob = pdf.output("blob");
+      if (handle) {
+        const w = await handle.createWritable(); await w.write(blob); await w.close();
+        flash(t("reportSaved", { f: handle.name }));
+      } else {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = name; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      }
+    } catch (e) {
+      alert(t("reportFailed", { e: e.message || e }));
+    } finally {
+      host.remove(); btn.disabled = false; label.textContent = old;
+    }
   }
-  $("reportBtn").addEventListener("click", printReport);
+  function flash(msg) {
+    const el = document.createElement("div"); el.className = "flash"; el.textContent = msg; document.body.appendChild(el);
+    setTimeout(() => el.classList.add("out"), 2600); setTimeout(() => el.remove(), 3200);
+  }
+  $("reportBtn").addEventListener("click", saveReport);
 
   // ---------- equipment utilization ----------
   const ST_VAR = { 2: "proc", 21: "setup", 31: "setup", 9: "op", 49: "op", 10: "tr", 14: "tr", 15: "tr", 4: "block", 26: "block", 48: "block",
@@ -3724,5 +3801,7 @@
   })();
 })();
 </script>
+<script src="vendor/jspdf.umd.min.js" defer></script>
+<script src="vendor/html2canvas.min.js" defer></script>
 </body>
 </html>
