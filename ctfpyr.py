@@ -38,6 +38,7 @@ def tables_to_read(cfg: dict[str, Any]) -> list[str]:
         names.append(p["setting_table"])
     for st in cf["stations"]:
         names += list(st["tables"].values())
+    names += param_tables(cfg)
     return list(dict.fromkeys(names))
 
 
@@ -192,3 +193,73 @@ def script(cfg: dict[str, Any], clean: dict[str, Any] | None, defaults: dict[str
                 if "fpyr" in rec:
                     lines.append(f"Table({tb})[{m['row']}][{d['stations'][name]['fpyr_col']}] = {rec['fpyr']!r};")
     return lines if len(lines) > 1 else []
+
+
+# ---------------------------------------------------------------------------
+# 其他參數表（例如 POD）：表裡的數字格都可以改，文字格（例如分配公式）只顯示
+# ---------------------------------------------------------------------------
+
+def param_tables(cfg: dict[str, Any]) -> list[str]:
+    names: list[str] = []
+    for grp in cfg.get("param_tables", []):
+        names += grp["tables"]
+    return list(dict.fromkeys(names))
+
+
+def build_param_defaults(cfg: dict[str, Any], tables: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for grp in cfg.get("param_tables", []):
+        g: dict[str, Any] = {}
+        for name in grp["tables"]:
+            tb = tables.get(name)
+            if not tb:
+                continue
+            rows = []
+            for ri, r in enumerate(tb["rows"], 1):
+                if r["row"].startswith("sdt::"):
+                    continue
+                rows.append({"name": r["row"], "row": ri,
+                             "cells": [v if isinstance(v, float) else (str(v) if v not in ("", None) else None) for v in r["values"]]})
+            g[name] = {"columns": tb["columns"], "rows": rows}
+        out[grp["name"]] = g
+    return out
+
+
+def validate_params_tables(cfg: dict[str, Any], given: Any, defaults: dict[str, Any] | None) -> dict[str, Any] | None:
+    """只接受模型裡本來就是數字的格子：{群組: {表: {"列號,欄號": 值}}}"""
+    if not defaults or not isinstance(given, dict):
+        return None
+    out: dict[str, Any] = {}
+    for gname, tbs in defaults.items():
+        g = given.get(gname)
+        if not isinstance(g, dict):
+            continue
+        for tname, tb in tbs.items():
+            cells = g.get(tname)
+            if not isinstance(cells, dict):
+                continue
+            ok = {}
+            for key, v in cells.items():
+                try:
+                    r, c = (int(x) for x in str(key).split(","))
+                except ValueError:
+                    continue
+                row = next((x for x in tb["rows"] if x["row"] == r), None)
+                if not row or not (1 <= c <= len(row["cells"])) or not isinstance(row["cells"][c - 1], float):
+                    continue
+                ok[f"{r},{c}"] = _num(v, f"{tname} {row['name']}", -1e9, 1e9)
+            if ok:
+                out.setdefault(gname, {})[tname] = ok
+    return out or None
+
+
+def params_script(clean: dict[str, Any] | None) -> list[str]:
+    if not clean:
+        return []
+    lines = ["// ---- parameter tables ----"]
+    for tbs in clean.values():
+        for tname, cells in tbs.items():
+            for key, v in cells.items():
+                r, c = key.split(",")
+                lines.append(f"Table({_s(tname)})[{int(r)}][{int(c)}] = {v!r};")
+    return lines

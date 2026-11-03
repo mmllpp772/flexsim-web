@@ -94,6 +94,8 @@
   .ct-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
   .ct-h { font-size: 15px; margin: 18px 0 8px; }
   .ct-tabs { margin: 6px 0 14px; }
+  table.pt-table td.txt { color: var(--faint); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #ptPanels > section + section { margin-top: 18px; }
   .ct-tabs button { padding: 7px 18px; font-size: 15px; position: relative; }
   .ct-tabs .dot { position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--hold); }
   .ct-station { padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--steel); }
@@ -766,6 +768,7 @@
           <p class="hint tight" id="ctMachineNote"></p>
           <div class="table-wrap ct-wrap"><table class="ct-table" id="ctMachineTable"></table></div>
         </section>
+        <div id="ptPanels"></div>
       </div>
     </div>
   </main>
@@ -1095,6 +1098,9 @@
       ctModeMcHelp: "Enter the CT of each workstation below. The bottleneck is the largest of them.",
       ctModeMixed: "Stations use different modes. Pick one to set them all.", ctAutoMax: "Largest workstation CT",
       ctApplyAll: "Use this mode for all stations",
+      ctBnOnly: "{s} has no machine CT table; it uses one bottleneck CT, which OEE and takt time use for this station.",
+      ptItem: "Item", ptCol: "Column {n}", ptReset: "Restore model values", ptConfirmReset: "Restore all these values to the model's values?",
+      ptHint: "Starting values are read from the FlexSim model. Changed cells are highlighted and only they are sent with the run. Text cells (such as distributions) are shown but can't be changed here.",
       ctFpyrHow: "FPYR can be changed only on test stations (machines that have an FPYR in the model); the others are locked.",
       ctFpyrNone: "This machine has no FPYR in the model.",
       ctNoFpyrCol: "This station's parameter table has no FPYR column yet, so FPYR is locked. Add one in the model (a column whose name contains FPYR) and it opens here automatically.",
@@ -1254,6 +1260,9 @@
       ctModeMcHelp: "在下方逐台填各工站 CT，瓶頸 CT 自動取其中最大值。",
       ctModeMixed: "目前各站的方式不同。點選其中一個可以一次套用到所有站別。", ctAutoMax: "各工站最大值",
       ctApplyAll: "所有站別都用這個方式",
+      ctBnOnly: "{s} 沒有機台 CT 表，只填一個瓶頸 CT，OEE 和 Takt Time 會用這個值。",
+      ptItem: "項目", ptCol: "第 {n} 欄", ptReset: "全部恢復模型值", ptConfirmReset: "要把這些值全部恢復成模型的值嗎？",
+      ptHint: "預設值是從 FlexSim 模型讀出來的。改過的格子會標示出來，只有改過的值會隨模擬送出。文字格（例如分配公式）只顯示、不能在這裡改。",
       ctFpyrHow: "只有測試站（模型裡本來就有 FPYR 的機台）可以改 FPYR，其他機台鎖住，避免誤填。",
       ctFpyrNone: "模型裡這台機台沒有 FPYR。",
       ctNoFpyrCol: "這段的參數表還沒有 FPYR 欄，所以 FPYR 先鎖住。在模型裡加一欄（欄名含 FPYR），網頁就會自動開放。",
@@ -1876,6 +1885,7 @@
     if (PD()) c.push({ k: "plan", label: t("catPlan") });
     if (SH()) c.push({ k: "shift", label: t("catShift") });
     if (CT()) c.push({ k: "ct", label: t("catCt") });
+    PTG().forEach(g => c.push({ k: "pt_" + g.name, label: L(g, "label") }));
     return c;
   }
   function inSummary(k) {
@@ -1883,6 +1893,7 @@
     if (k === "plan") return PD().products.map(p => `${L(p, "label")} ${fmt(Number(planFor(p.name).target) || 0, 0)}`).join(", ");
     if (k === "shift") return SH().products.map(p => t("sumShift", { p: L(p, "label"), n: shiftFor(p.name).count })).join(", ");
     if (k === "ct") { const n = ctChangedCount(); return n ? t("sumCt", { n }) : t("sumCtNone"); }
+    if (k.startsWith("pt_")) { const n = ptCount(k.slice(3)); return n ? t("sumCt", { n }) : t("sumCtNone"); }
     return "";
   }
   function renderInNav() {
@@ -1892,9 +1903,63 @@
     $("inNav").innerHTML = `<div class="grp">${esc(t("grpInputs"))}</div>` + cats.map(c =>
       `<button type="button" data-k="${c.k}" aria-current="${c.k === IN_CAT}"><b>${esc(c.label)}</b><small>${esc(inSummary(c.k))}</small></button>`).join("");
     $("inNav").querySelectorAll("button").forEach(b => b.onclick = () => showInCat(b.dataset.k));
+    if ($("ptPanels") && !$("ptPanels").children.length && PTG().length) buildPtPanels();
     document.querySelectorAll("#app [data-cat]").forEach(sec => sec.hidden = sec.dataset.cat !== IN_CAT);
   }
-  function showInCat(k) { IN_CAT = k; store("simInCat", k); renderInNav(); if (k === "plan") renderPlan(); if (k === "shift") renderShifts(); if (k === "ct") renderCt(); }
+  function showInCat(k) { IN_CAT = k; store("simInCat", k); renderInNav(); if (k === "plan") renderPlan(); if (k === "shift") renderShifts(); if (k === "ct") renderCt(); if (k.startsWith("pt_")) renderPt(k.slice(3)); }
+  // ---------- parameter tables (e.g. POD) ----------
+  // PTS holds only changed cells: { group: { table: { "row,col": value } } }
+  const PTG = () => CFG.param_tables || [];
+  let PTS = {};
+  try { PTS = JSON.parse(load("simPt") || "{}") || {}; } catch (e) { PTS = {}; }
+  const savePt = () => store("simPt", JSON.stringify(PTS));
+  const ptCount = (g) => Object.values(PTS[g] || {}).reduce((a, x) => a + Object.keys(x).length, 0);
+  function ptForSubmit() {
+    const out = {};
+    for (const g of PTG()) for (const [tn, cells] of Object.entries(PTS[g.name] || {})) {
+      if (!g.defaults?.[tn]) continue;
+      if (Object.keys(cells).length) (out[g.name] ||= {})[tn] = { ...cells };
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  function renderPt(gname) {
+    const g = PTG().find(x => x.name === gname); if (!g) return;
+    const box = $("pt_" + gname);
+    const tables = Object.entries(g.defaults || {});
+    box.innerHTML = tables.map(([tn, tb]) => {
+      const cols = tb.columns.map((c, i) => /^col\s*\d+$/i.test(String(c)) ? t("ptCol", { n: i + 1 }) : c);
+      return `<h3 class="ct-h">${esc(tn)}</h3><div class="table-wrap"><table class="ct-table pt-table"><thead><tr><th class="l">${esc(t("ptItem"))}</th>${cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
+        tb.rows.map(r => `<tr><td class="l">${esc(r.name)}</td>${r.cells.map((d, ci) => {
+          if (typeof d !== "number") return `<td class="txt" title="${esc(d || "")}">${esc(d || "")}</td>`;
+          const key = `${r.row},${ci + 1}`, cur = PTS[gname]?.[tn]?.[key], v = cur ?? d, ch = cur != null && cur !== d;
+          return `<td><input type="number" step="any" data-t="${esc(tn)}" data-k="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(r.name)} ${esc(cols[ci])}">${ch ? `<span class="was">${esc(t("ctWas", { v: nf(d) }))}</span>` : ""}</td>`;
+        }).join("")}</tr>`).join("") + "</tbody></table></div>";
+    }).join("") || `<p class="empty">${esc(t("noData"))}</p>`;
+    box.querySelectorAll("input[data-k]").forEach(inp => inp.addEventListener("change", () => {
+      const tn = inp.dataset.t, key = inp.dataset.k, [r, c] = key.split(",").map(Number);
+      const d = g.defaults[tn].rows.find(x => x.row === r).cells[c - 1], v = numIn(inp.value);
+      const tb = ((PTS[gname] ||= {})[tn] ||= {});
+      if (v == null || v === d) delete tb[key]; else tb[key] = v;
+      if (!Object.keys(tb).length) delete PTS[gname][tn];
+      if (!Object.keys(PTS[gname]).length) delete PTS[gname];
+      savePt(); renderPt(gname); renderInNav();
+    }));
+  }
+  function buildPtPanels() {
+    const host = $("ptPanels"); if (!host) return;
+    host.innerHTML = PTG().map(g => `<section class="panel" data-cat="pt_${esc(g.name)}">
+        <div class="panel-head"><h2>${esc(L(g, "label"))}</h2>
+          <button type="button" class="link" data-ptreset="${esc(g.name)}">${esc(t("ptReset"))}</button></div>
+        <p class="hint tight">${esc(t("ptHint"))}</p>
+        <div id="pt_${esc(g.name)}"></div></section>`).join("");
+    host.querySelectorAll("[data-ptreset]").forEach(b => b.onclick = () => {
+      if (!confirm(t("ptConfirmReset"))) return;
+      delete PTS[b.dataset.ptreset]; savePt(); renderPt(b.dataset.ptreset); renderInNav();
+    });
+    PTG().forEach(g => renderPt(g.name));
+  }
+
+
 
   // ---------- CT and FPYR ----------
   // CTS holds only the values the user changed: { product: { stations: {SMT: {use, ct, target, improve}}, machines: {SMT: {name: {ct, fpyr}}} } }
@@ -1969,30 +2034,32 @@
     $("ctStationSeg").querySelectorAll("button").forEach(b => b.onclick = () => { ctStation = b.dataset.s; store("simCtStation", ctStation); renderCt(); });
 
     const n = ctStation, s0 = D.stations[n] || {}, ms = D.machines[n] || [];
-    const hasMode = s0.use != null;
-    const bn = hasMode && !!ctStationVal(ctProd, n, "use");
+    const bnOnly = (CT().bottleneck_only || []).includes(n);
+    const hasMode = !bnOnly && s0.use != null;
+    const bn = bnOnly || (hasMode && !!ctStationVal(ctProd, n, "use"));
     const maxMc = Math.max(0, ...ms.map(m => Number(ctMachineVal(ctProd, n, m, "ct")) || 0));
     // mode + bottleneck CT
     const modeSeg = hasMode ? `<div class="seg" id="ctModeSeg" role="group" aria-label="${esc(t("ctUse"))}">${[["1", "ctModeBn", bn], ["0", "ctModeMc", !bn]].map(([v, key, on]) =>
       `<button type="button" data-use="${v}" aria-pressed="${on}">${esc(t(key))}</button>`).join("")}</div>` : "";
     const ctVal = ctStationVal(ctProd, n, "ct"), ctCh = s0.ct != null && ctVal !== s0.ct;
-    const ctField = !hasMode || s0.ct == null ? "" : bn
+    const ctField = s0.ct == null ? "" : bn
       ? `<label class="ct-bn"><span>${esc(t("ctCt"))}</span><input type="number" step="0.1" id="ctBnInput" value="${esc(ctVal)}" class="${ctCh ? "changed" : ""}">${ctCh ? was(s0.ct) : ""}</label>`
       : `<div class="ct-bn auto"><span>${esc(t("ctCt"))}</span><b>${nf(maxMc)}</b><small>${esc(t("ctAutoMax"))}</small></div>`;
     $("ctStationBox").innerHTML = `<div class="ct-modebar">${hasMode ? `<span class="lbl">${esc(t("ctUse"))}</span>${modeSeg}` : ""}${ctField}
         ${hasMode ? `<button type="button" class="link" id="ctApplyAll">${esc(t("ctApplyAll"))}</button>` : ""}</div>
       ${hasMode && bn !== !!s0.use ? `<p class="ct-was">${esc(t("ctWas", { v: t(s0.use ? "ctModeBn" : "ctModeMc") }))}</p>` : ""}
-      <p class="hint tight">${esc(hasMode ? t(bn ? "ctModeBnHelp" : "ctModeMcHelp") : "")}</p>`;
+      <p class="hint tight">${esc(bnOnly ? t("ctBnOnly", { s: n }) : hasMode ? t(bn ? "ctModeBnHelp" : "ctModeMcHelp") : "")}</p>`;
     $("ctStationBox").querySelectorAll("#ctModeSeg button").forEach(b => b.onclick = () => { ctSet(ctProd, "station", n, "use", +b.dataset.use); renderCt(); renderInNav(); });
     $("ctBnInput")?.addEventListener("change", (e) => { const v = numIn(e.target.value); ctSet(ctProd, "station", n, "ct", v == null ? s0.ct : v); renderCt(); renderInNav(); });
     $("ctApplyAll")?.addEventListener("click", () => {
-      stations.filter(x => D.stations[x]?.use != null).forEach(x => ctSet(ctProd, "station", x, "use", bn ? 1 : 0));
+      stations.filter(x => D.stations[x]?.use != null && !(CT().bottleneck_only || []).includes(x)).forEach(x => ctSet(ctProd, "station", x, "use", bn ? 1 : 0));
       renderCt(); renderInNav();
     });
 
     // machines
     const fcol = !!s0.fpyr_col, hasDesc = ms.some(m => m.desc);
-    $("ctMachineNote").textContent = (bn ? t("ctUsingStation", { v: nf(ctVal) }) : t("ctPerMachine")) + " " + t(fcol ? "ctFpyrHow" : "ctNoFpyrCol");
+    $("ctMachineNote").textContent = bnOnly ? "" : (bn ? t("ctUsingStation", { v: nf(ctVal) }) : t("ctPerMachine")) + " " + t(fcol ? "ctFpyrHow" : "ctNoFpyrCol");
+    $("ctMachineTable").closest(".table-wrap").hidden = bnOnly; $("ctMachineTable").closest(".panel").querySelector("h3.ct-h:last-of-type").hidden = bnOnly;
     $("ctMachineTable").innerHTML = `<thead><tr><th class="l">${esc(t("ctMachine"))}</th>${hasDesc ? `<th class="l">${esc(t("ctDesc"))}</th>` : ""}<th>${esc(t("ctMct"))}</th><th>${esc(t("ctFpyr"))}</th></tr></thead><tbody>` +
       ms.map((m, i) => {
         const v = bn ? ctVal : ctMachineVal(ctProd, n, m, "ct"), ch = !bn && v !== m.ct;
@@ -2267,7 +2334,7 @@
       const plans = plansForSubmit();
       const sh = shiftsForSubmit();
       if (sh.error) { shiftProduct = sh.product; showInCat("shift"); alert(sh.error); $("btnRun").disabled = $("btnFast").disabled = false; return; }
-      const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who, client: clientInfo(), plans, shifts: sh.data, ct: ctForSubmit() });
+      const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who, client: clientInfo(), plans, shifts: sh.data, ct: ctForSubmit(), param_tables: ptForSubmit() });
       activeId = selectedId = job.id; activeJob = job; pending = null;
       renderJob(job);
       if (mode !== "fast") showLive(job);
@@ -2311,12 +2378,12 @@
   // Restoring defaults is a separate, confirmed action
   $("btnDefaults").addEventListener("click", () => {
     if (!confirm(t("confirmDefaults"))) return;
-    PLANS = {}; savePlans(); SHIFTS = {}; saveShifts(); CTS = {}; saveCt();
+    PLANS = {}; savePlans(); SHIFTS = {}; saveShifts(); CTS = {}; saveCt(); PTS = {}; savePt();
     store("simLastParams"); store("simLabel");
     buildForm(defaults());
     $("f_label").value = "";
     $("formError").hidden = true;
-    renderPlan(); renderShifts(); renderCt(); renderInNav();
+    renderPlan(); renderShifts(); renderCt(); PTG().forEach(g => renderPt(g.name)); renderInNav();
     if (!activeId) setIdle("defaultsMsg");
   });
 
@@ -2651,8 +2718,8 @@
         const oi = rec.columns.indexOf(s.output);
         const out = oi >= 0 ? Number(r.values[oi]) || 0 : 0;
         const arr = bn.ct[prod][s.name] || [];
-        const ct = arr[at[iso]] ?? arr[arr.length - 1] ?? 0;
-        const eff = ct * out / 3600;
+        const ct = arr.length ? (arr[at[iso]] ?? arr[arr.length - 1]) : (Number(job.station_ct?.[prod]?.[s.name]) || 0);
+        const eff = ct > 0 ? ct * out / 3600 : null;  // no CT (e.g. POD not set yet): OEE can't be calculated
         let planned = 0;
         if (!off && sh && S) {
           const wr = S.rows.indexOf(WD3[d.getDay()]), sc = S.columns.indexOf(s.shift);
@@ -2677,7 +2744,9 @@
   }
   function oeeOf(days, name) {
     let eff = 0, total = 0, planned = 0;
-    days.forEach(x => { const v = x.st[name]; eff += v.eff; total += v.total; planned += v.planned; });
+    let unknown = false;
+    days.forEach(x => { const v = x.st[name]; if (v.eff == null) unknown = true; else eff += v.eff; total += v.total; planned += v.planned; });
+    if (unknown) return { o1: null, o2: null };
     return { o1: total > 0 ? eff / total : null, o2: planned > 0 ? eff / planned : null };
   }
   function periodName(g, n) {
@@ -3042,7 +3111,8 @@
           if (wr >= 0 && sc >= 0) hours = sh.grids.reduce((a, g) => a + (Number(g?.[wr]?.[sc]) || 0), 0);
         }
         const arr = bn?.ct?.[prod]?.[n] || [];
-        st[n] = { sec: hours * 3600, ct: arr.length ? (arr[at[r.date]] ?? arr[arr.length - 1]) : null };
+        const sct = Number(job.station_ct?.[prod]?.[n]) || 0;
+        st[n] = { sec: hours * 3600, ct: arr.length ? (arr[at[r.date]] ?? arr[arr.length - 1]) : sct > 0 ? sct : null };
       }
       return { d, off, demand, st };
     });
@@ -3561,7 +3631,8 @@
     if (stateMode === "job" && shownJob) renderJob(shownJob); else setIdle();
     refreshSimStatus(true).catch(() => {});
     if (TAB === "output") renderOutput();
-    renderInNav(); if (IN_CAT === "shift") renderShifts(); if (IN_CAT === "ct") renderCt();
+    if ($("ptPanels")) $("ptPanels").innerHTML = "";
+    renderInNav(); if (IN_CAT === "shift") renderShifts(); if (IN_CAT === "ct") renderCt(); if (IN_CAT.startsWith("pt_")) renderPt(IN_CAT.slice(3));
   }
   document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
 

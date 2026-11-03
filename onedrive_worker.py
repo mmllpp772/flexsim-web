@@ -117,6 +117,7 @@ class Worker:
         except RuntimeError as e:
             raise SystemExit(f"無法啟動 FlexSim：{e}")
         self.ct_failed_at = 0.0
+        self.param_defaults: dict[str, Any] | None = None
         self.ct_defaults = self.load_ct_defaults()
         self.bad_seen: dict[str, float] = {}  # 讀不到的檔案第一次出現的時間
         self.queue: list[str] = []
@@ -133,17 +134,20 @@ class Worker:
         model = Path(self.cfg["flexsim"]["model_path"])
         if not self.cfg.get("mock_mode"):
             cached = ctfpyr.load_cached(cache, model)
-            if cached:
-                return cached
+            if cached and "ct" in cached:
+                self.param_defaults = cached.get("params")
+                return cached["ct"]
         log.info("Reading CT and FPYR from the model (once per model change, about a minute)...")
         try:
-            defaults = ctfpyr.build_defaults(self.cfg, self.runner.read_tables(names))
+            tables = self.runner.read_tables(names)
+            defaults = ctfpyr.build_defaults(self.cfg, tables)
+            self.param_defaults = ctfpyr.build_param_defaults(self.cfg, tables)
         except Exception as e:  # 讀不到就不提供 CT/FPYR 輸入，其他功能照常；10 分鐘後再試
             log.warning("Could not read CT/FPYR from the model: %s", e)
             self.ct_failed_at = time.time()
             return None
         if not self.cfg.get("mock_mode"):
-            ctfpyr.save_cached(cache, model, defaults)
+            ctfpyr.save_cached(cache, model, {"ct": defaults, "params": self.param_defaults})
         n = sum(len(m) for d in defaults.values() for m in d["machines"].values())
         log.info("CT/FPYR: %d machines read from the model", n)
         return defaults
@@ -155,7 +159,8 @@ class Worker:
         if time.time() - self.ct_failed_at < 600:
             return
         model = Path(self.cfg["flexsim"]["model_path"])
-        if ctfpyr.load_cached(BASE_DIR / "model_defaults.json", model) is None:
+        cached = ctfpyr.load_cached(BASE_DIR / "model_defaults.json", model)
+        if cached is None or "ct" not in cached:
             self.ct_defaults = self.load_ct_defaults()
             self.publish()
 
@@ -166,7 +171,11 @@ class Worker:
             cf = self.cfg["ct_fpyr"]
             pub["ct_fpyr"] = {"stations": [s["name"] for s in cf["stations"]],
                               "fpyr": [s["name"] for s in cf["stations"] if s.get("fpyr")],
-                              "defaults": self.ct_defaults}
+                              "defaults": self.ct_defaults,
+                              "bottleneck_only": [s["name"] for s in cf["stations"] if s.get("bottleneck_only")]}
+        if self.param_defaults and self.cfg.get("param_tables"):
+            pub["param_tables"] = [{**{k: v for k, v in g.items() if not k.startswith("_")},
+                                    "defaults": self.param_defaults.get(g["name"], {})} for g in self.cfg["param_tables"]]
         write_json_atomic(self.share / "config.json", pub)
         page = BASE_DIR / "index.html"
         target = self.share / "Simulator.html"
@@ -261,13 +270,21 @@ class Worker:
             plans = validate_plans(self.cfg, job.get("plans"), *period) if period else None
             shifts = validate_shifts(self.cfg, job.get("shifts"))
             ct = ctfpyr.validate(self.cfg, job.get("ct"), self.ct_defaults)
+            ptab = ctfpyr.validate_params_tables(self.cfg, job.get("param_tables"), self.param_defaults)
         except ValueError as e:
             self.write_result(job_id, {**base, "status": "error", "finished_at": now_iso(), "error": str(e),
                                        "parameters": job.get("parameters"), "run_length": job.get("run_length")})
             log.warning("Rejected job %s: %s", job_id, e)
             return
 
-        base.update(parameters=params, run_length=length, plans=plans, shifts=shifts, ct=ct)
+        # 沒有機台表、只填瓶頸 CT 的站別（例如 POD）：記下這次實際用的 CT，網頁算 OEE / Takt 用
+        station_ct = None
+        if self.ct_defaults and self.cfg.get("ct_fpyr"):
+            only = [st["name"] for st in self.cfg["ct_fpyr"]["stations"] if st.get("bottleneck_only")]
+            station_ct = {prod: {n: (ct or {}).get(prod, {}).get("stations", {}).get(n, {}).get("ct", d["stations"].get(n, {}).get("ct"))
+                                 for n in only} for prod, d in self.ct_defaults.items()} if only else None
+        base.update(parameters=params, run_length=length, plans=plans, shifts=shifts, ct=ct, param_tables=ptab,
+                    station_ct=station_ct)
         self.running = job_id
         started = now_iso()
         t_start = time.time()
@@ -336,7 +353,7 @@ class Worker:
         try:
             result = self.runner.run(params, length, should_cancel=should_cancel, on_progress=on_progress,
                                      want_pause=want_pause, on_pause=on_pause, plans=plans, shifts=shifts,
-                                     ct=ct, ct_defaults=self.ct_defaults)
+                                     ct=ct, ct_defaults=self.ct_defaults, param_tables=ptab)
             base["mode"] = st["mode"]
             if series and result.get("model_time") is not None:
                 add_point(result["model_time"], result["metrics"])

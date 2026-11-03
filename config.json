@@ -591,6 +591,12 @@
         "shift": "FA_L2"
       },
       {
+        "name": "POD",
+        "output": "POD",
+        "shift": "POD",
+        "ct_setting": true
+      },
+      {
         "name": "L4",
         "output": "L4",
         "shift": "FA_L4"
@@ -662,6 +668,12 @@
           "bianca": "WUS_packing Parameter",
           "strata": "WUS_packing Parameter_Strata"
         }
+      },
+      {
+        "name": "POD",
+        "setting_row": "POD Bottleneck station CT",
+        "tables": {},
+        "bottleneck_only": true
       }
     ]
   },
@@ -722,6 +734,7 @@
       "DIP",
       "L1",
       "L2",
+      "POD",
       "L4",
       "Packing"
     ]
@@ -740,6 +753,17 @@
     "good_col": "PK",
     "scrap_col": "Bonepile"
   },
+  "param_tables": [
+    {
+      "name": "pod",
+      "label": "POD parameters",
+      "label_zh": "POD 參數",
+      "tables": [
+        "WUS_POD Parameter",
+        "WUS_POD TestTime"
+      ]
+    }
+  ],
   "admin_code": "",
   "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。"
 }
