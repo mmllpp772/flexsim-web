@@ -883,7 +883,7 @@ def mock_read_tables(cfg: dict[str, Any], names: list[str]) -> dict[str, Any]:
             for i in range(1, 9):
                 test = fp and i in (3, 6)
                 rows.append({"row": f"{'AOI' if test else 'M'}{i}", "values": [110.0 + i, 98.5 if test else (0.0 if fp else f"Step {i}")]})
-            out[n] = {"columns": ["Bianca", "Bianca_FPYR"], "rows": rows}
+            out[n] = {"columns": ["Bianca", "Bianca_FPYR" if fp else ""], "rows": rows}
     return out
 
 

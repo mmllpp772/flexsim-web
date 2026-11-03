@@ -6,7 +6,8 @@ CT 與 FPYR（輸入參數）
   1. 站別設定 WUS_CT_Setting / WUS_CT_Setting_Strata：每站的瓶頸 CT、USE 開關、目標 CT、每週改善 %。
      USE = 1 時，模型在 Reset 會把這一站所有機台的 CT 都改成這個 Cycle Time。
   2. 機台參數 WUS_SMT Parameter、WUS_DIP Parameter、WUS_FA_L1_Parameter …（Strata 各有一張）：
-     第 1 欄是每台機台的 CT（秒），SMT / DIP 的第 2 欄是測試站的 FPYR（%）。
+     第 1 欄是每台機台的 CT（秒）；欄名含 FPYR 的那一欄是 FPYR（%）。目前 SMT / DIP 有，
+     其他站的參數表日後加上 FPYR 欄，網頁會自動開放。
 
 網頁的預設值直接從模型讀（模型檔有變動才重新讀一次，存在 model_defaults.json），
 使用者改過的值隨工作送來，在 Reset 前寫進模型；USE = 0 的站別在 Reset 後再寫一次機台 CT，
@@ -20,7 +21,8 @@ import math
 from pathlib import Path
 from typing import Any
 
-SETTING_COLS = {"use": "USE", "ct": "Cycle Time", "target": "Target Cycle Time", "improve": "Weekly improvement percentage"}
+# 只用 USE 和 Cycle Time（Target Cycle Time、Weekly improvement percentage 已不使用）
+SETTING_COLS = {"use": "USE", "ct": "Cycle Time"}
 
 
 def _s(text: str) -> str:
@@ -64,17 +66,21 @@ def build_defaults(cfg: dict[str, Any], tables: dict[str, Any]) -> dict[str, Any
             ptb = tables.get(st["tables"].get(prod, ""))
             if not ptb:
                 continue
+            cols = ptb["columns"]
+            fcol = next((i for i, c in enumerate(cols) if "fpyr" in str(c).lower()), None)  # 0-based
             rows = []
             for ri, r in enumerate(ptb["rows"], 1):
                 vals = r["values"]
                 if r["row"].startswith("sdt::") or not vals or not isinstance(vals[0], float):
                     continue
-                second = vals[1] if len(vals) > 1 else None
-                has_fpyr = bool(st.get("fpyr")) and isinstance(second, float) and second > 0
+                fv = vals[fcol] if fcol is not None and len(vals) > fcol else None
+                desc = next((v for i, v in enumerate(vals) if i not in (0, fcol) and isinstance(v, str) and v.strip()), "")
                 rows.append({"name": r["row"], "row": ri, "ct": vals[0],
-                             "fpyr": second if has_fpyr else None,
-                             "desc": second if isinstance(second, str) and second.strip() else ""})
+                             "fpyr": fv if isinstance(fv, float) and fv > 0 else None,  # 0 或空白 = 還沒設定
+                             "desc": desc})
             machines[name] = rows
+            if fcol is not None:
+                stations.setdefault(name, {})["fpyr_col"] = fcol + 1
         out[prod] = {"stations": stations, "machines": machines}
     return out
 
@@ -129,13 +135,10 @@ def validate(cfg: dict[str, Any], ct: Any, defaults: dict[str, Any] | None) -> d
                 rec["use"] = 1.0 if v["use"] else 0.0
             if "ct" in v and st.get("ct_col"):
                 rec["ct"] = _num(v["ct"], f"{name} CT", 0.1, 100000)
-            if "target" in v and st.get("target_col"):
-                rec["target"] = _num(v["target"], f"{name} target CT", 0, 100000)
-            if "improve" in v and st.get("improve_col"):
-                rec["improve"] = _num(v["improve"], f"{name} weekly improvement", -100, 100)
             if rec:
                 clean["stations"][name] = rec
         for name, rows in d["machines"].items():
+            fpyr_ok = bool(d["stations"].get(name, {}).get("fpyr_col"))
             given = (p.get("machines") or {}).get(name)
             if not isinstance(given, dict):
                 continue
@@ -147,7 +150,7 @@ def validate(cfg: dict[str, Any], ct: Any, defaults: dict[str, Any] | None) -> d
                 rec = {}
                 if "ct" in v:
                     rec["ct"] = _num(v["ct"], f"{name} {m['name']} CT", 0.1, 100000)
-                if "fpyr" in v and m["fpyr"] is not None:
+                if "fpyr" in v and fpyr_ok:
                     rec["fpyr"] = _num(v["fpyr"], f"{name} {m['name']} FPYR", 0, 100)
                 if rec:
                     recs[m["name"]] = rec
@@ -172,6 +175,8 @@ def script(cfg: dict[str, Any], clean: dict[str, Any] | None, defaults: dict[str
             for name, rec in c["stations"].items():
                 st = d["stations"][name]
                 for key, val in rec.items():
+                    if key + "_col" not in st:
+                        continue
                     lines.append(f'Table({_s(pc["setting_table"])})[{st["row"]}][{st[key + "_col"]}] = {val!r};')
         for name, recs in c["machines"].items():
             st_rec = c["stations"].get(name, {})
@@ -185,5 +190,5 @@ def script(cfg: dict[str, Any], clean: dict[str, Any] | None, defaults: dict[str
                 if "ct" in rec:
                     lines.append(f"Table({tb})[{m['row']}][1] = {rec['ct']!r};")
                 if "fpyr" in rec:
-                    lines.append(f"Table({tb})[{m['row']}][2] = {rec['fpyr']!r};")
+                    lines.append(f"Table({tb})[{m['row']}][{d['stations'][name]['fpyr_col']}] = {rec['fpyr']!r};")
     return lines if len(lines) > 1 else []

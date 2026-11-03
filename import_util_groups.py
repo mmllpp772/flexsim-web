@@ -25,6 +25,8 @@ HERE = Path(__file__).resolve().parent
 CSV_DIR = HERE / "util_csv"
 CONFIG = HERE / "config.json"
 ORDER = ["SMT", "DIP", "L1", "L2", "L4", "POD", "PACKING", "PK"]
+# 檔名（不分大小寫，去掉 _Strata）→ 網頁上的站別名稱
+LABELS = {"smt": "SMT", "dip": "DIP", "l1": "L1", "l2": "L2", "l4": "L4", "pod": "POD", "packing": "Packing", "pk": "Packing"}
 
 
 def read_text(path: Path) -> str:
@@ -69,8 +71,9 @@ def main() -> None:
         stem = f.stem
         is_strata = "strata" in stem.lower()
         label = stem.replace("_Strata", "").replace("_strata", "").replace(" Strata", "").strip(" _")
+        label = LABELS.get(label.lower(), label)
         groups.append({
-            "name": stem.lower().replace(" ", "_"),
+            "name": label.lower() + ("_strata" if is_strata else ""),
             "label": label, "label_zh": label,
             "product": "strata" if is_strata else "bianca",
             "objects": objs,
@@ -84,9 +87,14 @@ def main() -> None:
 
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
     ut = cfg.setdefault("utilization", {})
+    # 合併：同名群組換成新的設備清單，其他群組（含還沒設定的空白群組）保留
+    merged = {g["name"]: g for g in ut.get("groups", [])}
+    for g in groups:
+        merged[g["name"]] = {**merged.get(g["name"], {}), **g}
+    groups = sorted(merged.values(), key=rank)
     ut["groups"] = groups
     CONFIG.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"\n已更新 config.json：{len(groups)} 個群組。請重新啟動 onedrive_worker.py。")
+    print(f"\n已更新 config.json：共 {len(groups)} 個群組（{sum(1 for g in groups if g['objects'])} 個已設定設備）。請重新啟動 onedrive_worker.py。")
 
 
 if __name__ == "__main__":

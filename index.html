@@ -93,6 +93,24 @@
   .run-inputs dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
   .ct-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
   .ct-h { font-size: 15px; margin: 18px 0 8px; }
+  .ct-tabs { margin: 6px 0 14px; }
+  .ct-tabs button { padding: 7px 18px; font-size: 15px; position: relative; }
+  .ct-tabs .dot { position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--hold); }
+  .ct-station { padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--steel); }
+  .ct-modebar { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
+  .ct-modebar .lbl { font-weight: 700; font-size: 14px; }
+  .ct-modebar .link { margin-left: auto; }
+  .ct-bn { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ct-bn span { font-size: 14px; color: var(--muted); }
+  .ct-bn input { width: 110px; height: 36px; text-align: right; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font-variant-numeric: tabular-nums; }
+  .ct-bn input.changed { border-color: var(--hold); background: var(--hold-soft); }
+  .ct-bn .was { font-size: 11px; color: var(--faint); }
+  .ct-bn.auto b { font: 600 20px var(--cond); }
+  .ct-bn.auto small { color: var(--faint); font-size: 12px; }
+  .ct-station .hint { margin: 8px 0 0; }
+  .ct-was { margin: 6px 0 0; font-size: 12px; color: var(--hold); }
+  table.ct-table input.frozen { background: var(--steel); border-style: dashed; color: var(--faint); }
+  table.ct-table input.frozen:hover { border-color: var(--faint); }
   .ct-mode { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--line);
     border-radius: 10px; background: var(--steel); }
   .ct-mode .lbl { font-weight: 700; font-size: 14px; }
@@ -688,17 +706,9 @@
             <p class="hint tight" data-i18n="ctHint"></p>
             <button type="button" class="link" id="ctResetBtn" data-i18n="ctReset"></button>
           </div>
-          <div class="ct-mode">
-            <span class="lbl" data-i18n="ctModeAll"></span>
-            <div class="seg" id="ctModeSeg" role="group" data-i18n-aria="ctModeAll"></div>
-            <span class="hint tight" id="ctModeNote"></span>
-          </div>
-          <h3 class="ct-h" data-i18n="ctStations"></h3>
-          <div class="table-wrap"><table class="ct-table" id="ctStationTable"></table></div>
-          <div class="ct-mhead">
-            <h3 class="ct-h" data-i18n="ctMachines"></h3>
-            <div class="seg" id="ctStationSeg" role="group" data-i18n-aria="station"></div>
-          </div>
+          <div class="seg ct-tabs" id="ctStationSeg" role="group" data-i18n-aria="station"></div>
+          <div class="ct-station" id="ctStationBox"></div>
+          <h3 class="ct-h" data-i18n="ctMachines"></h3>
           <p class="hint tight" id="ctMachineNote"></p>
           <div class="table-wrap ct-wrap"><table class="ct-table" id="ctMachineTable"></table></div>
         </section>
@@ -995,9 +1005,13 @@
       ctModeBnHelp: "Enter one bottleneck CT per station; every machine in the station uses it. Use this when per-workstation CT isn't available.",
       ctModeMcHelp: "Enter the CT of each workstation below. The bottleneck is the largest of them.",
       ctModeMixed: "Stations use different modes. Pick one to set them all.", ctAutoMax: "Largest workstation CT",
+      ctApplyAll: "Use this mode for all stations",
+      ctFpyrHow: "FPYR cells shown dashed have no value yet; click one to fill it in.",
+      ctNoFpyrCol: "This station's parameter table has no FPYR column yet, so FPYR is locked. Add one in the model (a column whose name contains FPYR) and it opens here automatically.",
+      ctFpyrUnset: "Not set. Click to enter FPYR.",
       ctStation: "Station", ctCt: "Bottleneck CT (s)", ctTarget: "Target CT (s)", ctImprove: "Weekly improvement (%)",
       ctMachine: "Machine", ctDesc: "Description", ctMct: "CT (s)", ctFpyr: "FPYR (%)", ctWas: "Model {v}",
-      ctUsingStation: "This station uses its bottleneck CT ({v} s) for every machine. Switch it to Each workstation's CT above to set machines one by one. Values you entered here are kept.",
+      ctUsingStation: "Every machine uses the bottleneck CT ({v} s). Switch to Each workstation's CT to set them one by one; values entered here are kept.",
       ctPerMachine: "Each machine uses its own CT. You can paste a column from Excel.", ctNoFpyr: "This station has no FPYR in the model.",
       sumCtNone: "Model values", sumCt: "{n} changed",
       rwByStation: "Rework by station", rwHint: "Over the whole period. Click a station to chart it.", rwRate: "Repair rate",
@@ -1020,7 +1034,8 @@
       utilAvg: "Average utilization", utilHi: "Highest", utilLo: "Lowest", utilCol: "Utilization", utilEquip: "Equipment",
       utilStates: "Time in each state", utilHint: "Share of each machine's time by state. {ex} time is left out, the same as the FlexSim dashboard.",
       utilHintNoEx: "Share of each machine's time by state.", utilNone: "This run has no utilization data. Runs made before this update don't include it.",
-      utilMissing: "Not found in the model, so not shown: {list}", utilTipH: "{h} h", utilWorking: "Utilization counts: {list}.",
+      utilMissing: "Not found in the model, so not shown: {list}",
+      utilNotSet: "No machines set up for {g} yet. Export this chart's CSV from the FlexSim dashboard and run import_util_groups.py.", utilTipH: "{h} h", utilWorking: "Utilization counts: {list}.",
       needPeriod: "Choose a start and end date under Period and run info first.",
       kpiTitle: "Key metrics", runInputs: "Inputs used in this run",
       sumShift: "{p}: {n} shift(s)", sumTarget: "Target {v}",
@@ -1141,9 +1156,13 @@
       ctModeBnHelp: "每站只填一個瓶頸 CT，整站機台都用這個值。拿不到各工站 CT 時用這個。",
       ctModeMcHelp: "在下方逐台填各工站 CT，瓶頸 CT 自動取其中最大值。",
       ctModeMixed: "目前各站的方式不同。點選其中一個可以一次套用到所有站別。", ctAutoMax: "各工站最大值",
+      ctApplyAll: "所有站別都用這個方式",
+      ctFpyrHow: "虛線的 FPYR 格子代表還沒設定，點一下就能填。",
+      ctNoFpyrCol: "這段的參數表還沒有 FPYR 欄，所以 FPYR 先鎖住。在模型裡加一欄（欄名含 FPYR），網頁就會自動開放。",
+      ctFpyrUnset: "尚未設定，點一下可以填 FPYR。",
       ctStation: "站別", ctCt: "瓶頸 CT（秒）", ctTarget: "目標 CT（秒）", ctImprove: "每週改善（%）",
       ctMachine: "機台", ctDesc: "說明", ctMct: "CT（秒）", ctFpyr: "FPYR（%）", ctWas: "模型 {v}",
-      ctUsingStation: "這一站用瓶頸 CT（{v} 秒），所有機台都用這個值。要逐台設定，請在上方把這站切到「各工站 CT」。你在這裡填過的值都會保留。",
+      ctUsingStation: "所有機台都用瓶頸 CT（{v} 秒）。要逐台設定，請切到「各工站 CT」，這裡填過的值都會保留。",
       ctPerMachine: "每台機台用自己的 CT。可以從 Excel 複製一整欄貼上。", ctNoFpyr: "模型裡這一站沒有 FPYR。",
       sumCtNone: "使用模型值", sumCt: "已修改 {n} 項",
       rwByStation: "各站 Rework", rwHint: "整個期間的結果，點選站別看變化。", rwRate: "維修率",
@@ -1166,7 +1185,8 @@
       utilAvg: "平均使用率", utilHi: "最高", utilLo: "最低", utilCol: "使用率", utilEquip: "設備",
       utilStates: "各狀態時間比例", utilHint: "每台設備在各狀態的時間比例。和 FlexSim 儀表板一樣，已扣除 {ex} 時間。",
       utilHintNoEx: "每台設備在各狀態的時間比例。", utilNone: "這次模擬沒有使用率資料。更新之前跑的模擬不會有。",
-      utilMissing: "模型裡找不到這些設備，所以沒有顯示：{list}", utilTipH: "{h} 小時", utilWorking: "使用率計算：{list}。",
+      utilMissing: "模型裡找不到這些設備，所以沒有顯示：{list}",
+      utilNotSet: "{g} 還沒設定設備。從 FlexSim 儀表板把這張圖 Export to CSV，再執行 import_util_groups.py 即可。", utilTipH: "{h} 小時", utilWorking: "使用率計算：{list}。",
       needPeriod: "請先到「期間與基本資料」選擇開始和結束日期。",
       kpiTitle: "主要指標", runInputs: "這次模擬用的輸入",
       sumShift: "{p} {n} 班", sumTarget: "Target {v}",
@@ -1837,70 +1857,57 @@
     $("ctProdSeg").querySelectorAll("button").forEach(b => b.onclick = () => { ctProd = b.dataset.p; store("simCtProd", ctProd); renderCt(); });
     const D = CT().defaults[ctProd], stations = CT().stations.filter(n => D.stations[n] || (D.machines[n] || []).length);
     const was = (v) => `<span class="was">${esc(t("ctWas", { v: nf(v) }))}</span>`;
-    const label = { ct: "ctCt", target: "ctTarget", improve: "ctImprove" };
-    const isBn = (n) => D.stations[n] ? !!ctStationVal(ctProd, n, "use") : false;
-    const maxMc = (n) => Math.max(0, ...(D.machines[n] || []).map(m => Number(ctMachineVal(ctProd, n, m, "ct")) || 0));
-    // mode for all stations
-    const modal = stations.filter(n => D.stations[n]?.use != null);
-    const allBn = modal.length && modal.every(isBn), allMc = modal.length && modal.every(n => !isBn(n));
-    $("ctModeSeg").innerHTML = [["bn", "ctModeBn", allBn], ["mc", "ctModeMc", allMc]]
-      .map(([k, key, on]) => `<button type="button" data-m="${k}" aria-pressed="${!!on}">${esc(t(key))}</button>`).join("");
-    $("ctModeNote").textContent = allBn ? t("ctModeBnHelp") : allMc ? t("ctModeMcHelp") : t("ctModeMixed");
-    $("ctModeSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
-      modal.forEach(n => ctSet(ctProd, "station", n, "use", b.dataset.m === "bn" ? 1 : 0));
-      renderCt(); renderInNav();
-    });
-    const cell = (n, key) => {
-      const d = D.stations[n]?.[key];
-      if (d === undefined || d === null) return "<td>—</td>";
-      if (key === "ct" && D.stations[n]?.use != null && !isBn(n)) {
-        // workstation mode: the bottleneck is the largest machine CT; the bottleneck value typed earlier is kept for later
-        return `<td><input type="number" value="${esc(maxMc(n))}" disabled aria-label="${esc(n)} ${esc(t("ctAutoMax"))}"><span class="auto">${esc(t("ctAutoMax"))}</span></td>`;
-      }
-      const v = ctStationVal(ctProd, n, key), ch = v !== d;
-      return `<td><input type="number" step="0.1" data-st="${esc(n)}" data-key="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(n)} ${esc(t(label[key]))}">${ch ? was(d) : ""}</td>`;
-    };
-    $("ctStationTable").innerHTML = `<thead><tr><th class="l">${esc(t("ctStation"))}</th><th class="l">${esc(t("ctUse"))}</th><th>${esc(t("ctCt"))}</th><th>${esc(t("ctTarget"))}</th><th>${esc(t("ctImprove"))}</th></tr></thead><tbody>` +
-      stations.map(n => {
-        const s0 = D.stations[n];
-        const bn = isBn(n);
-        const modeCell = s0 && s0.use != null
-          ? `<div class="seg" role="group" aria-label="${esc(n)} ${esc(t("ctUse"))}">${[["1", "ctModeBn", bn], ["0", "ctModeMc", !bn]].map(([v, key, on]) =>
-              `<button type="button" data-st="${esc(n)}" data-use="${v}" aria-pressed="${on}">${esc(t(key))}</button>`).join("")}</div>` +
-            (bn !== !!s0.use ? `<small style="color:var(--hold);display:block;margin-top:2px">${esc(t("ctWas", { v: t(s0.use ? "ctModeBn" : "ctModeMc") }))}</small>` : "")
-          : "—";
-        return `<tr><td class="l"><b>${esc(n)}</b></td><td class="l">${modeCell}</td>${cell(n, "ct")}${cell(n, "target")}${cell(n, "improve")}</tr>`;
-      }).join("") + "</tbody>";
-    $("ctStationTable").querySelectorAll("button[data-use]").forEach(b => b.onclick = () => {
-      ctSet(ctProd, "station", b.dataset.st, "use", +b.dataset.use); renderCt(); renderInNav();
-    });
-    $("ctStationTable").querySelectorAll("input[data-key]").forEach(inp => inp.addEventListener("change", () => {
-      const n = inp.dataset.st, key = inp.dataset.key, v = numIn(inp.value);
-      ctSet(ctProd, "station", n, key, v == null ? D.stations[n][key] : v);
-      renderCt(); renderInNav();
-    }));
+    // station tabs (with a dot on stations that have changes)
     if (!stations.includes(ctStation)) ctStation = stations[0];
-    $("ctStationSeg").innerHTML = stations.map(n => `<button type="button" data-s="${esc(n)}" aria-pressed="${n === ctStation}">${esc(n)}</button>`).join("");
+    const changedIn = (n) => !!(CTS[ctProd]?.stations?.[n] || CTS[ctProd]?.machines?.[n]);
+    $("ctStationSeg").innerHTML = stations.map(n => `<button type="button" data-s="${esc(n)}" aria-pressed="${n === ctStation}">${esc(n)}${changedIn(n) ? '<i class="dot" aria-hidden="true"></i>' : ""}</button>`).join("");
     $("ctStationSeg").querySelectorAll("button").forEach(b => b.onclick = () => { ctStation = b.dataset.s; store("simCtStation", ctStation); renderCt(); });
-    const ms = D.machines[ctStation] || [];
-    const useSt = D.stations[ctStation] ? !!ctStationVal(ctProd, ctStation, "use") : false;
-    const stCt = ctStationVal(ctProd, ctStation, "ct");
-    const hasFpyr = ms.some(m => m.fpyr != null), hasDesc = ms.some(m => m.desc);
-    $("ctMachineNote").textContent = (useSt ? t("ctUsingStation", { v: nf(stCt) }) : t("ctPerMachine")) + (hasFpyr ? "" : " " + t("ctNoFpyr"));
-    $("ctMachineTable").innerHTML = `<thead><tr><th class="l">${esc(t("ctMachine"))}</th>${hasDesc ? `<th class="l">${esc(t("ctDesc"))}</th>` : ""}<th>${esc(t("ctMct"))}</th>${hasFpyr ? `<th>${esc(t("ctFpyr"))}</th>` : ""}</tr></thead><tbody>` +
+
+    const n = ctStation, s0 = D.stations[n] || {}, ms = D.machines[n] || [];
+    const hasMode = s0.use != null;
+    const bn = hasMode && !!ctStationVal(ctProd, n, "use");
+    const maxMc = Math.max(0, ...ms.map(m => Number(ctMachineVal(ctProd, n, m, "ct")) || 0));
+    // mode + bottleneck CT
+    const modeSeg = hasMode ? `<div class="seg" id="ctModeSeg" role="group" aria-label="${esc(t("ctUse"))}">${[["1", "ctModeBn", bn], ["0", "ctModeMc", !bn]].map(([v, key, on]) =>
+      `<button type="button" data-use="${v}" aria-pressed="${on}">${esc(t(key))}</button>`).join("")}</div>` : "";
+    const ctVal = ctStationVal(ctProd, n, "ct"), ctCh = s0.ct != null && ctVal !== s0.ct;
+    const ctField = !hasMode || s0.ct == null ? "" : bn
+      ? `<label class="ct-bn"><span>${esc(t("ctCt"))}</span><input type="number" step="0.1" id="ctBnInput" value="${esc(ctVal)}" class="${ctCh ? "changed" : ""}">${ctCh ? was(s0.ct) : ""}</label>`
+      : `<div class="ct-bn auto"><span>${esc(t("ctCt"))}</span><b>${nf(maxMc)}</b><small>${esc(t("ctAutoMax"))}</small></div>`;
+    $("ctStationBox").innerHTML = `<div class="ct-modebar">${hasMode ? `<span class="lbl">${esc(t("ctUse"))}</span>${modeSeg}` : ""}${ctField}
+        ${hasMode ? `<button type="button" class="link" id="ctApplyAll">${esc(t("ctApplyAll"))}</button>` : ""}</div>
+      ${hasMode && bn !== !!s0.use ? `<p class="ct-was">${esc(t("ctWas", { v: t(s0.use ? "ctModeBn" : "ctModeMc") }))}</p>` : ""}
+      <p class="hint tight">${esc(hasMode ? t(bn ? "ctModeBnHelp" : "ctModeMcHelp") : "")}</p>`;
+    $("ctStationBox").querySelectorAll("#ctModeSeg button").forEach(b => b.onclick = () => { ctSet(ctProd, "station", n, "use", +b.dataset.use); renderCt(); renderInNav(); });
+    $("ctBnInput")?.addEventListener("change", (e) => { const v = numIn(e.target.value); ctSet(ctProd, "station", n, "ct", v == null ? s0.ct : v); renderCt(); renderInNav(); });
+    $("ctApplyAll")?.addEventListener("click", () => {
+      stations.filter(x => D.stations[x]?.use != null).forEach(x => ctSet(ctProd, "station", x, "use", bn ? 1 : 0));
+      renderCt(); renderInNav();
+    });
+
+    // machines
+    const fcol = !!s0.fpyr_col, hasDesc = ms.some(m => m.desc);
+    $("ctMachineNote").textContent = (bn ? t("ctUsingStation", { v: nf(ctVal) }) : t("ctPerMachine")) + " " + t(fcol ? "ctFpyrHow" : "ctNoFpyrCol");
+    $("ctMachineTable").innerHTML = `<thead><tr><th class="l">${esc(t("ctMachine"))}</th>${hasDesc ? `<th class="l">${esc(t("ctDesc"))}</th>` : ""}<th>${esc(t("ctMct"))}</th><th>${esc(t("ctFpyr"))}</th></tr></thead><tbody>` +
       ms.map((m, i) => {
-        const v = useSt ? stCt : ctMachineVal(ctProd, ctStation, m, "ct"), ch = !useSt && v !== m.ct;
-        const f = m.fpyr != null ? ctMachineVal(ctProd, ctStation, m, "fpyr") : null, chf = f != null && f !== m.fpyr;
-        const fcell = !hasFpyr ? "" : `<td>${m.fpyr != null
-          ? `<input type="number" step="0.01" min="0" max="100" data-i="${i}" data-key="fpyr" value="${esc(f)}" class="${chf ? "changed" : ""}" aria-label="${esc(m.name)} FPYR">${chf ? was(m.fpyr) : ""}` : ""}</td>`;
+        const v = bn ? ctVal : ctMachineVal(ctProd, n, m, "ct"), ch = !bn && v !== m.ct;
+        let fcell;
+        if (!fcol) fcell = `<td><input type="number" disabled class="frozen" placeholder="—" aria-label="${esc(m.name)} FPYR"></td>`;
+        else {
+          const f = ctMachineVal(ctProd, n, m, "fpyr"), chf = f !== m.fpyr && f != null, unset = f == null;
+          fcell = `<td><input type="number" step="0.01" min="0" max="100" data-i="${i}" data-key="fpyr" value="${unset ? "" : esc(f)}" placeholder="—"
+            class="${unset ? "frozen" : chf ? "changed" : ""}" title="${esc(unset ? t("ctFpyrUnset") : "")}" aria-label="${esc(m.name)} FPYR">${chf ? was(m.fpyr) : ""}</td>`;
+        }
         return `<tr><td class="l">${esc(m.name)}</td>${hasDesc ? `<td class="l desc" title="${esc(m.desc)}">${esc(m.desc)}</td>` : ""}` +
-          `<td><input type="number" step="0.1" data-i="${i}" data-key="ct" value="${esc(v)}" ${useSt ? "disabled" : ""} class="${ch ? "changed" : ""}" aria-label="${esc(m.name)} CT">${ch ? was(m.ct) : ""}</td>${fcell}</tr>`;
+          `<td><input type="number" step="0.1" data-i="${i}" data-key="ct" value="${esc(v)}" ${bn ? "disabled" : ""} class="${ch ? "changed" : ""}" aria-label="${esc(m.name)} CT">${ch ? was(m.ct) : ""}</td>${fcell}</tr>`;
       }).join("") + "</tbody>";
-    const inputs = [...$("ctMachineTable").querySelectorAll("input:not([disabled])")];
+    const inputs = [...$("ctMachineTable").querySelectorAll("input[data-key]:not([disabled])")];
     inputs.forEach(inp => {
+      inp.addEventListener("focus", () => inp.classList.remove("frozen"));
+      inp.addEventListener("blur", () => { if (inp.dataset.key === "fpyr" && inp.value.trim() === "") inp.classList.add("frozen"); });
       inp.addEventListener("change", () => {
         const m = ms[+inp.dataset.i], key = inp.dataset.key, v = numIn(inp.value);
-        ctSet(ctProd, "machine", ctStation, key, v == null ? m[key] : v, m);
+        ctSet(ctProd, "machine", n, key, v == null ? m[key] : v, m);
         renderCt(); renderInNav();
       });
       inp.addEventListener("paste", (e) => {
@@ -1911,7 +1918,7 @@
         const key = inp.dataset.key, col = inputs.filter(x => x.dataset.key === key), start = col.indexOf(inp);
         vals.forEach((raw, k) => {
           const target = col[start + k]; if (!target) return;
-          const v = numIn(raw); if (v != null) ctSet(ctProd, "machine", ctStation, key, v, ms[+target.dataset.i]);
+          const v = numIn(raw); if (v != null) ctSet(ctProd, "machine", n, key, v, ms[+target.dataset.i]);
         });
         renderCt(); renderInNav();
       });
@@ -2943,6 +2950,10 @@
         <div class="ubar${r.segs.length ? "" : " empty"}" data-r="${ri}">${r.segs.map((sg, si) =>
           `<span data-s="${si}" style="flex:${sg.p.toFixed(5)} 1 0;background:${stColor(+sg.k)}"></span>`).join("")}</div>
         <div class="pct${r.util == null ? " na" : ""}">${pc(r.util)}</div>`).join("");
+    if (!g.objects.length) {
+      $("utilList").innerHTML = `<p class="empty">${esc(t("utilNotSet", { g: L(g, "label") }))}</p>`;
+      $("utilLegend").hidden = true;
+    }
     const miss = job?.utilization?.missing?.filter(o => g.objects.includes(o)) || [];
     $("utilMissing").hidden = !miss.length; $("utilMissing").textContent = t("utilMissing", { list: miss.join(", ") });
     const tip = $("tip");

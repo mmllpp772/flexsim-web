@@ -384,7 +384,7 @@
   ],
   "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。 columns 是這張表應有的欄位，還沒有資料時網頁用它畫出空的版面。",
   "utilization": {
-    "_help": "Equipment utilization. groups = one chart each (like the FlexSim dashboard); objects are model object names. States are FlexSim state numbers (2 processing, 1 idle, 12 scheduled down, 30 off shift ...). utilized_states count as working time; excluded_states (scheduled down, off shift, lunch, on break) are left out of the total, like the FlexSim chart.",
+    "_help": "Equipment utilization. groups = one chart per stage and product (like the FlexSim dashboard); empty object lists are placeholders. Fill them with import_util_groups.py (Export to CSV from each dashboard chart).",
     "max_state": 50,
     "utilized_states": [
       2
@@ -401,6 +401,7 @@
         "name": "smt",
         "label": "SMT",
         "label_zh": "SMT",
+        "product": "bianca",
         "objects": [
           "WUS_SMT1_Board feeder",
           "WUS_SMT1_Sticky roller1",
@@ -443,20 +444,103 @@
           "WUS_Top_Post_AOI",
           "WUS_SMT1_AXI1",
           "WUS_SMT1_AXI2"
-        ],
-        "product": "bianca"
+        ]
       },
       {
         "name": "dip",
         "label": "DIP",
         "label_zh": "DIP",
+        "product": "bianca",
         "objects": [
           "WUS_D01_MDA_buffer1",
           "WUS_D01_MDA1",
           "WUS_D01_MDA2",
           "WUS_D01_AOI"
-        ],
-        "product": "bianca"
+        ]
+      },
+      {
+        "name": "l1",
+        "label": "L1",
+        "label_zh": "L1",
+        "product": "bianca",
+        "objects": []
+      },
+      {
+        "name": "l2",
+        "label": "L2",
+        "label_zh": "L2",
+        "product": "bianca",
+        "objects": []
+      },
+      {
+        "name": "l4",
+        "label": "L4",
+        "label_zh": "L4",
+        "product": "bianca",
+        "objects": []
+      },
+      {
+        "name": "pod",
+        "label": "POD",
+        "label_zh": "POD",
+        "product": "bianca",
+        "objects": []
+      },
+      {
+        "name": "packing",
+        "label": "Packing",
+        "label_zh": "Packing",
+        "product": "bianca",
+        "objects": []
+      },
+      {
+        "name": "smt_strata",
+        "label": "SMT",
+        "label_zh": "SMT",
+        "product": "strata",
+        "objects": []
+      },
+      {
+        "name": "dip_strata",
+        "label": "DIP",
+        "label_zh": "DIP",
+        "product": "strata",
+        "objects": []
+      },
+      {
+        "name": "l1_strata",
+        "label": "L1",
+        "label_zh": "L1",
+        "product": "strata",
+        "objects": []
+      },
+      {
+        "name": "l2_strata",
+        "label": "L2",
+        "label_zh": "L2",
+        "product": "strata",
+        "objects": []
+      },
+      {
+        "name": "l4_strata",
+        "label": "L4",
+        "label_zh": "L4",
+        "product": "strata",
+        "objects": []
+      },
+      {
+        "name": "pod_strata",
+        "label": "POD",
+        "label_zh": "POD",
+        "product": "strata",
+        "objects": []
+      },
+      {
+        "name": "packing_strata",
+        "label": "Packing",
+        "label_zh": "Packing",
+        "product": "strata",
+        "objects": []
       }
     ]
   },
