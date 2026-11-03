@@ -91,6 +91,21 @@
   .run-inputs dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
   .run-inputs dt { color: var(--muted); }
   .run-inputs dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .ct-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .ct-h { font-size: 15px; margin: 18px 0 8px; }
+  .ct-mhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+  .ct-mhead .ct-h { margin-bottom: 4px; }
+  .ct-wrap { max-height: 520px; overflow: auto; }
+  table.ct-table th { position: sticky; top: 0; background: var(--panel); z-index: 1; box-shadow: inset 0 -1px 0 var(--line); }
+  table.ct-table td { padding: 4px 12px; }
+  table.ct-table td.desc { color: var(--muted); font-size: 13px; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  table.ct-table input[type=number] { width: 110px; height: 34px; text-align: right; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--panel); font-variant-numeric: tabular-nums; }
+  table.ct-table input[type=number]:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+  table.ct-table input[type=number]:disabled { background: transparent; border-style: dashed; color: var(--faint); }
+  table.ct-table input.changed { border-color: var(--hold); background: var(--hold-soft); }
+  table.ct-table input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--blue); }
+  table.ct-table td .was { display: block; font-size: 11px; color: var(--faint); text-align: right; }
   .shift-count { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 6px; }
   .shift-count .lbl { font-weight: 600; }
   .shift-count .spacer { flex: 1; }
@@ -638,6 +653,25 @@
           <p class="hint shift-hint" data-i18n="shiftHint"></p>
           <div class="shift-grids" id="shiftGrids"></div>
         </section>
+
+        <section class="panel" data-cat="ct" id="ctPanel">
+          <div class="panel-head">
+            <h2 data-i18n="ctTitle"></h2>
+            <div class="seg prod" id="ctProdSeg" role="group" data-i18n-aria="product"></div>
+          </div>
+          <div class="ct-bar">
+            <p class="hint tight" data-i18n="ctHint"></p>
+            <button type="button" class="link" id="ctResetBtn" data-i18n="ctReset"></button>
+          </div>
+          <h3 class="ct-h" data-i18n="ctStations"></h3>
+          <div class="table-wrap"><table class="ct-table" id="ctStationTable"></table></div>
+          <div class="ct-mhead">
+            <h3 class="ct-h" data-i18n="ctMachines"></h3>
+            <div class="seg" id="ctStationSeg" role="group" data-i18n-aria="station"></div>
+          </div>
+          <p class="hint tight" id="ctMachineNote"></p>
+          <div class="table-wrap ct-wrap"><table class="ct-table" id="ctMachineTable"></table></div>
+        </section>
       </div>
     </div>
   </main>
@@ -831,7 +865,7 @@
       switching: "Switching", toFast: "Switching to fast forward.", toRun: "Switching to normal run with progress.",
       syncSub: "It takes effect once OneDrive syncs.", pPaused: "Paused",
       resetTip: "Clear the run status and results view. Your inputs stay as they are.",
-      restoreDefaults: "Restore all inputs to defaults", confirmDefaults: "Restore every input (period, daily plan, shifts) to the defaults?",
+      restoreDefaults: "Restore all inputs to defaults", confirmDefaults: "Restore every input (period, daily plan, shifts, CT and FPYR) to the defaults?",
       defaultsMsg: "All inputs restored to defaults.",
       runTip: "Run the simulation and show progress",
       fastTip: "Run to the end with progress only, no live metrics",
@@ -852,7 +886,16 @@
       startLbl: "Start", endLbl: "End",
       tabInput: "Parameters", tabOutput: "Metrics", tabHistory: "Run history",
       inputCats: "Input categories", outputCats: "Metric categories", grpInputs: "Inputs", grpOutputs: "Metrics",
-      catBasic: "Period and run info", catPlan: "Daily input plan", catShift: "Shifts", catOverview: "Overview",
+      catBasic: "Period and run info", catPlan: "Daily input plan", catShift: "Shifts", catOverview: "Overview", catCt: "CT and FPYR",
+      ctTitle: "Cycle time (CT) and FPYR",
+      ctHint: "Starting values are read from the FlexSim model. Changed cells are highlighted and only they are sent with the run.",
+      ctReset: "Restore model values for this product", ctConfirmReset: "Restore all CT and FPYR values of {p} to the model's values?",
+      ctStations: "Station CT", ctMachines: "Machine CT and FPYR", ctUse: "Same CT for the whole station",
+      ctStation: "Station", ctCt: "Cycle time (s)", ctTarget: "Target CT (s)", ctImprove: "Weekly improvement (%)",
+      ctMachine: "Machine", ctDesc: "Description", ctMct: "CT (s)", ctFpyr: "FPYR (%)", ctWas: "Model {v}",
+      ctUsingStation: "This station uses the same CT ({v} s) for every machine. Untick Same CT for the whole station above to set machines one by one.",
+      ctPerMachine: "Each machine uses its own CT. You can paste a column from Excel.", ctNoFpyr: "This station has no FPYR in the model.",
+      sumCtNone: "Model values", sumCt: "{n} changed",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -953,7 +996,7 @@
       switching: "切換中", toFast: "切換成快轉。", toRun: "切換成一般執行，顯示進度。",
       syncSub: "OneDrive 同步後生效。", pPaused: "已暫停",
       resetTip: "清除執行狀態和畫面上的結果，你設定的參數會保留。",
-      restoreDefaults: "所有輸入恢復預設值", confirmDefaults: "要把所有輸入（期間、每日投產計畫、班別）恢復成預設值嗎？",
+      restoreDefaults: "所有輸入恢復預設值", confirmDefaults: "要把所有輸入（期間、每日投產計畫、班別、CT 與 FPYR）恢復成預設值嗎？",
       defaultsMsg: "所有輸入已恢復預設值。",
       runTip: "執行模擬並顯示進度",
       fastTip: "直接跑到結束，只顯示進度，不顯示即時指標",
@@ -974,7 +1017,16 @@
       startLbl: "開始", endLbl: "結束",
       tabInput: "參數調整", tabOutput: "指標呈現", tabHistory: "執行紀錄",
       inputCats: "輸入類別", outputCats: "指標類別", grpInputs: "輸入", grpOutputs: "指標",
-      catBasic: "期間與基本資料", catPlan: "每日投產計畫", catShift: "班別設定", catOverview: "總覽",
+      catBasic: "期間與基本資料", catPlan: "每日投產計畫", catShift: "班別設定", catOverview: "總覽", catCt: "CT 與 FPYR",
+      ctTitle: "CT（週期時間）與 FPYR",
+      ctHint: "預設值是從 FlexSim 模型讀出來的。改過的格子會標示出來，只有改過的值會隨模擬送出。",
+      ctReset: "這個產品全部恢復模型值", ctConfirmReset: "要把 {p} 的 CT 和 FPYR 全部恢復成模型的值嗎？",
+      ctStations: "站別 CT", ctMachines: "各機台 CT 與 FPYR", ctUse: "整站使用同一個 CT",
+      ctStation: "站別", ctCt: "Cycle Time（秒）", ctTarget: "目標 CT（秒）", ctImprove: "每週改善（%）",
+      ctMachine: "機台", ctDesc: "說明", ctMct: "CT（秒）", ctFpyr: "FPYR（%）", ctWas: "模型 {v}",
+      ctUsingStation: "這一站所有機台都用同一個 CT（{v} 秒）。要逐台設定，請在上方取消勾選「整站使用同一個 CT」。",
+      ctPerMachine: "每台機台用自己的 CT。可以從 Excel 複製一整欄貼上。", ctNoFpyr: "模型裡這一站沒有 FPYR。",
+      sumCtNone: "使用模型值", sumCt: "已修改 {n} 項",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -1569,12 +1621,14 @@
     const c = [{ k: "basic", label: t("catBasic") }];
     if (PD()) c.push({ k: "plan", label: t("catPlan") });
     if (SH()) c.push({ k: "shift", label: t("catShift") });
+    if (CT()) c.push({ k: "ct", label: t("catCt") });
     return c;
   }
   function inSummary(k) {
     if (k === "basic") { const p = currentPeriod(); return p ? `${dayFmt(p.start, false)} – ${dayFmt(p.end)}` : "—"; }
     if (k === "plan") return PD().products.map(p => `${L(p, "label")} ${fmt(Number(planFor(p.name).target) || 0, 0)}`).join(", ");
     if (k === "shift") return SH().products.map(p => t("sumShift", { p: L(p, "label"), n: shiftFor(p.name).count })).join(", ");
+    if (k === "ct") { const n = ctChangedCount(); return n ? t("sumCt", { n }) : t("sumCtNone"); }
     return "";
   }
   function renderInNav() {
@@ -1586,7 +1640,139 @@
     $("inNav").querySelectorAll("button").forEach(b => b.onclick = () => showInCat(b.dataset.k));
     document.querySelectorAll("#app [data-cat]").forEach(sec => sec.hidden = sec.dataset.cat !== IN_CAT);
   }
-  function showInCat(k) { IN_CAT = k; store("simInCat", k); renderInNav(); if (k === "plan") renderPlan(); if (k === "shift") renderShifts(); }
+  function showInCat(k) { IN_CAT = k; store("simInCat", k); renderInNav(); if (k === "plan") renderPlan(); if (k === "shift") renderShifts(); if (k === "ct") renderCt(); }
+
+  // ---------- CT and FPYR ----------
+  // CTS holds only the values the user changed: { product: { stations: {SMT: {use, ct, target, improve}}, machines: {SMT: {name: {ct, fpyr}}} } }
+  const CT = () => CFG.ct_fpyr;
+  let CTS = {}, ctProd = load("simCtProd"), ctStation = load("simCtStation");
+  try { CTS = JSON.parse(load("simCt") || "{}") || {}; } catch (e) { CTS = {}; }
+  const saveCt = () => store("simCt", JSON.stringify(CTS));
+  const ctOf = (p) => (CTS[p] ||= { stations: {}, machines: {} });
+  const ctProdLabel = (n) => { const p = (PD()?.products || SH()?.products || []).find(x => x.name === n); return p ? L(p, "label") : n; };
+  function ctStationVal(p, name, key) {
+    const v = CTS[p]?.stations?.[name]?.[key];
+    return v !== undefined ? v : CT().defaults[p].stations[name]?.[key];
+  }
+  function ctMachineVal(p, name, m, key) {
+    const v = CTS[p]?.machines?.[name]?.[m.name]?.[key];
+    return v !== undefined ? v : m[key];
+  }
+  function ctSet(p, kind, name, key, value, m) {
+    const c = ctOf(p);
+    if (kind === "station") {
+      const def = CT().defaults[p].stations[name]?.[key];
+      const rec = (c.stations[name] ||= {});
+      if (key === "use" ? !!value === !!def : value === def) delete rec[key]; else rec[key] = value;
+      if (!Object.keys(rec).length) delete c.stations[name];
+    } else {
+      const st = (c.machines[name] ||= {}), rec = (st[m.name] ||= {});
+      if (value === m[key]) delete rec[key]; else rec[key] = value;
+      if (!Object.keys(rec).length) delete st[m.name];
+      if (!Object.keys(st).length) delete c.machines[name];
+    }
+    saveCt();
+  }
+  function ctChangedCount() {
+    if (!CT()) return 0;
+    let n = 0;
+    for (const p of Object.keys(CT().defaults)) {
+      for (const r of Object.values(CTS[p]?.stations || {})) n += Object.keys(r).length;
+      for (const st of Object.values(CTS[p]?.machines || {})) for (const r of Object.values(st)) n += Object.keys(r).length;
+    }
+    return n;
+  }
+  function ctForSubmit() {
+    if (!CT()) return null;
+    const out = {};
+    for (const p of Object.keys(CT().defaults)) {
+      const c = CTS[p]; if (!c) continue;
+      const st = {}, mc = {};
+      for (const [n, r] of Object.entries(c.stations || {})) if (CT().defaults[p].stations[n]) st[n] = { ...r };
+      for (const [n, ms] of Object.entries(c.machines || {})) {
+        const known = new Set((CT().defaults[p].machines[n] || []).map(m => m.name));
+        const keep = {}; for (const [mn, r] of Object.entries(ms)) if (known.has(mn)) keep[mn] = { ...r };
+        if (Object.keys(keep).length) mc[n] = keep;
+      }
+      if (Object.keys(st).length || Object.keys(mc).length) out[p] = { stations: st, machines: mc };
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  const numIn = (v) => { const x = String(v).trim().replace(/,/g, ""); return x === "" || Number.isNaN(Number(x)) ? null : Number(x); };
+  const nf = (v) => v == null ? "—" : fmt(v, Number.isInteger(v) ? 0 : 2);
+  function renderCt() {
+    if (!CT()) return;
+    const prods = Object.keys(CT().defaults);
+    if (!prods.includes(ctProd)) ctProd = prods[0];
+    $("ctProdSeg").innerHTML = prods.map(n => `<button type="button" data-p="${esc(n)}" aria-pressed="${n === ctProd}">${esc(ctProdLabel(n))}</button>`).join("");
+    $("ctProdSeg").querySelectorAll("button").forEach(b => b.onclick = () => { ctProd = b.dataset.p; store("simCtProd", ctProd); renderCt(); });
+    const D = CT().defaults[ctProd], stations = CT().stations.filter(n => D.stations[n] || (D.machines[n] || []).length);
+    const was = (v) => `<span class="was">${esc(t("ctWas", { v: nf(v) }))}</span>`;
+    const label = { ct: "ctCt", target: "ctTarget", improve: "ctImprove" };
+    const cell = (n, key) => {
+      const d = D.stations[n]?.[key];
+      if (d === undefined || d === null) return "<td>—</td>";
+      const v = ctStationVal(ctProd, n, key), ch = v !== d;
+      return `<td><input type="number" step="0.1" data-st="${esc(n)}" data-key="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(n)} ${esc(t(label[key]))}">${ch ? was(d) : ""}</td>`;
+    };
+    $("ctStationTable").innerHTML = `<thead><tr><th class="l">${esc(t("ctStation"))}</th><th class="l">${esc(t("ctUse"))}</th><th>${esc(t("ctCt"))}</th><th>${esc(t("ctTarget"))}</th><th>${esc(t("ctImprove"))}</th></tr></thead><tbody>` +
+      stations.map(n => {
+        const s0 = D.stations[n];
+        const use = s0 ? !!ctStationVal(ctProd, n, "use") : false;
+        const useCell = s0 && s0.use != null
+          ? `<input type="checkbox" data-st="${esc(n)}" data-key="use" ${use ? "checked" : ""} aria-label="${esc(n)} ${esc(t("ctUse"))}">${use !== !!s0.use ? ` <small style="color:var(--hold)">${esc(t("ctWas", { v: s0.use ? "✓" : "✗" }))}</small>` : ""}`
+          : "—";
+        return `<tr><td class="l"><b>${esc(n)}</b></td><td class="l">${useCell}</td>${cell(n, "ct")}${cell(n, "target")}${cell(n, "improve")}</tr>`;
+      }).join("") + "</tbody>";
+    $("ctStationTable").querySelectorAll("input").forEach(inp => inp.addEventListener("change", () => {
+      const n = inp.dataset.st, key = inp.dataset.key;
+      if (key === "use") ctSet(ctProd, "station", n, "use", inp.checked ? 1 : 0);
+      else { const v = numIn(inp.value); ctSet(ctProd, "station", n, key, v == null ? D.stations[n][key] : v); }
+      renderCt(); renderInNav();
+    }));
+    if (!stations.includes(ctStation)) ctStation = stations[0];
+    $("ctStationSeg").innerHTML = stations.map(n => `<button type="button" data-s="${esc(n)}" aria-pressed="${n === ctStation}">${esc(n)}</button>`).join("");
+    $("ctStationSeg").querySelectorAll("button").forEach(b => b.onclick = () => { ctStation = b.dataset.s; store("simCtStation", ctStation); renderCt(); });
+    const ms = D.machines[ctStation] || [];
+    const useSt = D.stations[ctStation] ? !!ctStationVal(ctProd, ctStation, "use") : false;
+    const stCt = ctStationVal(ctProd, ctStation, "ct");
+    const hasFpyr = ms.some(m => m.fpyr != null), hasDesc = ms.some(m => m.desc);
+    $("ctMachineNote").textContent = (useSt ? t("ctUsingStation", { v: nf(stCt) }) : t("ctPerMachine")) + (hasFpyr ? "" : " " + t("ctNoFpyr"));
+    $("ctMachineTable").innerHTML = `<thead><tr><th class="l">${esc(t("ctMachine"))}</th>${hasDesc ? `<th class="l">${esc(t("ctDesc"))}</th>` : ""}<th>${esc(t("ctMct"))}</th>${hasFpyr ? `<th>${esc(t("ctFpyr"))}</th>` : ""}</tr></thead><tbody>` +
+      ms.map((m, i) => {
+        const v = useSt ? stCt : ctMachineVal(ctProd, ctStation, m, "ct"), ch = !useSt && v !== m.ct;
+        const f = m.fpyr != null ? ctMachineVal(ctProd, ctStation, m, "fpyr") : null, chf = f != null && f !== m.fpyr;
+        const fcell = !hasFpyr ? "" : `<td>${m.fpyr != null
+          ? `<input type="number" step="0.01" min="0" max="100" data-i="${i}" data-key="fpyr" value="${esc(f)}" class="${chf ? "changed" : ""}" aria-label="${esc(m.name)} FPYR">${chf ? was(m.fpyr) : ""}` : ""}</td>`;
+        return `<tr><td class="l">${esc(m.name)}</td>${hasDesc ? `<td class="l desc" title="${esc(m.desc)}">${esc(m.desc)}</td>` : ""}` +
+          `<td><input type="number" step="0.1" data-i="${i}" data-key="ct" value="${esc(v)}" ${useSt ? "disabled" : ""} class="${ch ? "changed" : ""}" aria-label="${esc(m.name)} CT">${ch ? was(m.ct) : ""}</td>${fcell}</tr>`;
+      }).join("") + "</tbody>";
+    const inputs = [...$("ctMachineTable").querySelectorAll("input:not([disabled])")];
+    inputs.forEach(inp => {
+      inp.addEventListener("change", () => {
+        const m = ms[+inp.dataset.i], key = inp.dataset.key, v = numIn(inp.value);
+        ctSet(ctProd, "machine", ctStation, key, v == null ? m[key] : v, m);
+        renderCt(); renderInNav();
+      });
+      inp.addEventListener("paste", (e) => {
+        const text = (e.clipboardData || window.clipboardData)?.getData("text") || "";
+        const vals = text.split(/\r?\n/).map(x => x.split("\t")[0].trim()).filter((x, k, a) => !(k === a.length - 1 && x === ""));
+        if (vals.length < 2) return;
+        e.preventDefault();
+        const key = inp.dataset.key, col = inputs.filter(x => x.dataset.key === key), start = col.indexOf(inp);
+        vals.forEach((raw, k) => {
+          const target = col[start + k]; if (!target) return;
+          const v = numIn(raw); if (v != null) ctSet(ctProd, "machine", ctStation, key, v, ms[+target.dataset.i]);
+        });
+        renderCt(); renderInNav();
+      });
+    });
+  }
+  $("ctResetBtn").addEventListener("click", () => {
+    if (!confirm(t("ctConfirmReset", { p: ctProdLabel(ctProd) }))) return;
+    delete CTS[ctProd]; saveCt(); renderCt(); renderInNav();
+  });
+
 
   // ---------- shifts ----------
   const SH = () => CFG.shifts;
@@ -1780,7 +1966,7 @@
       const plans = plansForSubmit();
       const sh = shiftsForSubmit();
       if (sh.error) { shiftProduct = sh.product; showInCat("shift"); alert(sh.error); $("btnRun").disabled = $("btnFast").disabled = false; return; }
-      const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who, client: clientInfo(), plans, shifts: sh.data });
+      const job = await T.submit({ parameters: params, run_length: null, mode, label: $("f_label").value.trim() || null, submitted_by: who, client: clientInfo(), plans, shifts: sh.data, ct: ctForSubmit() });
       activeId = selectedId = job.id; activeJob = job; pending = null;
       renderJob(job);
       if (mode !== "fast") showLive(job);
@@ -1824,12 +2010,12 @@
   // Restoring defaults is a separate, confirmed action
   $("btnDefaults").addEventListener("click", () => {
     if (!confirm(t("confirmDefaults"))) return;
-    PLANS = {}; savePlans(); SHIFTS = {}; saveShifts();
+    PLANS = {}; savePlans(); SHIFTS = {}; saveShifts(); CTS = {}; saveCt();
     store("simLastParams"); store("simLabel");
     buildForm(defaults());
     $("f_label").value = "";
     $("formError").hidden = true;
-    renderPlan(); renderShifts(); renderInNav();
+    renderPlan(); renderShifts(); renderCt(); renderInNav();
     if (!activeId) setIdle("defaultsMsg");
   });
 
@@ -2568,7 +2754,7 @@
     if (stateMode === "job" && shownJob) renderJob(shownJob); else setIdle();
     refreshSimStatus(true).catch(() => {});
     if (TAB === "output") renderOutput();
-    renderInNav(); if (IN_CAT === "shift") renderShifts();
+    renderInNav(); if (IN_CAT === "shift") renderShifts(); if (IN_CAT === "ct") renderCt();
   }
   document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
 

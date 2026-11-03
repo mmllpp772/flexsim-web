@@ -514,6 +514,69 @@
       }
     ]
   },
+  "ct_fpyr": {
+    "_help": "CT and FPYR inputs. Station CT comes from the CT setting table (USE=1 makes every machine in the station use that CT at Reset). Machine CT is column 1 of each parameter table; FPYR (%) is column 2 of the SMT and DIP tables. Defaults are read from the model whenever the model file changes.",
+    "products": {
+      "bianca": {
+        "setting_table": "WUS_CT_Setting"
+      },
+      "strata": {
+        "setting_table": "WUS_CT_Setting_Strata"
+      }
+    },
+    "stations": [
+      {
+        "name": "SMT",
+        "setting_row": "SMT Bottleneck station CT",
+        "tables": {
+          "bianca": "WUS_SMT Parameter",
+          "strata": "WUS_SMT Parameter_Strata"
+        },
+        "fpyr": true
+      },
+      {
+        "name": "DIP",
+        "setting_row": "DIP Bottleneck station CT",
+        "tables": {
+          "bianca": "WUS_DIP Parameter",
+          "strata": "WUS_DIP Parameter_Strata"
+        },
+        "fpyr": true
+      },
+      {
+        "name": "L1",
+        "setting_row": "FA_L1 Bottleneck station CT",
+        "tables": {
+          "bianca": "WUS_FA_L1_Parameter",
+          "strata": "WUS_FA_L1_Parameter_Strata"
+        }
+      },
+      {
+        "name": "L2",
+        "setting_row": "FA_L2 Bottleneck station CT",
+        "tables": {
+          "bianca": "WUS_FA_L2_Parameter",
+          "strata": "WUS_FA_L2_Parameter_Strata"
+        }
+      },
+      {
+        "name": "L4",
+        "setting_row": "FA_L4 Bottleneck station CT",
+        "tables": {
+          "bianca": "WUS_FA_L4_Parameter",
+          "strata": "WUS_FA_L4_Parameter_Strata"
+        }
+      },
+      {
+        "name": "Packing",
+        "setting_row": "Packing Bottleneck station CT",
+        "tables": {
+          "bianca": "WUS_packing Parameter",
+          "strata": "WUS_packing Parameter_Strata"
+        }
+      }
+    ]
+  },
   "admin_code": "",
   "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。"
 }

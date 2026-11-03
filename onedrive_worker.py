@@ -32,6 +32,7 @@ import hashlib
 import hmac
 
 from schedule import validate_plans, validate_shifts
+import ctfpyr
 from runner import (BASE_DIR, Cancelled, load_config, model_datetime, period_of, log, make_runner, now_iso,
                     public_config, setup_logging, validate_params)
 
@@ -115,15 +116,58 @@ class Worker:
             self.runner = make_runner(self.cfg)
         except RuntimeError as e:
             raise SystemExit(f"無法啟動 FlexSim：{e}")
+        self.ct_failed_at = 0.0
+        self.ct_defaults = self.load_ct_defaults()
         self.bad_seen: dict[str, float] = {}  # 讀不到的檔案第一次出現的時間
         self.queue: list[str] = []
         self.running: str | None = None
         self.last_heartbeat = 0.0
         self.stopping = False
 
+    # ---------- CT / FPYR 預設值（從模型讀，模型檔有變才重讀） ----------
+    def load_ct_defaults(self) -> dict[str, Any] | None:
+        names = ctfpyr.tables_to_read(self.cfg)
+        if not names:
+            return None
+        cache = BASE_DIR / "model_defaults.json"
+        model = Path(self.cfg["flexsim"]["model_path"])
+        if not self.cfg.get("mock_mode"):
+            cached = ctfpyr.load_cached(cache, model)
+            if cached:
+                return cached
+        log.info("Reading CT and FPYR from the model (once per model change, about a minute)...")
+        try:
+            defaults = ctfpyr.build_defaults(self.cfg, self.runner.read_tables(names))
+        except Exception as e:  # 讀不到就不提供 CT/FPYR 輸入，其他功能照常；10 分鐘後再試
+            log.warning("Could not read CT/FPYR from the model: %s", e)
+            self.ct_failed_at = time.time()
+            return None
+        if not self.cfg.get("mock_mode"):
+            ctfpyr.save_cached(cache, model, defaults)
+        n = sum(len(m) for d in defaults.values() for m in d["machines"].values())
+        log.info("CT/FPYR: %d machines read from the model", n)
+        return defaults
+
+    def refresh_ct_defaults(self) -> None:
+        """模型檔被更新時（例如存了新版本），重新讀預設值並發布。"""
+        if self.cfg.get("mock_mode") or not ctfpyr.tables_to_read(self.cfg):
+            return
+        if time.time() - self.ct_failed_at < 600:
+            return
+        model = Path(self.cfg["flexsim"]["model_path"])
+        if ctfpyr.load_cached(BASE_DIR / "model_defaults.json", model) is None:
+            self.ct_defaults = self.load_ct_defaults()
+            self.publish()
+
     # ---------- 共用資料夾初始化 ----------
     def publish(self) -> None:
-        write_json_atomic(self.share / "config.json", public_config(self.cfg))
+        pub = public_config(self.cfg)
+        if self.ct_defaults and self.cfg.get("ct_fpyr"):
+            cf = self.cfg["ct_fpyr"]
+            pub["ct_fpyr"] = {"stations": [s["name"] for s in cf["stations"]],
+                              "fpyr": [s["name"] for s in cf["stations"] if s.get("fpyr")],
+                              "defaults": self.ct_defaults}
+        write_json_atomic(self.share / "config.json", pub)
         page = BASE_DIR / "index.html"
         target = self.share / "Simulator.html"
         if page.exists():
@@ -216,13 +260,14 @@ class Worker:
             period = period_of(self.cfg, params)
             plans = validate_plans(self.cfg, job.get("plans"), *period) if period else None
             shifts = validate_shifts(self.cfg, job.get("shifts"))
+            ct = ctfpyr.validate(self.cfg, job.get("ct"), self.ct_defaults)
         except ValueError as e:
             self.write_result(job_id, {**base, "status": "error", "finished_at": now_iso(), "error": str(e),
                                        "parameters": job.get("parameters"), "run_length": job.get("run_length")})
             log.warning("Rejected job %s: %s", job_id, e)
             return
 
-        base.update(parameters=params, run_length=length, plans=plans, shifts=shifts)
+        base.update(parameters=params, run_length=length, plans=plans, shifts=shifts, ct=ct)
         self.running = job_id
         started = now_iso()
         self.write_result(job_id, {**base, "status": "running", "started_at": started})
@@ -289,7 +334,8 @@ class Worker:
 
         try:
             result = self.runner.run(params, length, should_cancel=should_cancel, on_progress=on_progress,
-                                     want_pause=want_pause, on_pause=on_pause, plans=plans, shifts=shifts)
+                                     want_pause=want_pause, on_pause=on_pause, plans=plans, shifts=shifts,
+                                     ct=ct, ct_defaults=self.ct_defaults)
             base["mode"] = st["mode"]
             if series and result.get("model_time") is not None:
                 add_point(result["model_time"], result["metrics"])
@@ -358,6 +404,8 @@ class Worker:
             try:
                 self.handle_admin()
                 self.queue = self.scan()
+                if not self.queue:
+                    self.refresh_ct_defaults()
                 self.heartbeat(force=bool(self.queue))
                 if self.queue:
                     self.process(self.queue.pop(0))

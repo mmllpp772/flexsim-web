@@ -13,3 +13,4 @@ worker.log
 runs/
 history_archive/
 util_csv/
+model_defaults.json
