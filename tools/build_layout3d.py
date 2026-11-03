@@ -3,7 +3,7 @@ CAD → 3D 廠區佈置圖（在公司電腦上執行，資料不會離開這台
 ================================================================
 
 一支程式做完：
-  1. DWG 轉 DXF（自動找電腦上的 AutoCAD 或 ODA File Converter）
+  1. DWG 轉 DXF（用程式附的 LibreDWG 轉檔程式 tools\\libredwg，不需要 AutoCAD）
   2. 讀 CAD：牆壁／隔間、柱子、功能房（封閉框線 + 房名文字）、設備（圖塊或設備圖層上的框）
   3. 設備依名稱對應 Factory_Equipment_3D_Library.html 裡的 3D 模型；庫裡沒有的用內建的 3D 外觀補上
   4. 依名稱或區域判斷設備屬於 Bianca 還是 Strata
@@ -598,11 +598,21 @@ def share_dir() -> Path | None:
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(1)
-    cad = Path(sys.argv[1]).resolve()
-    lib = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else None
+    if len(sys.argv) >= 2:
+        cad = Path(sys.argv[1]).resolve()
+        lib = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else None
+    else:
+        # 沒給參數：在 flexsim-web 資料夾（和上一層）找 DWG / DXF 和 3D 庫
+        dirs = [ROOT, ROOT.parent, Path.cwd()]
+        cads = [f for d in dirs for pat in ("*.dwg", "*.DWG", "*.dxf", "*.DXF") for f in d.glob(pat)]
+        cads = sorted({f.resolve() for f in cads}, key=lambda f: (f.suffix.lower() != ".dwg", -f.stat().st_mtime))
+        libs = sorted({f.resolve() for d in dirs for f in d.glob("*.html") if re.search(r"(?i)3d|library|庫", f.name)},
+                      key=lambda f: -f.stat().st_mtime)
+        if not cads:
+            print(__doc__)
+            sys.exit("找不到 DWG 檔，請把 DWG 放在 flexsim-web 資料夾，或在指令後面加上檔名。")
+        cad, lib = cads[0], (libs[0] if libs else None)
+        print(f"CAD：{cad.name}　3D 庫：{lib.name if lib else '（沒有，使用內建外觀）'}")
     if not cad.exists():
         sys.exit(f"找不到 {cad}")
     map_path = cad.with_name("layout3d_map.json")

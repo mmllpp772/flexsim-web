@@ -3,7 +3,7 @@ CAD 與 3D 庫盤點（在公司電腦上執行，資料不會離開這台電腦
 ==========================================================
 
 做兩件事：
-  1. 把 DWG 轉成 DXF（用電腦上已經有的 AutoCAD 或 ODA File Converter，自動尋找）
+  1. 把 DWG 轉成 DXF（用程式附的 LibreDWG 轉檔程式，不需要 AutoCAD）
   2. 讀 DXF 和 3D 庫 HTML，寫出一份「盤點清單」cad_report.txt：
      只有圖層名稱、圖塊名稱、數量、單位、3D 庫裡的設備名稱，沒有座標也沒有圖面內容。
 
@@ -47,11 +47,45 @@ def find_accore() -> str | None:
     return hits[-1] if hits else None
 
 
+def find_libredwg() -> str | None:
+    """程式附的 LibreDWG（tools\\libredwg\\dwg2dxf.exe），不需要另外安裝任何軟體"""
+    exe = Path(__file__).resolve().parent / "libredwg" / "dwg2dxf.exe"
+    if exe.exists() and os.name == "nt":
+        return str(exe)
+    return shutil.which("dwg2dxf")
+
+
+def libredwg_convert(exe: str, dwg: Path, out: Path) -> bool:
+    # 路徑有中文時這個轉檔程式可能讀不到，所以先複製到暫存資料夾（英文路徑）再轉
+    tmp = Path(tempfile.mkdtemp(prefix="dwg2dxf_"))
+    src, dst = tmp / "in.dwg", tmp / "out.dxf"
+    shutil.copy2(dwg, src)
+    try:
+        r = subprocess.run([exe, "-y", "-o", str(dst), str(src)], timeout=1800, capture_output=True,
+                           cwd=str(Path(exe).parent))
+    except (OSError, subprocess.TimeoutExpired) as e:
+        print(f"  轉檔程式無法執行：{e}")
+        return False
+    if dst.exists() and dst.stat().st_size > 1000:
+        shutil.move(str(dst), out)
+        return True
+    msg = (r.stderr or r.stdout or b"").decode("utf-8", "replace").strip().splitlines()[-3:]
+    print("  轉檔失敗：" + " / ".join(msg))
+    return False
+
+
 def dwg_to_dxf(dwg: Path) -> Path | None:
     out = dwg.with_suffix(".dxf")
     if out.exists() and out.stat().st_mtime >= dwg.stat().st_mtime:
         print(f"  已經有轉好的 DXF：{out.name}")
         return out
+
+    lib = find_libredwg()
+    if lib:
+        print("  用程式附的 LibreDWG 轉檔（不需要 AutoCAD），大檔案可能要幾分鐘…")
+        if libredwg_convert(lib, dwg, out):
+            return out
+        print("  改試電腦上的其他轉檔軟體。")
 
     oda = find_oda()
     if oda:
