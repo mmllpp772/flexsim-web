@@ -239,6 +239,18 @@
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; padding: 3px; background: var(--steel); }
   .seg button { border: 0; background: none; padding: 6px 16px; border-radius: 7px; cursor: pointer; font: 600 15px var(--display); color: var(--muted); }
   .seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(23,34,46,.12); }
+  /* product switch (Bianca / Strata): separate pills, the chosen one filled dark — reads as "which product", not "which view" */
+  .seg.prod { border: 0; background: none; padding: 0; gap: 8px; }
+  .seg.prod button { border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 7px 18px 7px 14px;
+    display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+  .seg.prod button::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--faint); }
+  .seg.prod button:hover { border-color: var(--faint); }
+  .seg.prod button[aria-pressed="true"] { background: var(--console); border-color: var(--console); color: #fff; box-shadow: none; }
+  @media (prefers-color-scheme: dark) { .seg.prod button[aria-pressed="true"] { background: var(--console-2); border-color: var(--amber); } }
+  .seg.prod button[aria-pressed="true"]::before { border-color: var(--amber); background: var(--amber); }
+  .seg.prod button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  /* time unit switch stays a compact light segmented control */
+  #granSeg button { padding: 5px 14px; font-size: 14px; }
   .hint { color: var(--muted); font-size: 13px; margin: -10px 0 14px; }
   .empty-panel { color: var(--muted); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -341,6 +353,11 @@
   table.plan tr.hol input { background: transparent; border-style: dashed; color: var(--faint); }
   table.plan td.sug { font-weight: 600; }
   table.plan td.sug.neg { color: var(--err); }
+  table.plan label.rest { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; flex-wrap: wrap; }
+  table.plan label.rest input { width: 18px; height: 18px; margin: 0; padding: 0; border: 0; accent-color: var(--hold); }
+  table.plan label.rest span { color: var(--muted); }
+  table.plan tr.hol label.rest span { color: var(--ink); }
+  table.plan label.rest small, table.plan tr.hol label.rest small { flex-basis: 100%; padding-left: 26px; color: var(--hold); font-size: 12px; font-weight: 600; }
   table.plan td.hcell b { color: var(--hold); font-weight: 700; margin-right: 6px; }
   table.plan td.hcell small { color: var(--faint); }
 
@@ -557,7 +574,7 @@
         <section class="panel" data-cat="plan" id="planPanel">
           <div class="panel-head">
             <h2 data-i18n="planTitle"></h2>
-            <div class="seg" id="planSeg" role="group" data-i18n-aria="product"></div>
+            <div class="seg prod" id="planSeg" role="group" data-i18n-aria="product"></div>
           </div>
           <p class="empty" id="planNoPeriod" data-i18n="needPeriod" hidden></p>
           <div id="planBody">
@@ -594,7 +611,7 @@
         <section class="panel" data-cat="shift" id="shiftPanel">
           <div class="panel-head">
             <h2 data-i18n="shiftTitle"></h2>
-            <div class="seg" id="shiftSeg" role="group" data-i18n-aria="product"></div>
+            <div class="seg prod" id="shiftSeg" role="group" data-i18n-aria="product"></div>
           </div>
           <div class="shift-count" role="radiogroup" data-i18n-aria="shiftCount">
             <span class="lbl" data-i18n="shiftCount"></span>
@@ -647,7 +664,7 @@
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
             <div class="util-segs">
-              <div class="seg" id="utilProdSeg" role="group" data-i18n-aria="product"></div>
+              <div class="seg prod" id="utilProdSeg" role="group" data-i18n-aria="product"></div>
               <div class="seg" id="utilSeg" role="group" data-i18n-aria="utilGroups"></div>
             </div>
           </section>
@@ -669,7 +686,7 @@
             <h2 id="viewTitle"></h2>
             <div class="util-segs">
               <div class="seg" id="granSeg" role="group" data-i18n-aria="granAria"></div>
-              <div class="seg" id="productSeg" role="group" data-i18n-aria="product"></div>
+              <div class="seg prod" id="productSeg" role="group" data-i18n-aria="product"></div>
             </div>
           </section>
           <p class="panel empty-panel" id="viewEmpty" hidden></p>
@@ -808,12 +825,13 @@
       fillDoneEach: "Filled {v} on {d} work days. Target updated to {total}.", fillNone: "There are no empty work days to fill.",
       fillNothingLeft: "Nothing left to spread: planned input already reaches the target.", fillNeedValue: "Enter how many to start each work day.",
       confirmOverwrite: "This replaces the {n} days already filled for {p}. Continue?",
-      planHint: "Type how many to start each day, or paste a column from Excel. Days you leave empty share the rest of the target evenly. Holidays are locked.",
+      planHint: "Type how many to start each day, or paste a column from Excel. Days you leave empty share the rest of the target evenly. Tick or untick Rest day for exceptions, such as working a Saturday or a weekday off.",
       sWorkDays: "Work days", sFilled: "Planned input", sRemain: "Left to plan", sPerDay: "Suggested per open day",
       fedHol: "US federal holidays in this period: {list}", noFedHol: "No US federal holidays in this period.",
       overTarget: "Planned input is already above the target, so the suggestion for the remaining days is negative.",
       thDate: "Date", thWeek: "Week", thWeekday: "Weekday", thInput: "SMT Input", thSuggest: "Suggest Input", thHoliday: "Holiday",
-      hSat: "Saturday", hSun: "Sunday", confirmClear: "Clear all daily inputs for {p}?", confirmReset: "Reset also clears the daily input plan. Continue?",
+      hSat: "Saturday", hSun: "Sunday", hManual: "Rest day", thRest: "Rest day", workDay: "Work",
+      exOff: "Changed: normally a work day", exWork: "Changed: working on {r}", confirmClear: "Clear all daily inputs for {p}?", confirmReset: "Reset also clears the daily input plan. Continue?",
       ePlan: "{p}: target must be 0 or more.",
       historyHint: "Every run sent from this page, with who sent it and from which device. Click a finished run to see its metrics.",
       nameHelp: "Required, so others can see who ran each scenario. Remembered on this browser.",
@@ -923,12 +941,13 @@
       fillDoneEach: "已在 {d} 個工作日各填入 {v}，目標量同步更新為 {total}。", fillNone: "沒有空白的工作日可以填。",
       fillNothingLeft: "已填的投入量已達目標量，沒有剩餘可以平攤。", fillNeedValue: "請先輸入每個工作日要投產多少。",
       confirmOverwrite: "{p} 已經填了 {n} 天，這會覆蓋它們。要繼續嗎？",
-      planHint: "填入每天要投產的數量，也可以直接從 Excel 複製一整欄貼上。沒填的日子會平均分攤剩下的目標量。假日自動鎖定不能填。",
+      planHint: "填入每天要投產的數量，也可以直接從 Excel 複製一整欄貼上。沒填的日子會平均分攤剩下的目標量。遇到例外（週末加班、平日停線），勾選或取消「休息」即可。",
       sWorkDays: "工作天數", sFilled: "已填投入", sRemain: "尚未分配", sPerDay: "每個未填工作日建議",
       fedHol: "這段期間的美國聯邦假日：{list}", noFedHol: "這段期間沒有美國聯邦假日。",
       overTarget: "已填的投入量已經超過目標量，剩下日子的建議值變成負數。",
       thDate: "日期", thWeek: "週", thWeekday: "星期", thInput: "SMT Input", thSuggest: "Suggest Input", thHoliday: "Holiday",
-      hSat: "週六", hSun: "週日", confirmClear: "要清除 {p} 的所有每日投入量嗎？", confirmReset: "重設也會清除每日投產計畫，要繼續嗎？",
+      hSat: "週六", hSun: "週日", hManual: "休息", thRest: "休息", workDay: "上班",
+      exOff: "例外：原本是上班日", exWork: "例外：{r}照常上班", confirmClear: "要清除 {p} 的所有每日投入量嗎？", confirmReset: "重設也會清除每日投產計畫，要繼續嗎？",
       ePlan: "{p}：目標量必須是 0 以上。",
       historyHint: "所有從這個網頁送出的模擬，包含誰送的、用哪台裝置。點一下已完成的紀錄可以看它的指標。",
       nameHelp: "必填，讓大家知道每個情境是誰跑的。瀏覽器會記住。",
@@ -1258,7 +1277,8 @@
     if (PD() && !load("simPlans") && job.plans) {
       for (const [name, pl] of Object.entries(job.plans)) {
         const inputs = {}; (pl.rows || []).forEach(r => { if (r.input > 0) inputs[r.date] = r.input; });
-        PLANS[name] = { target: pl.target, sat_off: !!pl.sat_off, sun_off: !!pl.sun_off, inputs };
+        const overrides = {}; (pl.rows || []).forEach(r => { if (r.override) overrides[r.date] = r.override; });
+        PLANS[name] = { target: pl.target, sat_off: !!pl.sat_off, sun_off: !!pl.sun_off, inputs, overrides };
       }
       savePlans(); changed = true;
     }
@@ -1316,6 +1336,7 @@
   function planFor(name) {
     const d = PD().defaults || {};
     if (!PLANS[name]) PLANS[name] = { target: d.target ?? 0, sat_off: !!d.sat_off, sun_off: d.sun_off ?? true, inputs: {} };
+    if (!PLANS[name].overrides) PLANS[name].overrides = {};
     return PLANS[name];
   }
   function currentPeriod() {
@@ -1331,10 +1352,13 @@
     const rows = [];
     for (let d = new Date(per.start); d <= per.end; d.setDate(d.getDate() + 1)) {
       const iso = isoDay(d), wd = d.getDay();
-      const reason = fed[iso] || (wd === 6 && pl.sat_off ? "SAT" : wd === 0 && pl.sun_off ? "SUN" : null);
+      const base = fed[iso] || (wd === 6 && pl.sat_off ? "SAT" : wd === 0 && pl.sun_off ? "SUN" : null);
+      const ov = pl.overrides[iso];
+      const reason = ov === "work" ? null : ov === "off" ? (base || "MANUAL") : base;
       const raw = pl.inputs[iso];
       const input = reason || raw === "" || raw == null ? 0 : Math.max(0, Number(raw) || 0);
-      rows.push({ iso, month: MON3[d.getMonth()], week: Math.ceil(d.getDate() / 7), day: d.getDate(), weekday: WD3[wd], input, holiday: reason, fed: !!fed[iso] });
+      rows.push({ iso, month: MON3[d.getMonth()], week: Math.ceil(d.getDate() / 7), day: d.getDate(), weekday: WD3[wd], input, holiday: reason, base, fed: !!fed[iso],
+        changed: ov != null && (ov === "work") === !!base });
     }
     const filled = rows.reduce((a, r) => a + r.input, 0);
     const open = rows.filter(r => !r.holiday && r.input <= 0).length;
@@ -1359,16 +1383,25 @@
     $("planSat").checked = !!pl.sat_off; $("planSun").checked = !!pl.sun_off;
     const c = computePlan(planProduct, per);
     renderPlanSummary(c);
-    const reasonText = (r) => r.holiday === "SAT" ? t("hSat") : r.holiday === "SUN" ? t("hSun") : r.holiday;
+    const reasonText = (k) => k === "SAT" ? t("hSat") : k === "SUN" ? t("hSun") : k === "MANUAL" ? t("hManual") : k;
     $("planTable").innerHTML = `<thead><tr><th class="l">${esc(t("thDate"))}</th><th>${esc(t("thWeek"))}</th><th class="l">${esc(t("thWeekday"))}</th>` +
-      `<th>${esc(t("thInput"))}</th><th>${esc(t("thSuggest"))}</th><th class="l">${esc(t("thHoliday"))}</th></tr></thead><tbody>` +
+      `<th>${esc(t("thInput"))}</th><th>${esc(t("thSuggest"))}</th><th class="l">${esc(t("thRest"))}</th></tr></thead><tbody>` +
       c.rows.map((r, i) => `<tr class="${r.holiday ? "hol" : ""}">
         <td class="l">${esc(r.month)} ${r.day}</td><td>${r.week}</td><td class="l">${esc(r.weekday)}</td>
         <td class="in"><input type="number" min="0" step="1" inputmode="numeric" data-iso="${r.iso}" data-i="${i}"
           value="${r.holiday ? "" : esc(pl.inputs[r.iso] ?? "")}" ${r.holiday ? "disabled" : ""} class="${!r.holiday && r.input > 0 ? "filled" : ""}"
           aria-label="${esc(t("thInput"))} ${esc(r.month)} ${r.day}"></td>
         <td class="sug${r.suggest < 0 ? " neg" : ""}" data-sug="${i}">${fmt(r.suggest, Number.isInteger(r.suggest) ? 0 : 2)}</td>
-        <td class="l hcell">${r.holiday ? `<b>Y</b><small>${esc(reasonText(r))}</small>` : ""}</td></tr>`).join("") + "</tbody>";
+        <td class="l hcell"><label class="rest${r.changed ? " changed" : ""}"><input type="checkbox" data-rest="${r.iso}" ${r.holiday ? "checked" : ""}
+          aria-label="${esc(t("thRest"))} ${esc(r.month)} ${r.day}"><span>${r.holiday ? `<b>Y</b> ${esc(reasonText(r.holiday))}` : esc(t("workDay"))}</span>${r.changed
+          ? `<small>${esc(r.holiday ? t("exOff") : t("exWork", { r: reasonText(r.base) }))}</small>` : ""}</label></td></tr>`).join("") + "</tbody>";
+    $("planTable").querySelectorAll("input[data-rest]").forEach(cb => cb.addEventListener("change", () => {
+      const iso = cb.dataset.rest, row = c.rows.find(x => x.iso === iso);
+      if (cb.checked === !!row.base) delete pl.overrides[iso];       // back to the normal rule
+      else pl.overrides[iso] = cb.checked ? "off" : "work";        // exception
+      if (cb.checked) delete pl.inputs[iso];
+      savePlans(); renderPlan();
+    }));
     const inputs = [...$("planTable").querySelectorAll("input:not([disabled])")];
     inputs.forEach((inp, k) => {
       inp.addEventListener("input", () => {
@@ -1413,7 +1446,8 @@
     for (const p of PD().products) {
       const pl = planFor(p.name), c = computePlan(p.name, per);
       const inputs = {}; c.rows.forEach(r => { if (r.input > 0) inputs[r.iso] = r.input; });
-      out[p.name] = { target: Number(pl.target) || 0, sat_off: !!pl.sat_off, sun_off: !!pl.sun_off, inputs };
+      const overrides = {}; c.rows.forEach(r => { if (r.changed) overrides[r.iso] = r.holiday ? "off" : "work"; });
+      out[p.name] = { target: Number(pl.target) || 0, sat_off: !!pl.sat_off, sun_off: !!pl.sun_off, inputs, overrides };
     }
     return out;
   }
@@ -1463,7 +1497,7 @@
   $("planClear").addEventListener("click", () => {
     const p = PD().products.find(x => x.name === planProduct);
     if (!confirm(t("confirmClear", { p: L(p, "label") }))) return;
-    planFor(planProduct).inputs = {}; savePlans(); renderPlan();
+    planFor(planProduct).inputs = {}; planFor(planProduct).overrides = {}; savePlans(); renderPlan();
   });
 
   // ---------- input categories ----------

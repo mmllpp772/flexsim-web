@@ -86,13 +86,18 @@ def _num(x: Any, what: str, lo: float, hi: float) -> float:
 
 def build_plan(start: date, end: date, product: dict[str, Any], defaults: dict[str, Any],
                federal: bool = True) -> dict[str, Any]:
-    """依網頁送來的單一產品設定，算出每天的列。product: {target, sat_off, sun_off, inputs: {"YYYY-MM-DD": n}}"""
+    """依網頁送來的單一產品設定，算出每天的列。
+    product: {target, sat_off, sun_off, inputs: {"YYYY-MM-DD": n}, overrides: {"YYYY-MM-DD": "off" | "work"}}
+    overrides 是例外：週末或假日照常上班（work），或平日休息（off）。"""
     target = _num(product.get("target", defaults.get("target", 0)), "Target", 0, 1e9)
     sat_off = bool(product.get("sat_off", defaults.get("sat_off", False)))
     sun_off = bool(product.get("sun_off", defaults.get("sun_off", True)))
     raw = product.get("inputs") or {}
     if not isinstance(raw, dict):
         raise ValueError("Daily inputs are missing")
+    overrides = product.get("overrides") or {}
+    if not isinstance(overrides, dict) or any(v not in ("off", "work") for v in overrides.values()):
+        raise ValueError("Rest-day exceptions are not valid")
     hol = {}
     if federal:
         for y in range(start.year, end.year + 1):
@@ -102,11 +107,14 @@ def build_plan(start: date, end: date, product: dict[str, Any], defaults: dict[s
     d = start
     while d <= end:
         wd = d.weekday()
-        reason = hol.get(d) or ("Saturday" if wd == 5 and sat_off else "Sunday" if wd == 6 and sun_off else None)
+        base = hol.get(d) or ("Saturday" if wd == 5 and sat_off else "Sunday" if wd == 6 and sun_off else None)
+        ov = overrides.get(d.isoformat())
+        reason = None if ov == "work" else (base or "Rest day") if ov == "off" else base
         val = raw.get(d.isoformat())
         inp = 0.0 if reason or val in (None, "") else _num(val, f"SMT Input on {d.isoformat()}", 0, 1e9)
         rows.append({"date": d.isoformat(), "month": MONTHS[d.month - 1], "week": math.ceil(d.day / 7),
-                     "day": d.day, "weekday": WEEKDAYS[wd], "input": inp, "holiday": reason})
+                     "day": d.day, "weekday": WEEKDAYS[wd], "input": inp, "holiday": reason,
+                     "override": ov if (ov == "work") == bool(base) else None})
         d += timedelta(days=1)
         if len(rows) > 400:
             raise ValueError("The period is too long (more than 400 days)")
