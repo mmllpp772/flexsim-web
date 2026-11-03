@@ -222,6 +222,11 @@
   .r-doc .r-t td.n { text-align: right; }
   .r-doc .r-t tr { break-inside: avoid; }
   .r-doc .r-t small { color: var(--faint); }
+  .r-doc .r-ins { list-style: none; margin: 0 0 8px; padding: 6px 8px; background: var(--steel); border-radius: 4px; display: grid; gap: 4px; }
+  .r-doc .r-ins li { display: flex; gap: 6px; align-items: flex-start; }
+  .r-doc .r-ins .ic { flex: none; width: 13px; height: 13px; border-radius: 50%; display: grid; place-items: center; font-size: 8px; font-weight: 700; color: #fff; margin-top: 1px; }
+  .r-doc .r-ins .bad .ic { background: #c0392b; } .r-doc .r-ins .warn .ic { background: #b7791f; } .r-doc .r-ins .good .ic { background: #2f855a; } .r-doc .r-ins .info .ic { background: #2f6db0; }
+  .r-doc .r-ins .tag { font-weight: 600; color: var(--muted); margin-right: 4px; }
   .r-doc .r-plan td, .r-doc .r-plan th { padding: 1px 4px; font-size: 9.5px; }
   .r-doc .r-chart svg { width: 100%; height: auto; max-height: 200px; }
   .r-doc .r-chart .grid line { stroke: var(--line); } .r-doc .r-chart .axis text { fill: var(--muted); font-size: 11px; }
@@ -493,6 +498,8 @@
     .cat-nav { position: static; display: flex; overflow-x: auto; padding: 6px; }
     .cat-nav .grp { display: none; }
     .cat-nav button { width: auto; flex: none; }
+    .cat-nav button small { display: none; }
+    .cat-nav button[aria-current="true"]::before { display: none; }
     .basic-grid { grid-template-columns: 1fr; }
     .wrap { padding: 0 16px; }
     .ctl { height: 48px; padding: 0 16px; }
@@ -531,12 +538,32 @@
   .demo { margin-top: -10px; }
 
   /* category menu: quiet list with an amber marker */
-  .cat-nav { background: transparent; border: 0; box-shadow: none; padding: 0; gap: 2px; }
-  .cat-nav .grp { padding: 0 14px 6px; }
-  .cat-nav button { border-left: 3px solid transparent; border-radius: 0 10px 10px 0; padding: 11px 14px; }
-  .cat-nav button:hover { background: rgba(20,32,48,.05); }
-  .cat-nav button[aria-current="true"] { background: var(--panel); color: var(--ink); border-left-color: var(--amber); box-shadow: var(--shadow); }
+  /* sidebar: grouped sections, icon tiles, the open page as a raised card with an amber edge */
+  .cat-nav { background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); border-radius: 14px; padding: 10px 8px; gap: 2px; }
+  .cat-nav .grp { font: 600 12px var(--display); color: var(--faint); padding: 12px 10px 6px; letter-spacing: .03em; }
+  .cat-nav .grp:first-child { padding-top: 2px; }
+  .cat-nav button { position: relative; display: flex; align-items: center; gap: 12px; border: 0; border-radius: 10px; padding: 8px 10px; }
+  .cat-nav button .ni { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--steel); color: var(--muted); transition: background .15s, color .15s; }
+  .cat-nav button .ni svg { width: 19px; height: 19px; }
+  .cat-nav button .nt { min-width: 0; flex: 1; }
+  .cat-nav button b { font-size: 14.5px; }
+  .cat-nav button:hover { background: var(--steel); }
+  .cat-nav button:hover .ni { background: var(--panel); color: var(--ink); }
+  .cat-nav button[aria-current="true"] { background: var(--blue-soft); color: var(--ink); box-shadow: none; }
+  .cat-nav button[aria-current="true"]::before { content: ""; position: absolute; left: -8px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--amber); }
+  .cat-nav button[aria-current="true"] .ni { background: var(--console); color: var(--amber); }
   .cat-nav button[aria-current="true"] small { color: var(--muted); }
+  .cat-nav .nf { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px var(--hold-soft); }
+  /* result explanations */
+  .insights { border-left: 4px solid var(--amber); }
+  .ins-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 10px; }
+  .ins-list li { display: flex; gap: 12px; align-items: flex-start; line-height: 1.55; font-size: 14.5px; }
+  .ins-list .ic { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font: 700 12px var(--display); margin-top: 1px; }
+  .ins-list li.bad .ic { background: var(--err-soft); color: var(--err); }
+  .ins-list li.warn .ic { background: var(--hold-soft); color: var(--hold); }
+  .ins-list li.good .ic { background: var(--ok-soft); color: var(--ok); }
+  .ins-list li.info .ic { background: var(--blue-soft); color: var(--blue); }
+  .ins-list .tag { display: inline-block; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--steel); border-radius: 6px; padding: 1px 8px; margin-right: 8px; }
 
   /* metric cards */
   .kpis { border-top: 0; gap: 12px; }
@@ -788,6 +815,10 @@
       <nav class="cat-nav" id="outNav" data-i18n-aria="outputCats"></nav>
       <div class="cat-body">
         <div data-ocat="overview">
+          <section class="panel insights" hidden>
+            <div class="panel-head"><h2 data-i18n="insTitle"></h2><p class="hint tight" data-i18n="insHint"></p></div>
+            <div class="ins-body"></div>
+          </section>
           <section class="panel">
             <h2 data-i18n="kpiTitle"></h2>
             <div id="outKpis" class="kpis"></div>
@@ -813,6 +844,11 @@
               <div class="seg prod" id="oeeProdSeg" role="group" data-i18n-aria="product"></div>
             </div>
           </section>
+          <section class="panel insights" hidden>
+            <div class="panel-head"><h2 data-i18n="insTitle"></h2><p class="hint tight" data-i18n="insHint"></p></div>
+            <div class="ins-body"></div>
+          </section>
+
           <p class="panel empty-panel" id="oeeEmpty" hidden></p>
           <section class="panel">
             <div class="panel-head">
@@ -850,6 +886,11 @@
               <div class="seg prod" id="sdProdSeg" role="group" data-i18n-aria="product"></div>
             </div>
           </section>
+          <section class="panel insights" hidden>
+            <div class="panel-head"><h2 data-i18n="insTitle"></h2><p class="hint tight" data-i18n="insHint"></p></div>
+            <div class="ins-body"></div>
+          </section>
+
           <p class="panel empty-panel" id="sdEmpty" hidden></p>
           <section class="panel">
             <div class="panel-head"><h2 data-i18n="sdSummary"></h2><p class="hint tight" data-i18n="sdSummaryHint"></p></div>
@@ -880,6 +921,11 @@
               <div class="seg prod" id="rwProdSeg" role="group" data-i18n-aria="product"></div>
             </div>
           </section>
+          <section class="panel insights" hidden>
+            <div class="panel-head"><h2 data-i18n="insTitle"></h2><p class="hint tight" data-i18n="insHint"></p></div>
+            <div class="ins-body"></div>
+          </section>
+
           <p class="panel empty-panel" id="rwEmpty" hidden></p>
           <section class="panel">
             <div class="panel-head">
@@ -916,6 +962,11 @@
               <div class="seg prod" id="tkProdSeg" role="group" data-i18n-aria="product"></div>
             </div>
           </section>
+          <section class="panel insights" hidden>
+            <div class="panel-head"><h2 data-i18n="insTitle"></h2><p class="hint tight" data-i18n="insHint"></p></div>
+            <div class="ins-body"></div>
+          </section>
+
           <p class="panel empty-panel" id="tkEmpty" hidden></p>
           <section class="panel">
             <div class="panel-head">
@@ -949,6 +1000,11 @@
               <div class="seg prod" id="utilProdSeg" role="group" data-i18n-aria="product"></div>
             </div>
           </section>
+          <section class="panel insights" hidden>
+            <div class="panel-head"><h2 data-i18n="insTitle"></h2><p class="hint tight" data-i18n="insHint"></p></div>
+            <div class="ins-body"></div>
+          </section>
+
           <p class="panel empty-panel" id="utilEmpty" hidden></p>
           <section class="panel">
             <div class="util-top">
@@ -970,6 +1026,11 @@
               <div class="seg prod" id="productSeg" role="group" data-i18n-aria="product"></div>
             </div>
           </section>
+          <section class="panel insights" hidden>
+            <div class="panel-head"><h2 data-i18n="insTitle"></h2><p class="hint tight" data-i18n="insHint"></p></div>
+            <div class="ins-body"></div>
+          </section>
+
           <p class="panel empty-panel" id="viewEmpty" hidden></p>
           <div id="outBody">
             <div class="out-grid">
@@ -1124,6 +1185,9 @@
       tkDef: "Takt time = planned production time (shift 1 + shift 2 hours on work days) ÷ planned input (SMT Input if filled, otherwise Suggest Input). When the bottleneck CT is above takt time, the station can't keep up with the plan.",
       reportBtn: "Download PDF report", reportMaking: "Making PDF {p}%", reportSaved: "Saved {f}",
       reportFailed: "Could not make the PDF: {e}", reportNoLib: "The PDF tools didn't load. Make sure the vendor folder is next to Simulator.html.",
+      grpPlanning: "Plan", grpProcess: "Process settings", grpSummary: "Summary", grpProduction: "Production", grpEfficiency: "Efficiency", grpQuality: "Quality",
+      ovSub: "Key points of this run", tkSub: "Plan pace vs CT", utilSub: "Time in each state", rwSub: "Repair rate by station",
+      insTitle: "What the results say", insHint: "Generated from this run's numbers.", insNone: "Nothing stands out in this run.",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1287,6 +1351,9 @@
       tkDef: "Takt Time = 計畫生產時間（工作日的班別一 + 班別二時數）÷ 計畫投入量（有填 SMT Input 用它，沒填用 Suggest Input）。瓶頸 CT 超過 Takt Time，代表這站跟不上計畫。",
       reportBtn: "下載 PDF 報告", reportMaking: "產生 PDF 中 {p}%", reportSaved: "已儲存 {f}",
       reportFailed: "PDF 產生失敗：{e}", reportNoLib: "PDF 工具沒有載入，請確認 Simulator.html 旁邊有 vendor 資料夾。",
+      grpPlanning: "計畫", grpProcess: "製程參數", grpSummary: "摘要", grpProduction: "生產", grpEfficiency: "效率", grpQuality: "品質",
+      ovSub: "本次模擬的重點", tkSub: "計畫節奏與 CT", utilSub: "各狀態的時間比例", rwSub: "各站維修率",
+      insTitle: "重點解讀", insHint: "依這次模擬的數字自動產生。", insNone: "這次模擬沒有特別需要注意的地方。",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -1879,11 +1946,12 @@
   // ---------- input categories ----------
   let IN_CAT = load("simInCat") || "basic";
   function inCats() {
-    const c = [{ k: "basic", label: t("catBasic") }];
-    if (PD()) c.push({ k: "plan", label: t("catPlan") });
-    if (SH()) c.push({ k: "shift", label: t("catShift") });
-    if (CT()) c.push({ k: "ct", label: t("catCt") });
-    PTG().forEach(g => c.push({ k: "pt_" + g.name, label: L(g, "label") }));
+    const gp = t("grpPlanning"), gm = t("grpProcess");
+    const c = [{ k: "basic", label: t("catBasic"), grp: gp, icon: "basic" }];
+    if (PD()) c.push({ k: "plan", label: t("catPlan"), grp: gp, icon: "plan" });
+    if (SH()) c.push({ k: "shift", label: t("catShift"), grp: gp, icon: "shift" });
+    if (CT()) c.push({ k: "ct", label: t("catCt"), grp: gm, icon: "ct", flag: ctChangedStations().length > 0 });
+    PTG().forEach(g => c.push({ k: "pt_" + g.name, label: L(g, "label"), grp: gm, icon: "pt", flag: ptChangedItems(g.name).length > 0 }));
     return c;
   }
   function inSummary(k) {
@@ -1899,8 +1967,7 @@
     if (!CFG) return;
     const cats = inCats();
     if (!cats.find(c => c.k === IN_CAT)) IN_CAT = "basic";
-    $("inNav").innerHTML = `<div class="grp">${esc(t("grpInputs"))}</div>` + cats.map(c =>
-      `<button type="button" data-k="${c.k}" aria-current="${c.k === IN_CAT}"><b>${esc(c.label)}</b><small>${esc(inSummary(c.k))}</small></button>`).join("");
+    $("inNav").innerHTML = navHtml(cats.map(c => ({ ...c, sub: inSummary(c.k) })), IN_CAT);
     $("inNav").querySelectorAll("button").forEach(b => b.onclick = () => showInCat(b.dataset.k));
     if ($("ptPanels") && !$("ptPanels").children.length && PTG().length) buildPtPanels();
     document.querySelectorAll("#app [data-cat]").forEach(sec => sec.hidden = sec.dataset.cat !== IN_CAT);
@@ -2612,16 +2679,16 @@
   let OUT_CAT = load("simOutCat") || "overview";
   const outViews = () => CFG.output_views || [];
   function renderOutNav(job) {
-    const cats = [{ k: "overview", label: t("catOverview"), sub: "" },
-      ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", ") })),
-      ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2" }] : []),
-      ...(CFG.sod ? [{ k: "sd", label: t("sdTitle"), sub: t("sdGood") }] : []),
-      ...(CFG.rework ? [{ k: "rw", label: "Rework", sub: CFG.rework.stations.map(s => s.name).join(", ") }] : []),
-      ...(CFG.takt ? [{ k: "tk", label: "Takt Time", sub: CFG.takt.stations.join(", ") }] : []),
-      ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: [...new Set(CFG.utilization.groups.map(g => L(g, "label")))].join(", ") }] : [])];
+    const g0 = t("grpSummary"), g1 = t("grpProduction"), g2 = t("grpEfficiency"), g3 = t("grpQuality");
+    const cats = [{ k: "overview", label: t("catOverview"), sub: t("ovSub"), grp: g0, icon: "overview" },
+      ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", "), grp: g1, icon: "output" })),
+      ...(CFG.sod ? [{ k: "sd", label: t("sdTitle"), sub: t("sdGood"), grp: g1, icon: "sd" }] : []),
+      ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2", grp: g2, icon: "oee" }] : []),
+      ...(CFG.takt ? [{ k: "tk", label: "Takt Time", sub: t("tkSub"), grp: g2, icon: "tk" }] : []),
+      ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: t("utilSub"), grp: g2, icon: "util" }] : []),
+      ...(CFG.rework ? [{ k: "rw", label: "Rework", sub: t("rwSub"), grp: g3, icon: "rw" }] : [])];
     if (!cats.find(c => c.k === OUT_CAT)) OUT_CAT = "overview";
-    $("outNav").innerHTML = `<div class="grp">${esc(t("grpOutputs"))}</div>` + cats.map(c =>
-      `<button type="button" data-k="${esc(c.k)}" aria-current="${c.k === OUT_CAT}"><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`).join("");
+    $("outNav").innerHTML = navHtml(cats, OUT_CAT);
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
     document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd"].includes(OUT_CAT);
@@ -2713,6 +2780,7 @@
       $("detailTitle").textContent = t("dt_" + outGran);
       renderDaily(ag.tb, ag.def); renderDailyTable(ag.tb, ag.def);
     }
+    renderInsights(["overview", "sd", "oee", "tk", "rw", "util"].includes(OUT_CAT) ? OUT_CAT : "view", job);
     renderTable();
   }
   $("runSel").addEventListener("change", (e) => { outRunId = e.target.value; renderOutput(); });
@@ -3044,6 +3112,198 @@
       r.s.good - r.s.plan, r.s.plan > 0 ? (r.s.good / r.s.plan * 100).toFixed(1) + "%" : "", r.s.scrap, r.cum.plan, r.cum.good, r.cum.gap, r.cum.wip]));
   });
 
+  // ---------- sidebar ----------
+  const NAV_ICON = {
+    basic: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    plan: '<path d="M8 4h8M9 2.5h6v3H9z"/><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M8.5 10h7M8.5 14h7M8.5 18h4"/>',
+    shift: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    ct: '<path d="M4.5 16a8 8 0 1 1 15 0"/><path d="M12 16l4-5"/><circle cx="12" cy="16" r="1.4"/>',
+    pt: '<path d="M5 6h9M18 6h1M5 12h3M12 12h7M5 18h11M20 18h-1"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+    overview: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    output: '<path d="M4 20h16"/><rect x="6" y="11" width="3" height="7" rx=".8"/><rect x="11" y="6" width="3" height="12" rx=".8"/><rect x="16" y="9" width="3" height="9" rx=".8"/>',
+    sd: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+    oee: '<path d="M3 13h4l2.5-6 4 11 2.5-5H21"/>',
+    tk: '<path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9s8 4 8 9"/>',
+    rw: '<path d="M20 11a8 8 0 0 0-14.5-4.5M4 13a8 8 0 0 0 14.5 4.5"/><path d="M5 3v4h4M19 21v-4h-4"/>',
+    util: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
+  };
+  const navIcon = (k) => `<span class="ni" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${NAV_ICON[k] || NAV_ICON.output}</svg></span>`;
+  function navHtml(cats, cur) {
+    let html = "", grp = null;
+    for (const c of cats) {
+      if (c.grp !== grp) { grp = c.grp; html += `<div class="grp">${esc(grp)}</div>`; }
+      html += `<button type="button" data-k="${esc(c.k)}" aria-current="${c.k === cur}">${navIcon(c.icon)}<span class="nt"><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</span>${c.flag ? '<i class="nf" aria-hidden="true"></i>' : ""}</button>`;
+    }
+    return html;
+  }
+
+  // ---------- result explanations (重點解讀) ----------
+  // Rule-based notes that say what the numbers mean. level: bad / warn / good / info
+  const zh = () => LANG === "zh";
+  const ICON_LV = { bad: "✕", warn: "!", good: "✓", info: "i" };
+  function insightsHtml(list) {
+    if (!list.length) return `<p class="empty">${esc(t("insNone"))}</p>`;
+    return `<ul class="ins-list">${list.map(x => `<li class="${x.lv}"><span class="ic" aria-hidden="true">${ICON_LV[x.lv]}</span><span>${x.html}</span></li>`).join("")}</ul>`;
+  }
+  const B = (v) => `<b>${esc(v)}</b>`;
+  function insOutput(job, def) {
+    const tb = job?.tables?.[def?.name]; if (!tb?.rows?.length) return [];
+    const cols = numericCols(tb, def), out = [];
+    const tot = Object.fromEntries(cols.map(({ c, i }) => [c, tb.rows.reduce((a, r) => a + (Number(r.values[i]) || 0), 0)]));
+    const scrapCol = CFG.sod?.scrap_col, flow = cols.map(x => x.c).filter(c => c !== scrapCol);
+    if (flow.length >= 2) {
+      const first = flow[0], last = flow[flow.length - 1];
+      const low = flow.reduce((m, c) => tot[c] < tot[m] ? c : m, flow[0]);
+      const loss = tot[first] > 0 ? 1 - tot[last] / tot[first] : 0;
+      out.push({ lv: loss > 0.1 ? "warn" : "info", html: zh()
+        ? `${B(first)} 投入 ${B(fmt(tot[first], 0))}，到 ${B(last)} 完成 ${B(fmt(tot[last], 0))}，期間內少了 ${B(pct(loss))}。差額大多是還在線上的在製品，以及報廢。`
+        : `${B(first)} started ${B(fmt(tot[first], 0))} and ${B(last)} finished ${B(fmt(tot[last], 0))}, ${B(pct(loss))} fewer. The difference is mostly work still on the line, plus scrap.` });
+      if (tot[low] < tot[last]) out.push({ lv: "info", html: zh()
+        ? `產出最少的是 ${B(low)}（${fmt(tot[low], 0)}），比下游還少，可能是這一段的產能或供料限制了整條線。`
+        : `${B(low)} has the lowest output (${fmt(tot[low], 0)}), less than the stations after it; its capacity or supply may be limiting the line.` });
+    }
+    if (scrapCol && tot[scrapCol] != null && tot[flow[0]] > 0) {
+      const r = tot[scrapCol] / tot[flow[0]];
+      out.push({ lv: r > 0.02 ? "warn" : "good", html: zh()
+        ? `報廢（${esc(scrapCol)}）${B(fmt(tot[scrapCol], 0))}，占投入的 ${B(pct(r))}${r > 0.02 ? "，偏高，建議查看 Rework 與 FPYR 設定。" : "。"}`
+        : `Scrap (${esc(scrapCol)}) ${B(fmt(tot[scrapCol], 0))}, ${B(pct(r))} of input${r > 0.02 ? ", on the high side; check rework and FPYR." : "."}` });
+    }
+    const last = flow[flow.length - 1], li = cols.find(x => x.c === last)?.i;
+    if (li != null && tb.rows.length >= 14) {
+      const vals = tb.rows.map(r => Number(r.values[li]) || 0).filter(v => v > 0);
+      const a = vals.slice(0, 7), b = vals.slice(-7), avg = (x) => x.reduce((s, v) => s + v, 0) / (x.length || 1);
+      const ch = avg(a) > 0 ? avg(b) / avg(a) - 1 : 0;
+      if (Math.abs(ch) >= 0.05) out.push({ lv: ch > 0 ? "good" : "warn", html: zh()
+        ? `${B(last)} 最後 7 個工作日平均 ${fmt(avg(b), 0)}，比最初 7 天 ${ch > 0 ? "高" : "低"} ${B(pct(Math.abs(ch)))}${ch > 0 ? "，產線逐漸爬升到穩定產能。" : "，後段產出下滑，建議檢查後期的班別、假日或 CT 設定。"}`
+        : `${B(last)} averaged ${fmt(avg(b), 0)} in the last 7 work days, ${B(pct(Math.abs(ch)))} ${ch > 0 ? "above" : "below"} the first 7${ch > 0 ? "; the line ramped up." : "; output fell later on, check shifts, holidays or CT for that period."}` });
+    }
+    return out;
+  }
+  function insSod(job, prod) {
+    const days = job ? sdDays(job, prod) : null; if (!days?.length) return [];
+    const tot = sdSum(days), rows = sdRows(days), out = [];
+    const att = tot.plan > 0 ? tot.good / tot.plan : null;
+    if (att != null) out.push({ lv: att >= 1 ? "good" : att >= 0.95 ? "warn" : "bad", html: zh()
+      ? `良品產出 ${B(fmt(tot.good, 0))}，計畫 ${B(fmt(tot.plan, 0))}，達成率 ${B(pct(att))}${att >= 1 ? "，有達到計畫。" : `，還差 ${B(fmt(tot.plan - tot.good, 0))}。`}`
+      : `Good units ${B(fmt(tot.good, 0))} against a plan of ${B(fmt(tot.plan, 0))}: ${B(pct(att))}${att >= 1 ? ", plan met." : `, ${B(fmt(tot.plan - tot.good, 0))} short.`}` });
+    const worst = rows.reduce((m, r) => !m || r.cum.gap < m.cum.gap ? r : m, null);
+    if (worst && worst.cum.gap < 0) out.push({ lv: "info", html: zh()
+      ? `落後最多是在 ${B(worst.pn.row)}${worst.pn.range ? `（${esc(worst.pn.range)}）` : ""}，累計差 ${B(signed(worst.cum.gap))}。開頭落後多半是前置時間：產品要經過整條線才算良品。`
+      : `The gap was largest at ${B(worst.pn.row)}${worst.pn.range ? ` (${esc(worst.pn.range)})` : ""}: ${B(signed(worst.cum.gap))}. Early gaps are mostly lead time: units count as good only after the whole line.` });
+    const lastRow = rows[rows.length - 1];
+    if (lastRow && worst && worst.cum.gap < 0) {
+      const caught = rows.slice(rows.indexOf(worst)).find(r => r.cum.gap >= 0);
+      out.push({ lv: caught ? "good" : lastRow.cum.gap > worst.cum.gap ? "warn" : "bad", html: caught
+        ? (zh() ? `在 ${B(caught.pn.row)} 追上計畫。` : `Caught up with the plan by ${B(caught.pn.row)}.`)
+        : lastRow.cum.gap > worst.cum.gap
+          ? (zh() ? `之後有在追，但到期末仍差 ${B(signed(lastRow.cum.gap))}。` : `It recovered afterwards but still ended ${B(signed(lastRow.cum.gap))}.`)
+          : (zh() ? `差距持續擴大，到期末差 ${B(signed(lastRow.cum.gap))}，產能跟不上計畫。` : `The gap kept growing to ${B(signed(lastRow.cum.gap))}; capacity is below the plan.`) });
+    }
+    if (lastRow) out.push({ lv: "info", html: zh()
+      ? `期末還有 ${B(fmt(lastRow.cum.wip, 0))} 件在製品在線上，這些不算良品，但已經投入。`
+      : `${B(fmt(lastRow.cum.wip, 0))} units were still on the line at the end; they were started but aren't good units yet.` });
+    return out;
+  }
+  function insOee(job, prod) {
+    const days = job ? oeeDays(job, prod) : null; if (!days) return [];
+    const sts = CFG.oee.stations.map(s => s.name).map(n => ({ n, ...oeeOf(days, n) })).filter(x => x.o2 != null);
+    if (!sts.length) return [];
+    const out = [], low = sts.reduce((m, x) => x.o2 < m.o2 ? x : m), high = sts.reduce((m, x) => x.o2 > m.o2 ? x : m);
+    out.push({ lv: low.o2 < 0.6 ? "bad" : low.o2 < 0.8 ? "warn" : "good", html: zh()
+      ? `OEE2 最低的是 ${B(low.n)}（${pct(low.o2)}），排了班但有效生產時間最少，可能在等料、阻塞或停機。最高是 ${B(high.n)}（${pct(high.o2)}）。`
+      : `${B(low.n)} has the lowest OEE2 (${pct(low.o2)}): the least productive time within its shifts, likely waiting for parts, blocked or down. Highest is ${B(high.n)} (${pct(high.o2)}).` });
+    const over = sts.filter(x => x.o2 > 1);
+    if (over.length) out.push({ lv: "warn", html: zh()
+      ? `${B(over.map(x => x.n).join("、"))} 的 OEE2 超過 100%：有效時間比排定的班別時數還多。通常是班別時數設得比實際短、瓶頸 CT 設得比實際長，或休息日仍有產出。`
+      : `OEE2 is above 100% at ${B(over.map(x => x.n).join(", "))}: more productive time than the shift hours. Usually the shift hours are too short, the bottleneck CT too long, or there's output on rest days.` });
+    const g = sts[0];
+    out.push({ lv: "info", html: zh()
+      ? `OEE1 用一天 24 小時當分母，所以一定比 OEE2 低；兩者差越多，代表排班時數離滿載越遠（例如 ${esc(g.n)}：OEE1 ${pct(g.o1)}、OEE2 ${pct(g.o2)}）。`
+      : `OEE1 divides by 24 hours a day, so it is always below OEE2; the bigger the difference, the further the shifts are from round-the-clock (e.g. ${esc(g.n)}: OEE1 ${pct(g.o1)}, OEE2 ${pct(g.o2)}).` });
+    const miss = CFG.oee.stations.map(s => s.name).filter(n => oeeOf(days, n).o1 == null);
+    if (miss.length) out.push({ lv: "info", html: zh() ? `${B(miss.join("、"))} 沒有瓶頸 CT，無法計算 OEE，請到「CT 與 FPYR」填寫。` : `${B(miss.join(", "))} has no bottleneck CT, so OEE can't be calculated; set it under CT and FPYR.` });
+    return out;
+  }
+  function insTakt(job, prod) {
+    const items = job ? tkDays(job, prod) : null; if (!items) return [];
+    const out = [], rows = CFG.takt.stations.map(n => ({ n, ...tkOf(items, n) })).filter(x => x.takt != null && x.ct != null);
+    const slow = rows.filter(x => x.ct > x.takt).sort((a, b) => b.ct / b.takt - a.ct / a.takt);
+    // stations with the same CT and takt are said once
+    const same = []; slow.forEach(x => { const g = same.find(y => fmt(y.ct, 1) === fmt(x.ct, 1) && fmt(y.takt, 1) === fmt(x.takt, 1)); g ? g.names.push(x.n) : same.push({ ...x, names: [x.n] }); });
+    for (const x of same.slice(0, 3)) x.n = x.names.join(zh() ? "、" : ", ");
+    same.slice(0, 3).forEach((x, i) => out.push({ lv: "bad", html: zh()
+      ? `${B(x.n)} 的瓶頸 CT ${fmt(x.ct, 1)} 秒比 Takt ${fmt(x.takt, 1)} 秒慢 ${B(pct(x.ct / x.takt - 1))}${i ? "。" : "，照目前班別做不完計畫，需要加班、加開產線或縮短 CT。"}`
+      : `Bottleneck CT at ${B(x.n)} (${fmt(x.ct, 1)} s) is ${B(pct(x.ct / x.takt - 1))} slower than takt (${fmt(x.takt, 1)} s)${i ? "." : "; the plan can't be met with these shifts. Add hours or lines, or cut CT."}` }));
+    if (!slow.length && rows.length) {
+      const tight = rows.reduce((m, x) => x.ct / x.takt > m.ct / m.takt ? x : m);
+      out.push({ lv: tight.ct / tight.takt > 0.9 ? "warn" : "good", html: zh()
+        ? `所有站別的 CT 都在 Takt 以內。最緊的是 ${B(tight.n)}，CT 用掉 Takt 的 ${B(pct(tight.ct / tight.takt))}${tight.ct / tight.takt > 0.9 ? "，餘裕很少，任何停機都會影響交期。" : "。"}`
+        : `Every station's CT is within takt. Tightest is ${B(tight.n)} at ${B(pct(tight.ct / tight.takt))} of takt${tight.ct / tight.takt > 0.9 ? ", little room for any downtime." : "."}` });
+    }
+    out.push({ lv: "info", html: zh() ? "Takt Time 是「為了達成計畫，每幾秒要做出一件」；瓶頸 CT 要小於它才做得完。" : "Takt time is how often a unit must be finished to meet the plan; the bottleneck CT has to be shorter than that." });
+    return out;
+  }
+  function insRework(job, prod) {
+    const items = job ? rwDays(job, prod) : null; if (!items) return [];
+    const sts = CFG.rework.stations.filter(s => s.products.includes(prod)).map(s => ({ n: s.name, ...rwSum(items, s.name) })).filter(x => x.out > 0);
+    if (!sts.length) return [];
+    const out = [], tr = sts.reduce((a, x) => ({ rw: a.rw + x.rw, out: a.out + x.out }), { rw: 0, out: 0 });
+    const hi = sts.reduce((m, x) => rate(x) > rate(m) ? x : m);
+    out.push({ lv: rate(hi) > 0.03 ? "warn" : "info", html: zh()
+      ? `維修率最高的是 ${B(hi.n)}（${pct(rate(hi))}，${fmt(hi.rw, 0)} 件），是品質改善最優先的地方。`
+      : `${B(hi.n)} has the highest repair rate (${pct(rate(hi))}, ${fmt(hi.rw, 0)} units); the first place to improve quality.` });
+    out.push({ lv: "info", html: zh() ? `全部站別合計 Rework ${B(fmt(tr.rw, 0))} 件。Rework 會再佔用一次產能，維修率越高，實際能做的良品越少。`
+      : `${B(fmt(tr.rw, 0))} units reworked in total. Rework uses capacity again, so a higher repair rate means fewer good units.` });
+    return out;
+  }
+  function insUtil(job, g) {
+    if (!g || !job?.utilization?.objects) return [];
+    const rows = utilRows(job, g).filter(r => r.util != null); if (!rows.length) return [];
+    const U = CFG.utilization, out = [], name = (n) => U.state_names[n] || `State ${n}`;
+    const hi = rows.reduce((m, r) => r.util > m.util ? r : m), lo = rows.reduce((m, r) => r.util < m.util ? r : m);
+    out.push({ lv: "info", html: zh() ? `最忙的是 ${B(hi.name)}（${pct(hi.util)}），可能就是這段的瓶頸；最閒的是 ${B(lo.name)}（${pct(lo.util)}）。`
+      : `Busiest is ${B(hi.name)} (${pct(hi.util)}), likely this stage's bottleneck; least busy is ${B(lo.name)} (${pct(lo.util)}).` });
+    const share = {}; let all = 0;
+    rows.forEach(r => r.segs.forEach(s => { share[s.k] = (share[s.k] || 0) + s.v; all += s.v; }));
+    const used = new Set(U.utilized_states.map(String));
+    const top = Object.entries(share).filter(([k]) => !used.has(k)).sort((a, b) => b[1] - a[1])[0];
+    if (top && all > 0 && top[1] / all > 0.1) {
+      const k = +top[0], p = pct(top[1] / all), why = { 9: zh() ? "人員不夠或人員排班和機台不同步" : "not enough operators, or their shifts don't match",
+        4: zh() ? "下游來不及消化，造成阻塞" : "the next step can't take parts fast enough", 1: zh() ? "上游供料不足或計畫量偏低" : "too little supply from upstream or a low plan",
+        10: zh() ? "搬運（AGV／運輸）不足" : "not enough transport", 26: zh() ? "上游供料不足" : "too little supply from upstream" }[k];
+      out.push({ lv: "warn", html: zh() ? `除了加工以外，時間最多花在 ${B(name(k))}（${p}）${why ? `，通常代表${why}` : ""}。`
+        : `Apart from processing, most time goes to ${B(name(k))} (${p})${why ? `, which usually means ${why}` : ""}.` });
+    }
+    return out;
+  }
+  function insOverview(job) {
+    // the most important note from every page, for every product, problems first
+    const rank = { bad: 0, warn: 1, good: 2, info: 3 }, list = [];
+    const pick = (arr, tag) => arr.filter(x => x.lv !== "info").slice(0, 1).map(x => ({ ...x, html: `<span class="tag">${esc(tag)}</span>${x.html}` }));
+    for (const p of Object.keys(job.plans || {})) {
+      const pl = ctProdLabel(p);
+      if (CFG.sod) list.push(...pick(insSod(job, p), `${pl} ${t("sdTitle")}`));
+      if (CFG.takt) list.push(...pick(insTakt(job, p), `${pl} Takt`));
+      if (CFG.oee) list.push(...pick(insOee(job, p), `${pl} OEE`));
+      if (CFG.rework) list.push(...pick(insRework(job, p), `${pl} Rework`));
+    }
+    return list.sort((a, b) => rank[a.lv] - rank[b.lv]);
+  }
+  function renderInsights(cat, job) {
+    let list = [];
+    if (cat === "view") list = insOutput(job, tableDefs().find(d => d.name === outTable));
+    else if (cat === "sd") list = insSod(job, sdProd);
+    else if (cat === "oee") list = insOee(job, oeeProd);
+    else if (cat === "tk") list = insTakt(job, tkProd);
+    else if (cat === "rw") list = insRework(job, rwProd);
+    else if (cat === "util") list = insUtil(job, CFG.utilization?.groups.find(g => g.name === utilGroup));
+    else if (cat === "overview" && job) list = insOverview(job);
+    const box = document.querySelector(`[data-ocat="${cat}"] .insights`);
+    if (!box) return;
+    box.hidden = !job;
+    box.querySelector(".ins-body").innerHTML = insightsHtml(list);
+  }
+
   // ---------- Rework ----------
   let rwProd = load("simRwProd"), rwStation = load("simRwStation"), rwView = null;
   function rwDays(job, prod) {
@@ -3280,11 +3540,14 @@
     }
     // ---- results (new page) ----
     h += SEP + PAGE + SEP + `<h2>${esc(R.outputs)}</h2>`;
+    const insR = (list) => list.length ? `<ul class="r-ins">${list.map(x => `<li class="${x.lv}"><span class="ic">${ICON_LV[x.lv]}</span><span>${x.html}</span></li>`).join("")}</ul>` : "";
+    { const ov = insOverview(job); if (ov.length) h += `<h3>${esc(t("insTitle"))}</h3>` + insR(ov) + SEP; }
     // output
     for (const def of tableDefs().filter(d => d.view === "daily_output")) {
       const tb = job.tables?.[def.name];
       h += `<h3>${esc(L(def, "product_label") || L(def, "label"))}：${esc(R.output)}</h3>`;
       if (!tb?.rows?.length) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
+      h += insR(insOutput(job, def));
       const cols = numericCols(tb, def);
       const totals = cols.map(({ c, i }) => ({ c, v: tb.rows.reduce((a, r) => a + (Number(r.values[i]) || 0), 0) }));
       h += chart(totals.map(x => ({ label: x.c, vals: [x.v], tip: "" })), [{ cls: "b2" }], (v) => fmt(v, 0));
@@ -3296,6 +3559,7 @@
       const days = sdDays(job, p);
       h += `<h3>${esc(prodName(p))}：${esc(t("sdTitle"))}</h3>`;
       if (!days) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
+      h += insR(insSod(job, p));
       const tot = sdSum(days), rows = sdRows(days), last = rows[rows.length - 1];
       h += kv([[t("sdPlan"), fmt(tot.plan, 0)], [t("sdGood"), fmt(tot.good, 0)], [t("sdAtt"), pct(tot.plan > 0 ? tot.good / tot.plan : null)],
         [t("sdGap"), signed(tot.good - tot.plan)], [t("sdYield"), pct(tot.good + tot.scrap > 0 ? tot.good / (tot.good + tot.scrap) : null)], [t("sdWip"), last ? fmt(last.cum.wip, 0) : "—"]]) + SEP;
@@ -3307,6 +3571,7 @@
       const days = oeeDays(job, p);
       h += `<h3>${esc(prodName(p))}：OEE</h3>`;
       if (!days) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
+      h += insR(insOee(job, p));
       const sts = CFG.oee.stations.map(s => s.name);
       h += chart(sts.map(n => { const v = oeeOf(days, n); return { label: n, vals: [v.o1, v.o2], tip: "" }; }), [{ cls: "b1" }, { cls: "b2" }], (v) => Math.round(v * 100) + "%");
       const groups = oeeGroups(days);
@@ -3317,6 +3582,7 @@
       const items = rwDays(job, p);
       h += `<h3>${esc(prodName(p))}：Rework</h3>`;
       if (!items) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
+      h += insR(insRework(job, p));
       const sts = CFG.rework.stations.filter(s => s.products.includes(p)).map(s => s.name);
       h += T([R.station, "Rework", R.throughput, R.rate], sts.map(n => { const s = rwSum(items, n); return [esc(n), fmt(s.rw, 0), fmt(s.out, 0), pct(rate(s))]; }));
       h += T([R.period2, ...sts.flatMap(n => [n + " Rework", n + " " + R.rate])], groupByGran(items).map((g, n) => [esc(periodName(g, n).row), ...sts.flatMap(nm => { const s = rwSum(g.days, nm); return [fmt(s.rw, 0), pct(rate(s))]; })]));
@@ -3326,6 +3592,7 @@
       const items = tkDays(job, p);
       h += `<h3>${esc(prodName(p))}：Takt Time</h3>`;
       if (!items) { h += `<p>${esc(R.noData)}</p>` + SEP; continue; }
+      h += insR(insTakt(job, p));
       const sts = CFG.takt.stations;
       h += T([R.station, R.taktS, R.bnS, R.status], sts.map(n => { const v = tkOf(items, n); const ok = v.takt != null && v.ct != null ? v.ct <= v.takt : null;
         return [esc(n), secTxt(v.takt), secTxt(v.ct), ok == null ? "—" : ok ? `✓ ${esc(R.ok)}` : `! ${esc(R.short)}`]; }));
@@ -3349,7 +3616,7 @@
     let carry = "";
     for (const b of raw) {
       if (b === PAGE) { if (carry) { blocks.push(carry); carry = ""; } blocks.push(PAGE); continue; }
-      if (!/<table|<svg|<dl|<p>/.test(b)) { carry += b; continue; }
+      if (!/<table|<svg|<dl|<p>|<ul/.test(b)) { carry += b; continue; }
       blocks.push(carry + b); carry = "";
     }
     if (carry) blocks.push(carry);
