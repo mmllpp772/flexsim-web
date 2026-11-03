@@ -301,6 +301,9 @@
   .oee-def dd { margin: 2px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
   .tile .o2 { display: block; font: 600 30px/1.1 var(--cond); font-variant-numeric: tabular-nums; margin-top: 2px; }
   .tile .o2 small { font: 600 13px var(--display); color: var(--muted); }
+  .tile .tk-st { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .tile .tk-st.ok { background: var(--ok-soft); color: var(--ok); }
+  .tile .tk-st.bad { background: var(--err-soft); color: var(--err); }
   .tile .o1 { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
   .legend .lg-o1, .legend .lg-o2 { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 6px 0 14px; vertical-align: -1px; }
   .legend .lg-o1 { background: var(--st-setup); } .legend .lg-o2 { background: var(--blue); }
@@ -772,6 +775,75 @@
           </section>
         </div>
 
+        <div data-ocat="rw" hidden>
+          <section class="panel view-head">
+            <h2>Rework</h2>
+            <div class="util-segs">
+              <div class="seg" id="rwGranSeg" role="group" data-i18n-aria="granAria"></div>
+              <div class="seg prod" id="rwProdSeg" role="group" data-i18n-aria="product"></div>
+            </div>
+          </section>
+          <p class="panel empty-panel" id="rwEmpty" hidden></p>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 data-i18n="rwByStation"></h2>
+              <p class="hint tight" data-i18n="rwHint"></p>
+            </div>
+            <div id="rwTiles" class="tiles"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="rwChartTitle"></h2>
+              <div class="legend"><span class="lg-o2"></span>Rework</div>
+            </div>
+            <div class="chart" id="rwChart"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="rwTableTitle"></h2>
+              <button class="link" id="rwCsvBtn" type="button" data-i18n="tableCsv"></button>
+            </div>
+            <div class="table-wrap"><table id="rwTable" class="daily oee"></table></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2 id="rwMachTitle"></h2><p class="hint tight" data-i18n="rwMachHint"></p></div>
+            <div class="table-wrap"><table id="rwMachTable" class="daily"></table></div>
+          </section>
+        </div>
+
+        <div data-ocat="tk" hidden>
+          <section class="panel view-head">
+            <h2>Takt Time</h2>
+            <div class="util-segs">
+              <div class="seg" id="tkGranSeg" role="group" data-i18n-aria="granAria"></div>
+              <div class="seg prod" id="tkProdSeg" role="group" data-i18n-aria="product"></div>
+            </div>
+          </section>
+          <p class="panel empty-panel" id="tkEmpty" hidden></p>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 data-i18n="tkByStation"></h2>
+              <p class="hint tight" data-i18n="tkHint"></p>
+            </div>
+            <div id="tkTiles" class="tiles"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="tkChartTitle"></h2>
+              <div class="legend"><span class="lg-o2"></span>Takt<span class="lg-o1"></span><span data-i18n="tkCtLg"></span></div>
+            </div>
+            <div class="chart" id="tkChart"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="tkTableTitle"></h2>
+              <button class="link" id="tkCsvBtn" type="button" data-i18n="tableCsv"></button>
+            </div>
+            <div class="table-wrap"><table id="tkTable" class="daily oee"></table></div>
+          </section>
+          <p class="hint" data-i18n="tkDef" style="margin:4px 4px 0"></p>
+        </div>
+
         <div data-ocat="util" hidden>
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
@@ -928,6 +1000,16 @@
       ctUsingStation: "This station uses its bottleneck CT ({v} s) for every machine. Switch it to Each workstation's CT above to set machines one by one. Values you entered here are kept.",
       ctPerMachine: "Each machine uses its own CT. You can paste a column from Excel.", ctNoFpyr: "This station has no FPYR in the model.",
       sumCtNone: "Model values", sumCt: "{n} changed",
+      rwByStation: "Rework by station", rwHint: "Over the whole period. Click a station to chart it.", rwRate: "Repair rate",
+      rwOf: "Rework {r} of {o}", rwOut: "Throughput {n}", rwChart: "{s} rework", rwTable: "Rework detail",
+      rwMach: "{s} rework by machine (whole run)", rwMachHint: "From the model's rework table at the end of the run.",
+      rwMachine: "Rework machine", rwThroughput: "Throughput", rwNoMach: "No rework recorded for this station.",
+      rwNone: "This run has no rework data. Runs made before this update don't include it.",
+      tkByStation: "Takt time by station", tkHint: "Takt time against the bottleneck CT over the whole period.",
+      tkSecTakt: "s takt", tkCt: "Bottleneck CT {v} s", tkOk: "CT within takt", tkShort: "CT above takt",
+      tkChart: "{s} takt time vs bottleneck CT", tkTable: "Takt time detail (s)", tkDemand: "Planned input {n}", tkDemandCol: "Planned input",
+      tkCtLg: "Bottleneck CT", secUnit: "s", tkNone: "This run has no plan, so takt time can't be calculated.",
+      tkDef: "Takt time = planned production time (shift 1 + shift 2 hours on work days) ÷ planned input (SMT Input if filled, otherwise Suggest Input). When the bottleneck CT is above takt time, the station can't keep up with the plan.",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1064,6 +1146,16 @@
       ctUsingStation: "這一站用瓶頸 CT（{v} 秒），所有機台都用這個值。要逐台設定，請在上方把這站切到「各工站 CT」。你在這裡填過的值都會保留。",
       ctPerMachine: "每台機台用自己的 CT。可以從 Excel 複製一整欄貼上。", ctNoFpyr: "模型裡這一站沒有 FPYR。",
       sumCtNone: "使用模型值", sumCt: "已修改 {n} 項",
+      rwByStation: "各站 Rework", rwHint: "整個期間的結果，點選站別看變化。", rwRate: "維修率",
+      rwOf: "Rework {r}／產出 {o}", rwOut: "產出 {n}", rwChart: "{s} Rework", rwTable: "Rework 明細",
+      rwMach: "{s} 各維修站 Rework（整次模擬）", rwMachHint: "取自模型的 Rework 表，模擬結束時的數字。",
+      rwMachine: "維修站", rwThroughput: "產出", rwNoMach: "這一站沒有 Rework 紀錄。",
+      rwNone: "這次模擬沒有 Rework 資料。更新之前跑的模擬不會有。",
+      tkByStation: "各站 Takt Time", tkHint: "整個期間的 Takt Time 和瓶頸 CT 比較。",
+      tkSecTakt: "秒 Takt", tkCt: "瓶頸 CT {v} 秒", tkOk: "CT 未超過 Takt", tkShort: "CT 超過 Takt",
+      tkChart: "{s} Takt Time 與瓶頸 CT", tkTable: "Takt Time 明細（秒）", tkDemand: "計畫投入 {n}", tkDemandCol: "計畫投入",
+      tkCtLg: "瓶頸 CT", secUnit: "秒", tkNone: "這次模擬沒有投產計畫，無法計算 Takt Time。",
+      tkDef: "Takt Time = 計畫生產時間（工作日的班別一 + 班別二時數）÷ 計畫投入量（有填 SMT Input 用它，沒填用 Suggest Input）。瓶頸 CT 超過 Takt Time，代表這站跟不上計畫。",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -2319,13 +2411,17 @@
     const cats = [{ k: "overview", label: t("catOverview"), sub: "" },
       ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", ") })),
       ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2" }] : []),
+      ...(CFG.rework ? [{ k: "rw", label: "Rework", sub: CFG.rework.stations.map(s => s.name).join(", ") }] : []),
+      ...(CFG.takt ? [{ k: "tk", label: "Takt Time", sub: CFG.takt.stations.join(", ") }] : []),
       ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: [...new Set(CFG.utilization.groups.map(g => L(g, "label")))].join(", ") }] : [])];
     if (!cats.find(c => c.k === OUT_CAT)) OUT_CAT = "overview";
     $("outNav").innerHTML = `<div class="grp">${esc(t("grpOutputs"))}</div>` + cats.map(c =>
       `<button type="button" data-k="${esc(c.k)}" aria-current="${c.k === OUT_CAT}"><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</button>`).join("");
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
-    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="rw"]').hidden = OUT_CAT !== "rw";
+    document.querySelector('[data-ocat="tk"]').hidden = OUT_CAT !== "tk";
     document.querySelector('[data-ocat="util"]').hidden = OUT_CAT !== "util";
     document.querySelector('[data-ocat="oee"]').hidden = OUT_CAT !== "oee";
   }
@@ -2382,6 +2478,10 @@
       renderUtil(job);
     } else if (OUT_CAT === "oee") {
       renderOee(job);
+    } else if (OUT_CAT === "rw") {
+      renderRework(job);
+    } else if (OUT_CAT === "tk") {
+      renderTakt(job);
     } else {
       const view = outViews().find(v => v.name === OUT_CAT);
       $("viewTitle").textContent = L(view, "label");
@@ -2564,6 +2664,218 @@
     a.href = URL.createObjectURL(blob); a.download = `OEE_${oeeProd}_${outGran}_${(job.label || job.id).replace(/[^\w\u4e00-\u9fff-]+/g, "_")}.csv`; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
+
+  // ---------- shared helpers for Rework / Takt ----------
+  function groupByGran(items) {  // items: [{d, ...}] in date order
+    if (outGran === "day") return items.map(x => ({ from: x.d, to: x.d, days: [x] }));
+    const groups = []; let cur = null, wk = 0;
+    items.forEach(x => {
+      const d = x.d;
+      const key = outGran === "week" ? wk : outGran === "month" ? `${d.getFullYear()}-${d.getMonth()}` : `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+      if (!cur || cur.key !== key) { cur = { key, from: d, to: d, days: [] }; groups.push(cur); }
+      cur.to = d; cur.days.push(x);
+      if (outGran === "week" && d.getDay() === 0) wk++;
+    });
+    return groups;
+  }
+  const unitTxt = () => outGran === "day" ? "" : LANG === "zh" ? `（${t("g_" + outGran)}）` : ` (${t("g_" + outGran)})`;
+  function prodPills(el, prods, cur, onPick) {
+    el.innerHTML = prods.map(n => `<button type="button" data-p="${esc(n)}" aria-pressed="${n === cur}">${esc(ctProdLabel(n))}</button>`).join("");
+    el.hidden = prods.length < 2;
+    el.querySelectorAll("button").forEach(b => b.onclick = () => onPick(b.dataset.p));
+  }
+  function granPills(el) {
+    el.innerHTML = GRANS.map(g => `<button type="button" data-g="${g}" aria-pressed="${g === outGran}">${esc(t("g_" + g))}</button>`).join("");
+    el.querySelectorAll("button").forEach(b => b.onclick = () => { outGran = b.dataset.g; store("simOutGran", outGran); renderOutput(); });
+  }
+  // grouped bar chart: data = [{label, vals: [v per series], tip}], series = [{cls}]
+  function groupChart(box, data, series, fmtY) {
+    const W = Math.max(320, box.clientWidth || 640), H = 260, m = { l: 52, r: 8, t: 10, b: 30 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const peak = Math.max(0, ...data.flatMap(d => d.vals.map(v => v || 0)));
+    const raw = (peak || 1) / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), nn = raw / mag;
+    const stepY = (nn <= 1 ? 1 : nn <= 2 ? 2 : nn <= 5 ? 5 : 10) * mag, ymax = Math.max(stepY, Math.ceil((peak || 1) / stepY) * stepY);
+    const y = (v) => m.t + ph - (v / ymax) * ph;
+    let g = '<g class="grid">', ax = '<g class="axis">';
+    for (let v = 0; v <= ymax + 1e-9; v += stepY) { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`; ax += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v, stepY >= 1 ? 0 : 1)}</text>`; }
+    g += "</g>";
+    let bars = "", hits = "";
+    if (data.length) {
+      const step = pw / data.length, ns = series.length, bw = Math.max(1, Math.min(ns > 1 ? 18 : 28, (step - 4) / ns - 2));
+      const every = Math.max(1, Math.ceil(data.length / Math.floor(pw / 64)));
+      data.forEach((d, i) => {
+        const x0 = m.l + step * i + step / 2 - (ns * (bw + 2)) / 2;
+        d.vals.forEach((v, k) => { if (v > 0) bars += `<rect class="${series[k].cls}" data-i="${i}" x="${x0 + k * (bw + 2)}" y="${y(v)}" width="${bw}" height="${Math.max(1, m.t + ph - y(v))}" rx="2"/>`; });
+        if (i % every === 0) ax += `<text x="${m.l + step * i + step / 2}" y="${H - 8}" text-anchor="middle">${esc(d.label)}</text>`;
+        hits += `<rect class="hit" data-i="${i}" x="${m.l + step * i}" y="${m.t}" width="${step}" height="${ph}"/>`;
+      });
+    } else {
+      ax += `<text x="${(W + m.l) / 2}" y="${m.t + ph / 2}" text-anchor="middle" style="fill:var(--muted);font-size:14px">${esc(t("noData"))}</text>`;
+    }
+    ax += "</g>";
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img">${g}${ax}${bars}${hits}</svg>`;
+    const tip = $("tip");
+    box.querySelectorAll(".hit").forEach(h => {
+      h.addEventListener("mousemove", (e) => {
+        const d = data[+h.dataset.i];
+        box.querySelectorAll("rect[data-i]:not(.hit)").forEach(b => b.classList.toggle("hot", b.dataset.i === h.dataset.i));
+        tip.innerHTML = d.tip; tip.hidden = false;
+        tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + "px";
+        tip.style.top = (e.clientY - tip.offsetHeight - 10) + "px";
+      });
+      h.addEventListener("mouseleave", () => { tip.hidden = true; box.querySelectorAll(".hot").forEach(b => b.classList.remove("hot")); });
+    });
+  }
+  // the days of the run's period (data recorded before the start date is left out)
+  function inPeriod(job, iso) {
+    const p = periodOf(job?.parameters || {});
+    return !p || (iso >= isoDay(p.start) && iso <= isoDay(p.end));
+  }
+
+  // ---------- Rework ----------
+  let rwProd = load("simRwProd"), rwStation = load("simRwStation"), rwView = null;
+  function rwDays(job, prod) {
+    const R = job?.bottleneck?.rework?.[prod], dates = job?.bottleneck?.dates;
+    if (!R || !dates) return null;
+    const st = Object.keys(R);
+    const items = [];
+    dates.forEach((iso, k) => {
+      const one = {};
+      for (const n of st) {
+        const a = R[n].rework, o = R[n].output;
+        one[n] = { rw: Math.max(0, (a[k] || 0) - (k ? a[k - 1] || 0 : 0)), out: Math.max(0, (o[k] || 0) - (k ? o[k - 1] || 0 : 0)) };
+      }
+      if (inPeriod(job, iso)) items.push({ d: parseDay(iso), iso, st: one });
+    });
+    return items;
+  }
+  const rwSum = (days, n) => days.reduce((a, x) => { const v = x.st[n] || { rw: 0, out: 0 }; a.rw += v.rw; a.out += v.out; return a; }, { rw: 0, out: 0 });
+  const rate = (s) => s.out > 0 ? s.rw / s.out : null;
+  function renderRework(job) {
+    const R = CFG.rework;
+    if (!R.products.includes(rwProd)) rwProd = R.products[0];
+    prodPills($("rwProdSeg"), R.products, rwProd, (p) => { rwProd = p; store("simRwProd", p); renderOutput(); });
+    granPills($("rwGranSeg"));
+    const stations = R.stations.filter(s => s.products.includes(rwProd)).map(s => s.name);
+    if (!stations.includes(rwStation)) rwStation = stations[0];
+    const items = job ? rwDays(job, rwProd) : null;
+    $("rwEmpty").hidden = !(job && !items); $("rwEmpty").textContent = t("rwNone");
+    const all = items || [];
+    $("rwTiles").innerHTML = stations.map(n => {
+      const s = rwSum(all, n), r = rate(s);
+      return `<button type="button" class="tile" data-s="${esc(n)}" aria-pressed="${n === rwStation}"><span class="nm">${esc(n)}</span>
+        <span class="o2">${items ? pct(r) : "—"}<small> ${esc(t("rwRate"))}</small></span>
+        <span class="o1">${items ? esc(t("rwOf", { r: fmt(s.rw, 0), o: fmt(s.out, 0) })) : "&nbsp;"}</span></button>`;
+    }).join("");
+    $("rwTiles").querySelectorAll(".tile").forEach(b => b.onclick = () => { rwStation = b.dataset.s; store("simRwStation", rwStation); renderOutput(); });
+    const groups = groupByGran(all);
+    $("rwChartTitle").textContent = t("rwChart", { s: rwStation }) + unitTxt();
+    groupChart($("rwChart"), groups.map((g, n) => {
+      const pn = periodName(g, n), s = rwSum(g.days, rwStation);
+      return { label: pn.label, vals: [s.rw], tip: `${esc(pn.row)}${pn.range ? "  " + esc(pn.range) : ""}<br>Rework <b>${fmt(s.rw, 0)}</b><br>${esc(t("rwOut", { n: fmt(s.out, 0) }))}  ${esc(t("rwRate"))} ${pct(rate(s))}` };
+    }), [{ cls: "b2" }], (v) => fmt(v, v < 10 ? 1 : 0));
+    // table
+    $("rwTableTitle").textContent = t("rwTable") + unitTxt();
+    const head1 = `<tr><th class="k" rowspan="2">${esc(t("colPeriod"))}</th>${outGran === "day" ? "" : `<th class="k" rowspan="2">${esc(t("colDates"))}</th>`}` +
+      stations.map(n => `<th class="grp" colspan="2">${esc(n)}</th>`).join("") + "</tr>";
+    const head2 = "<tr>" + stations.map(() => `<th>Rework</th><th>${esc(t("rwRate"))}</th>`).join("") + "</tr>";
+    const rowsOut = groups.map((g, n) => ({ pn: periodName(g, n), cells: stations.map(nm => { const s = rwSum(g.days, nm); return [fmt(s.rw, 0), pct(rate(s))]; }) }));
+    $("rwTable").innerHTML = `<thead>${head1}${head2}</thead><tbody>` + (rowsOut.length ? rowsOut.map(r =>
+      `<tr><td class="k">${esc(r.pn.row)}</td>${outGran === "day" ? "" : `<td class="k">${esc(r.pn.range)}</td>`}${r.cells.map(([a, b]) => `<td>${a}</td><td>${b}</td>`).join("")}</tr>`).join("")
+      : `<tr><td class="k empty" colspan="${stations.length * 2 + 2}">${esc(t("noData"))}</td></tr>`) + "</tbody>";
+    rwView = { stations, rowsOut };
+    // per machine, whole run
+    const tb = job?.tables?.[`rw_${rwProd}_${rwStation.toLowerCase()}`];
+    $("rwMachTitle").textContent = t("rwMach", { s: rwStation });
+    $("rwMachTable").innerHTML = `<thead><tr><th class="k">${esc(t("rwMachine"))}</th><th>Rework</th><th>${esc(t("rwThroughput"))}</th><th>${esc(t("rwRate"))}</th></tr></thead><tbody>` +
+      (tb?.rows?.length ? tb.rows.map(r => {
+        const a = Number(r.values[0]) || 0, o = Number(r.values[1]) || 0;
+        return `<tr><td class="k">${esc(r.row)}</td><td>${fmt(a, 0)}</td><td>${fmt(o, 0)}</td><td>${pct(o > 0 ? a / o : null)}</td></tr>`;
+      }).join("") : `<tr><td class="k empty" colspan="4">${esc(t(job ? "rwNoMach" : "noData"))}</td></tr>`) + "</tbody>";
+  }
+  $("rwCsvBtn").addEventListener("click", () => {
+    const job = doneRuns().find(r => r.id === outRunId);
+    if (!job || !rwView || !rwView.rowsOut.length) return;
+    const head = [t("colPeriod"), ...(outGran === "day" ? [] : [t("colDates")]), ...rwView.stations.flatMap(n => [n + " Rework", n + " " + t("rwRate")])];
+    downloadCsv(`Rework_${rwProd}_${outGran}`, job, head, rwView.rowsOut.map(r => [r.pn.row, ...(outGran === "day" ? [] : [r.pn.range]), ...r.cells.flat()]));
+  });
+
+  // ---------- Takt time ----------
+  let tkProd = load("simTkProd"), tkStation = load("simTkStation"), tkView = null;
+  function tkDays(job, prod) {
+    const plan = job?.plans?.[prod];
+    if (!plan?.rows?.length) return null;
+    const sh = job.shifts?.[prod], S = CFG.shifts, bn = job.bottleneck;
+    const at = Object.fromEntries((bn?.dates || []).map((d, i) => [d, i]));
+    const shiftCol = Object.fromEntries((CFG.oee?.stations || []).map(s => [s.name, s.shift]));
+    return plan.rows.map(r => {
+      const d = parseDay(r.date), off = !!r.holiday, demand = off ? 0 : Number(r.suggest) || 0;
+      const st = {};
+      for (const n of CFG.takt.stations) {
+        let hours = 0;
+        if (!off && sh && S) {
+          const wr = S.rows.indexOf(WD3[d.getDay()]), sc = S.columns.indexOf(shiftCol[n] || n);
+          if (wr >= 0 && sc >= 0) hours = sh.grids.reduce((a, g) => a + (Number(g?.[wr]?.[sc]) || 0), 0);
+        }
+        const arr = bn?.ct?.[prod]?.[n] || [];
+        st[n] = { sec: hours * 3600, ct: arr.length ? (arr[at[r.date]] ?? arr[arr.length - 1]) : null };
+      }
+      return { d, off, demand, st };
+    });
+  }
+  function tkOf(days, n) {
+    let sec = 0, dem = 0, ctSum = 0, ctN = 0;
+    days.forEach(x => { if (x.off || x.demand <= 0) return; sec += x.st[n].sec; dem += x.demand; if (x.st[n].ct != null) { ctSum += x.st[n].ct; ctN++; } });
+    return { takt: dem > 0 && sec > 0 ? sec / dem : null, ct: ctN ? ctSum / ctN : null, demand: dem };
+  }
+  const secTxt = (v) => v == null ? "—" : fmt(v, v < 100 ? 1 : 0);
+  function renderTakt(job) {
+    const prods = Object.keys(job?.plans || {}).length ? Object.keys(job.plans) : (PD()?.products || []).map(p => p.name);
+    if (!prods.includes(tkProd)) tkProd = prods[0];
+    prodPills($("tkProdSeg"), prods, tkProd, (p) => { tkProd = p; store("simTkProd", p); renderOutput(); });
+    granPills($("tkGranSeg"));
+    const stations = CFG.takt.stations;
+    if (!stations.includes(tkStation)) tkStation = stations[0];
+    const items = job ? tkDays(job, tkProd) : null;
+    $("tkEmpty").hidden = !(job && !items); $("tkEmpty").textContent = t("tkNone");
+    const all = items || [];
+    $("tkTiles").innerHTML = stations.map(n => {
+      const v = tkOf(all, n), ok = v.takt != null && v.ct != null ? v.ct <= v.takt : null;
+      return `<button type="button" class="tile" data-s="${esc(n)}" aria-pressed="${n === tkStation}"><span class="nm">${esc(n)}</span>
+        <span class="o2">${secTxt(v.takt)}<small> ${esc(t("tkSecTakt"))}</small></span>
+        <span class="o1">${esc(t("tkCt", { v: secTxt(v.ct) }))}</span>
+        ${ok == null ? "" : `<span class="tk-st ${ok ? "ok" : "bad"}">${ok ? "✓" : "!"} ${esc(t(ok ? "tkOk" : "tkShort"))}</span>`}</button>`;
+    }).join("");
+    $("tkTiles").querySelectorAll(".tile").forEach(b => b.onclick = () => { tkStation = b.dataset.s; store("simTkStation", tkStation); renderOutput(); });
+    const groups = groupByGran(all);
+    $("tkChartTitle").textContent = t("tkChart", { s: tkStation }) + unitTxt();
+    groupChart($("tkChart"), groups.map((g, n) => {
+      const pn = periodName(g, n), v = tkOf(g.days, tkStation);
+      return { label: pn.label, vals: [v.takt, v.ct], tip: `${esc(pn.row)}${pn.range ? "  " + esc(pn.range) : ""}<br>Takt <b>${secTxt(v.takt)}</b> ${esc(t("secUnit"))}  ${esc(t("tkCt", { v: secTxt(v.ct) }))}<br>${esc(t("tkDemand", { n: fmt(v.demand, 0) }))}` };
+    }), [{ cls: "b2" }, { cls: "b1" }], (v) => fmt(v, v < 10 ? 1 : 0));
+    $("tkTableTitle").textContent = t("tkTable") + unitTxt();
+    const rowsOut = groups.map((g, n) => {
+      const pn = periodName(g, n), dem = g.days.reduce((a, x) => a + (x.off ? 0 : x.demand), 0);
+      return { pn, dem, cells: stations.map(nm => secTxt(tkOf(g.days, nm).takt)) };
+    });
+    $("tkTable").innerHTML = `<thead><tr><th class="k">${esc(t("colPeriod"))}</th>${outGran === "day" ? "" : `<th class="k">${esc(t("colDates"))}</th>`}<th>${esc(t("tkDemandCol"))}</th>` +
+      stations.map(n => `<th>${esc(n)}</th>`).join("") + "</tr></thead><tbody>" + (rowsOut.length ? rowsOut.map(r =>
+      `<tr><td class="k">${esc(r.pn.row)}</td>${outGran === "day" ? "" : `<td class="k">${esc(r.pn.range)}</td>`}<td>${fmt(r.dem, 0)}</td>${r.cells.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")
+      : `<tr><td class="k empty" colspan="${stations.length + 3}">${esc(t("noData"))}</td></tr>`) + "</tbody>";
+    tkView = { stations, rowsOut };
+  }
+  $("tkCsvBtn").addEventListener("click", () => {
+    const job = doneRuns().find(r => r.id === outRunId);
+    if (!job || !tkView || !tkView.rowsOut.length) return;
+    const head = [t("colPeriod"), ...(outGran === "day" ? [] : [t("colDates")]), t("tkDemandCol"), ...tkView.stations.map(n => n + " Takt (s)")];
+    downloadCsv(`Takt_${tkProd}_${outGran}`, job, head, tkView.rowsOut.map(r => [r.pn.row, ...(outGran === "day" ? [] : [r.pn.range]), r.dem, ...r.cells]));
+  });
+  function downloadCsv(prefix, job, head, rows) {
+    const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const blob = new Blob(["﻿" + [head, ...rows].map(r => r.map(q).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `${prefix}_${(job.label || job.id).replace(/[^\w一-鿿-]+/g, "_")}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
 
   // ---------- equipment utilization ----------
   const ST_VAR = { 2: "proc", 21: "setup", 31: "setup", 9: "op", 49: "op", 10: "tr", 14: "tr", 15: "tr", 4: "block", 26: "block", 48: "block",

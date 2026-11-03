@@ -74,6 +74,12 @@ def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
     out["output_views"] = cfg.get("output_views", [])
     if cfg.get("oee"):
         out["oee"] = {k: v for k, v in cfg["oee"].items() if not k.startswith("_")}
+    if cfg.get("rework"):
+        rw = cfg["rework"]
+        out["rework"] = {"products": rw["products"],
+                         "stations": [{"name": st["name"], "products": list(st["tables"])} for st in rw["stations"]]}
+    if cfg.get("takt"):
+        out["takt"] = {k: v for k, v in cfg["takt"].items() if not k.startswith("_")}
     sh = cfg.get("shifts")
     if sh:
         out["shifts"] = {"products": [{k: v for k, v in p.items() if k in ("name", "label", "label_zh")} for p in sh["products"]],
@@ -411,15 +417,28 @@ def first_day_end(cfg: dict[str, Any], params: dict[str, float]) -> float:
     return (midnight - start).total_seconds() / unit
 
 
+def rework_series(cfg: dict[str, Any]) -> list[tuple[str, str, str]]:
+    """(產品, 站別, Rework 表)。每天記錄表裡第 1 欄（Rework 數）和第 2 欄（產出數）的總和（累計值）。"""
+    rw = cfg.get("rework") or {}
+    out = []
+    for prod in rw.get("products", []):
+        for st in rw.get("stations", []):
+            tb = st["tables"].get(prod)
+            if tb:
+                out.append((prod, st["name"], tb))
+    return out
+
+
 def bottleneck_lines(cfg: dict[str, Any], params: dict[str, float]) -> tuple[list[str], list[str]]:
     """回傳（迴圈前的宣告, 迴圈裡每步之後要做的檢查）。"""
     ser = bottleneck_series(cfg)
-    if not ser:
+    rws = rework_series(cfg)
+    if not ser and not rws:
         return [], []
     decl = ["Array wb_vals = [];", "int wb_days = 0; int wb_r; double wb_m; double wb_v;",
             f"double wb_next = {first_day_end(cfg, params)!r};"]
     tvars: dict[str, str] = {}
-    for _, _, tb in ser:
+    for _, _, tb in ser + rws:
         if tb not in tvars:
             tvars[tb] = f"wbt{len(tvars) + 1}"
             decl.append(f"Table {tvars[tb]} = Table({_fs_str(tb)});")
@@ -427,6 +446,10 @@ def bottleneck_lines(cfg: dict[str, Any], params: dict[str, float]) -> tuple[lis
     for _, _, tb in ser:
         v = tvars[tb]
         body.append(f"        wb_m = 0; for (wb_r = 1; wb_r <= {v}.numRows; wb_r++) {{ wb_v = {v}[wb_r][1].as(double); if (wb_v > wb_m) wb_m = wb_v; }} wb_vals.push(wb_m);")
+    for _, _, tb in rws:
+        v = tvars[tb]
+        body.append(f"        wb_m = 0; wb_v = 0; for (wb_r = 1; wb_r <= {v}.numRows; wb_r++) {{ wb_m += {v}[wb_r][1].as(double); "
+                    f"if ({v}.numCols >= 2) wb_v += {v}[wb_r][2].as(double); }} wb_vals.push(wb_m); wb_vals.push(wb_v);")
     body += ["        wb_days++;", "        wb_next += wr_gap;", "    }"]
     return decl, body
 
@@ -440,6 +463,7 @@ def bottleneck_write_lines(path: Path) -> list[str]:
 
 def parse_bottleneck(cfg: dict[str, Any], params: dict[str, float], path: Path) -> dict[str, Any] | None:
     ser = bottleneck_series(cfg)
+    rws = rework_series(cfg)
     vals: list[float] = []
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if line.startswith("@"):
@@ -448,7 +472,7 @@ def parse_bottleneck(cfg: dict[str, Any], params: dict[str, float], path: Path) 
             vals.append(float(line))
         except ValueError:
             pass
-    n = len(ser)
+    n = len(ser) + 2 * len(rws)
     if not n or len(vals) < n:
         return None
     days = len(vals) // n
@@ -459,9 +483,14 @@ def parse_bottleneck(cfg: dict[str, Any], params: dict[str, float], path: Path) 
     for k in range(days):
         end = (start or datetime(2000, 1, 1)) + timedelta(seconds=(first * unit) + k * 86400)
         dates.append((end - timedelta(seconds=1)).date().isoformat())  # 剛結束的那一天
-    out: dict[str, Any] = {"dates": dates, "ct": {}}
+    out: dict[str, Any] = {"dates": dates, "ct": {}, "rework": {}}
     for i, (prod, st, _) in enumerate(ser):
         out["ct"].setdefault(prod, {})[st] = [vals[k * n + i] for k in range(days)]
+    base = len(ser)
+    for j, (prod, st, _) in enumerate(rws):
+        i = base + 2 * j
+        out["rework"].setdefault(prod, {})[st] = {"rework": [vals[k * n + i] for k in range(days)],
+                                                   "output": [vals[k * n + i + 1] for k in range(days)]}  # cumulative
     return out
 
 
@@ -629,7 +658,7 @@ class FlexSimRunner:
         tables = run_dir / "tables.txt"
         util = run_dir / "utilization.txt"
         bneck = run_dir / "bottleneck.txt"
-        want_bneck = bool(bottleneck_series(self.cfg))
+        want_bneck = bool(bottleneck_series(self.cfg) or rework_series(self.cfg))
         want_tables = bool(self.cfg.get("tables"))
         want_util = bool(util_objects(self.cfg))
         script.write_text(build_script(self.cfg, params, end_time, result, progress, tables, plans, shifts, util,
@@ -818,7 +847,7 @@ class MockRunner:
 
 def mock_bottleneck(cfg: dict[str, Any], params: dict[str, float]) -> dict[str, Any] | None:
     ser = bottleneck_series(cfg)
-    if not ser:
+    if not ser and not rework_series(cfg):
         return None
     start = model_start_for(cfg, params) or datetime(2026, 1, 1)
     days = max(1, int(round(stop_time(cfg, params, None) * float((cfg.get("stop") or {}).get("time_unit_seconds", 1)) / 86400)))
@@ -826,6 +855,14 @@ def mock_bottleneck(cfg: dict[str, Any], params: dict[str, float]) -> dict[str, 
     for prod, st, _ in ser:
         base = {"SMT": 116.5, "DIP": 110.0, "L1": 95.0, "L2": 120.0, "L4": 120.0, "Packing": 120.0}.get(st, 100.0)
         out["ct"].setdefault(prod, {})[st] = [round(base * (1 - 0.02 * (k // 7)), 2) for k in range(days)]
+    out["rework"] = {}
+    for prod, st, _ in rework_series(cfg):
+        rw, op, a, b = [], [], 0.0, 0.0
+        for k in range(days):
+            day_out = 0 if (start + timedelta(days=k)).weekday() == 6 else random.randint(150, 220)
+            b += day_out; a += round(day_out * random.uniform(0.005, 0.04))
+            rw.append(a); op.append(b)
+        out["rework"].setdefault(prod, {})[st] = {"rework": rw, "output": op}
     return out
 
 
@@ -875,7 +912,7 @@ def mock_tables(cfg: dict[str, Any], params: dict[str, float]) -> dict[str, Any]
     days = max(1, int(round(end_t / 86400)))
     cols = ["Date", "Weekday", "SMT", "DIP", "L1", "L2", "POD", "L4", "PK", "Bonepile"]
     out = {}
-    for k, tb in enumerate(cfg["tables"]):
+    for k, tb in enumerate(t for t in cfg["tables"] if t.get("view") != "rework_source"):
         rows = []
         for d in range(days):
             dt = start + timedelta(days=d)
@@ -886,6 +923,13 @@ def mock_tables(cfg: dict[str, Any], params: dict[str, float]) -> dict[str, Any]
                    [0.0 if off else float(random.randint(0, 12))]
             rows.append({"row": f"DAY{d + 1}", "values": vals})
         out[tb["name"]] = {"columns": cols, "rows": rows}
+    for tb in cfg["tables"]:
+        if tb.get("view") == "rework_source":
+            rows = []
+            for i in range(1, random.randint(2, 5)):
+                o = float(random.randint(3000, 9000)); r = float(round(o * random.uniform(0.005, 0.03)))
+                rows.append({"row": f"Repair_{i}", "values": [r, o, r / o]})
+            out[tb["name"]] = {"columns": ["Rework quality", "Throughput quality", "Repair Rate"], "rows": rows}
     return out
 
 

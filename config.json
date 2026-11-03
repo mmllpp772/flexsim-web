@@ -281,6 +281,105 @@
         "PK",
         "Bonepile"
       ]
+    },
+    {
+      "name": "rw_bianca_smt",
+      "label": "SMT rework",
+      "table": "WUS_SMT_Rework_QTY",
+      "view": "rework_source",
+      "product_label": "bianca",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_strata_smt",
+      "label": "SMT rework",
+      "table": "WUS_SMT_Rework_Strata_QTY",
+      "view": "rework_source",
+      "product_label": "strata",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_bianca_dip",
+      "label": "DIP rework",
+      "table": "WUS_DIP_Rework_QTY",
+      "view": "rework_source",
+      "product_label": "bianca",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_strata_dip",
+      "label": "DIP rework",
+      "table": "WUS_DIP_Rework_Strata_QTY",
+      "view": "rework_source",
+      "product_label": "strata",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_bianca_l1",
+      "label": "L1 rework",
+      "table": "WUS_L1_Rework_QTY",
+      "view": "rework_source",
+      "product_label": "bianca",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_strata_l1",
+      "label": "L1 rework",
+      "table": "WUS_L1_Rework_Strata_QTY",
+      "view": "rework_source",
+      "product_label": "strata",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_bianca_l2",
+      "label": "L2 rework",
+      "table": "WUS_L2_Rework_QTY",
+      "view": "rework_source",
+      "product_label": "bianca",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_strata_l2",
+      "label": "L2 rework",
+      "table": "WUS_L2_Rework_Strata_QTY",
+      "view": "rework_source",
+      "product_label": "strata",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_bianca_l4",
+      "label": "L4 rework",
+      "table": "WUS_L4_Rework_QTY",
+      "view": "rework_source",
+      "product_label": "bianca",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_strata_l4",
+      "label": "L4 rework",
+      "table": "WUS_L4_Rework_Strata_QTY",
+      "view": "rework_source",
+      "product_label": "strata",
+      "key_columns": [],
+      "columns": []
+    },
+    {
+      "name": "rw_bianca_pod",
+      "label": "POD rework",
+      "table": "WUS_POD_Rework_QTY",
+      "view": "rework_source",
+      "product_label": "bianca",
+      "key_columns": [],
+      "columns": []
     }
   ],
   "_tables說明": "模擬跑完後整張匯出、顯示在網頁「輸出」頁的表格。table 是 FlexSim 裡 Global Table 的名稱；skip_rows 是不要顯示的列（列名）；key_columns 是日期這類文字欄，其他數字欄會自動算總和、畫每日圖。 columns 是這張表應有的欄位，還沒有資料時網頁用它畫出空的版面。",
@@ -480,6 +579,67 @@
           "strata": "WUS_packing Parameter_Strata"
         }
       }
+    ]
+  },
+  "rework": {
+    "_help": "Rework tables: one row per rework machine, column 1 = rework quantity, column 2 = throughput. The run records the station totals once per simulated day (so the page can show day/week/month/quarter) and exports the tables at the end for the per-machine breakdown.",
+    "products": [
+      "bianca",
+      "strata"
+    ],
+    "stations": [
+      {
+        "name": "SMT",
+        "tables": {
+          "bianca": "WUS_SMT_Rework_QTY",
+          "strata": "WUS_SMT_Rework_Strata_QTY"
+        }
+      },
+      {
+        "name": "DIP",
+        "tables": {
+          "bianca": "WUS_DIP_Rework_QTY",
+          "strata": "WUS_DIP_Rework_Strata_QTY"
+        }
+      },
+      {
+        "name": "L1",
+        "tables": {
+          "bianca": "WUS_L1_Rework_QTY",
+          "strata": "WUS_L1_Rework_Strata_QTY"
+        }
+      },
+      {
+        "name": "L2",
+        "tables": {
+          "bianca": "WUS_L2_Rework_QTY",
+          "strata": "WUS_L2_Rework_Strata_QTY"
+        }
+      },
+      {
+        "name": "L4",
+        "tables": {
+          "bianca": "WUS_L4_Rework_QTY",
+          "strata": "WUS_L4_Rework_Strata_QTY"
+        }
+      },
+      {
+        "name": "POD",
+        "tables": {
+          "bianca": "WUS_POD_Rework_QTY"
+        }
+      }
+    ]
+  },
+  "takt": {
+    "_help": "Takt time = planned production seconds (shift 1 + shift 2 hours on work days) / planned input of that day (SMT Input if filled, otherwise the suggested input). Calculated on the page.",
+    "stations": [
+      "SMT",
+      "DIP",
+      "L1",
+      "L2",
+      "L4",
+      "Packing"
     ]
   },
   "admin_code": "",
