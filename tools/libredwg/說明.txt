@@ -1,0 +1,17 @@
+﻿DWG 轉 DXF 小工具
+=================
+
+不用安裝、不需要 AutoCAD。
+
+用法：把 DWG 檔拖到「DWG轉DXF.bat」上面放開，
+      同一個資料夾會出現同名的 .dxf。可以一次拖好幾個檔案。
+
+注意：
+- dwg2dxf.exe 和 DWG轉DXF.bat 要放在同一個資料夾。
+- 大檔案（100 MB 以上）可能要幾分鐘，視窗沒當掉，等它跑完。
+- 少數新版 AutoCAD 特殊物件可能轉不出來；整個檔案轉失敗時，
+  先用 DWG TrueView 的「DWG 轉換」存成 AutoCAD 2010 或 2004 格式再轉。
+- 防毒或資安政策擋下 dwg2dxf.exe 時，請 IT 放行。
+
+轉檔程式：GNU LibreDWG（開源），GPL v3 授權，見 COPYING.txt。
+原始碼：https://github.com/LibreDWG/libredwg
