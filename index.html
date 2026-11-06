@@ -552,6 +552,9 @@
   /* sidebar: a dark control-panel strip that matches the run console; the open page is lit, with an amber edge */
   .cat-nav { background: linear-gradient(180deg, var(--console) 0%, #17232f 100%); border: 0; border-radius: 14px; padding: 14px 10px 12px; gap: 1px;
     box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -12px rgba(16,26,36,.45); }
+  /* long summaries (e.g. many changed stations) must not widen the menu: wider buttons sat invisibly over the form and stole clicks */
+  .cat-nav { grid-template-columns: minmax(0, 1fr); min-width: 0; overflow: hidden; }
+  .cat-nav button { min-width: 0; max-width: 100%; }
   .cat-nav .grp { display: flex; align-items: center; gap: 10px; font: 600 11.5px var(--display); color: var(--console-muted); opacity: .75; padding: 14px 12px 6px; letter-spacing: .06em; }
   .cat-nav .grp::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.08); }
   .cat-nav .grp:first-child { padding-top: 2px; }
@@ -567,7 +570,7 @@
   .cat-nav :focus-visible { outline-color: var(--amber); }
   .cat-nav .nf { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(242,176,30,.18); }
   @media (max-width: 900px) {
-    .cat-nav { padding: 6px; }
+    .cat-nav { padding: 6px; overflow-x: auto; }
     .cat-nav .grp { display: none; }
     .cat-nav button { padding: 9px 14px; }
     .cat-nav button[aria-current="true"]::before { left: 14px; right: 14px; top: auto; bottom: 3px; width: auto; height: 2px; border-radius: 2px; }
