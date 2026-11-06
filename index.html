@@ -362,8 +362,10 @@
   .tile .o2 { display: block; font: 600 30px/1.1 var(--cond); font-variant-numeric: tabular-nums; margin-top: 2px; }
   .tile .o2 small { font: 600 13px var(--display); color: var(--muted); }
   .tiles.sd-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .panel.l3d-panel { padding: 0; overflow: hidden; }
-  .l3d-panel iframe { display: block; width: 100%; height: min(82vh, 920px); border: 0; }
+  /* 3D layout tab: the plant page fills the window below the tabs */
+  .l3d-page { padding-bottom: 24px; }
+  .l3d-bar { display: flex; justify-content: flex-end; margin: -8px 0 8px; }
+  .l3d-page iframe { display: block; width: 100%; height: 70vh; min-height: 480px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
   .sd-table .sd-fill { color: var(--faint); font-size: 13px; white-space: nowrap; }
   .sd-table tr.is-fill td { color: var(--muted); }
   .tile.sd { cursor: default; }
@@ -642,10 +644,16 @@
   </section>
 
   <nav class="tabs" id="tabs" role="tablist" hidden>
+    <button type="button" role="tab" id="tabLayout" data-tab="layout" aria-controls="pageLayout" data-i18n="tabLayout" hidden></button>
     <button type="button" role="tab" id="tabInput" data-tab="input" aria-controls="app" data-i18n="tabInput"></button>
     <button type="button" role="tab" id="tabOutput" data-tab="output" aria-controls="pageOutput" data-i18n="tabOutput"></button>
     <button type="button" role="tab" id="tabHistory" data-tab="history" aria-controls="pageHistory"><span data-i18n="tabHistory"></span> <span class="count" id="histCount"></span></button>
   </nav>
+
+  <main class="l3d-page" id="pageLayout" role="tabpanel" aria-labelledby="tabLayout" hidden>
+    <div class="l3d-bar"><a class="link" id="l3dOpen" target="_blank" rel="noopener" data-i18n="l3dOpen"></a></div>
+    <iframe id="l3dFrame" title="3D layout" data-i18n-title="tabLayout"></iframe>
+  </main>
 
   <main class="page" id="app" role="tabpanel" aria-labelledby="tabInput" hidden>
     <section class="console" data-i18n-aria="controlsAria">
@@ -968,14 +976,6 @@
           <p class="hint" data-i18n="tkDef" style="margin:4px 4px 0"></p>
         </div>
 
-        <div data-ocat="l3d" hidden>
-          <section class="panel view-head">
-            <h2 data-i18n="l3dTitle"></h2>
-            <a class="link" id="l3dOpen" href="layout3d.html" target="_blank" rel="noopener" data-i18n="l3dOpen"></a>
-          </section>
-          <section class="panel l3d-panel"><iframe id="l3dFrame" title="3D" loading="lazy"></iframe></section>
-        </div>
-
         <div data-ocat="util" hidden>
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
@@ -1119,7 +1119,7 @@
       stopping: "Stopping", stoppingMsg: "Sending the stop request.", stoppingSub: "It takes effect once OneDrive syncs.",
       confirmStop: "Stop this run? FlexSim will be closed and no results will be saved.",
       startLbl: "Start", endLbl: "End",
-      tabInput: "Parameters", tabOutput: "Metrics", tabHistory: "Run history",
+      tabLayout: "3D layout", tabInput: "Parameters", tabOutput: "Metrics", tabHistory: "Run history",
       inputCats: "Input categories", outputCats: "Metric categories", grpInputs: "Inputs", grpOutputs: "Metrics",
       catBasic: "Period and run info", catPlan: "Daily input plan", catShift: "Shifts", catOverview: "Overview", catCt: "CT and FPYR",
       ctTitle: "Cycle time (CT) and FPYR",
@@ -1163,7 +1163,7 @@
       reportFailed: "Could not make the PDF: {e}", reportNoLib: "The PDF tools didn't load. Make sure the vendor folder is next to Simulator.html.",
       grpPlanning: "Plan", grpProcess: "Process settings", grpSummary: "Summary", grpProduction: "Production", grpEfficiency: "Efficiency", grpQuality: "Quality",
       ovSub: "Key numbers", tkSub: "Plan pace vs CT", utilSub: "Time in each state", rwSub: "Repair rate by station",
-      l3dTitle: "3D layout", l3dSub: "Plant model from CAD", l3dOpen: "Open in a new tab",
+      l3dOpen: "Open in a new tab",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1285,7 +1285,7 @@
       stopping: "停止中", stoppingMsg: "正在送出停止要求。", stoppingSub: "OneDrive 同步後生效。",
       confirmStop: "要停止這次模擬嗎？FlexSim 會被關閉，不會保留結果。",
       startLbl: "開始", endLbl: "結束",
-      tabInput: "參數調整", tabOutput: "指標呈現", tabHistory: "執行紀錄",
+      tabLayout: "3D 佈置", tabInput: "參數調整", tabOutput: "指標呈現", tabHistory: "執行紀錄",
       inputCats: "輸入類別", outputCats: "指標類別", grpInputs: "輸入", grpOutputs: "指標",
       catBasic: "期間與基本資料", catPlan: "每日投產計畫", catShift: "班別設定", catOverview: "總覽", catCt: "CT 與 FPYR",
       ctTitle: "CT（週期時間）與 FPYR",
@@ -1329,7 +1329,7 @@
       reportFailed: "PDF 產生失敗：{e}", reportNoLib: "PDF 工具沒有載入，請確認 Simulator.html 旁邊有 vendor 資料夾。",
       grpPlanning: "計畫", grpProcess: "製程參數", grpSummary: "摘要", grpProduction: "生產", grpEfficiency: "效率", grpQuality: "品質",
       ovSub: "主要指標", tkSub: "計畫節奏與 CT", utilSub: "各狀態的時間比例", rwSub: "各站維修率",
-      l3dTitle: "3D 佈置", l3dSub: "依 CAD 建立的廠區", l3dOpen: "在新分頁開啟",
+      l3dOpen: "在新分頁開啟",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -2655,16 +2655,25 @@
   }
 
   // ---------- tabs ----------
-  const TABS = ["input", "output", "history"];
-  const TAB_IDS = { input: ["tabInput", "app"], output: ["tabOutput", "pageOutput"], history: ["tabHistory", "pageHistory"] };
+  const TAB_IDS = { layout: ["tabLayout", "pageLayout"], input: ["tabInput", "app"], output: ["tabOutput", "pageOutput"], history: ["tabHistory", "pageHistory"] };
+  const ALL_TABS = ["layout", "input", "output", "history"];
+  let TABS = ALL_TABS.slice(1);  // the 3D layout tab is added once the shared folder has the page
   function showTab(tab, push = true) {
     TAB = TABS.includes(tab) ? tab : "input";
+    ALL_TABS.filter(k => !TABS.includes(k)).forEach(k => { $(TAB_IDS[k][1]).hidden = true; });
     TABS.forEach(k => { $(TAB_IDS[k][0]).setAttribute("aria-selected", String(k === TAB)); $(TAB_IDS[k][1]).hidden = k !== TAB; });
     if (push) { try { history_replace(TAB); } catch (e) {} }
     if (TAB === "output") renderOutput();
     if (TAB === "history") renderTable();
+    if (TAB === "layout" && $("l3dFrame").getAttribute("src") !== HAS_L3D) $("l3dFrame").setAttribute("src", HAS_L3D);  // load the 3D page only when it's opened
     window.scrollTo(0, 0);
+    if (TAB === "layout") fitL3d();
   }
+  function fitL3d() {  // the 3D page fills the window from its top edge down
+    const f = $("l3dFrame"); if (f.offsetParent === null) return;
+    f.style.height = Math.max(480, window.innerHeight - f.getBoundingClientRect().top - 20) + "px";
+  }
+  window.addEventListener("resize", fitL3d);
   function history_replace(tab) { if (location.hash !== "#" + tab) window.history.replaceState(null, "", "#" + tab); }
   document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
   $("tabs").addEventListener("keydown", (e) => {
@@ -2689,7 +2698,6 @@
   function renderOutNav(job) {
     const g0 = t("grpSummary"), g1 = t("grpProduction"), g2 = t("grpEfficiency"), g3 = t("grpQuality");
     const cats = [{ k: "overview", label: t("catOverview"), sub: t("ovSub"), grp: g0, icon: "overview" },
-      ...(HAS_L3D ? [{ k: "l3d", label: t("l3dTitle"), sub: t("l3dSub"), grp: g0 }] : []),
       ...outViews().map(v => ({ k: v.name, label: L(v, "label"), sub: tableDefs().filter(d => d.view === v.name).map(d => L(d, "product_label") || L(d, "label")).join(", "), grp: g1, icon: "output" })),
       ...(CFG.sod ? [{ k: "sd", label: t("sdTitle"), sub: t("sdGood"), grp: g1, icon: "sd" }] : []),
       ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2", grp: g2, icon: "oee" }] : []),
@@ -2700,8 +2708,7 @@
     $("outNav").innerHTML = navHtml(cats, OUT_CAT);
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
-    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd", "l3d"].includes(OUT_CAT);
-    document.querySelector('[data-ocat="l3d"]').hidden = OUT_CAT !== "l3d";
+    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd"].includes(OUT_CAT);
     document.querySelector('[data-ocat="sd"]').hidden = OUT_CAT !== "sd";
     document.querySelector('[data-ocat="rw"]').hidden = OUT_CAT !== "rw";
     document.querySelector('[data-ocat="tk"]').hidden = OUT_CAT !== "tk";
@@ -2761,11 +2768,6 @@
       renderBars();
     } else if (OUT_CAT === "util") {
       renderUtil(job);
-    } else if (OUT_CAT === "l3d") {
-      // the 3D page is a separate file next to this one; load it once, in the current language
-      const src = HAS_L3D === "layout3d.html" ? `layout3d.html?lang=${LANG}` : HAS_L3D;
-      if ($("l3dFrame").getAttribute("src") !== src) $("l3dFrame").setAttribute("src", src);
-      $("l3dOpen").setAttribute("href", src);
     } else if (OUT_CAT === "oee") {
       renderOee(job);
     } else if (OUT_CAT === "sd") {
@@ -3886,6 +3888,9 @@
       // 3D layout page next to Simulator.html: the one named in config (layout3d.file), otherwise layout3d.html
       HAS_L3D = false;
       for (const f of [CFG.layout3d_file, "layout3d.html"].filter(Boolean)) if (await T.hasFile(f)) { HAS_L3D = f; break; }
+      TABS = HAS_L3D ? ALL_TABS.slice() : ALL_TABS.slice(1);
+      $("tabLayout").hidden = !HAS_L3D;
+      if (HAS_L3D) $("l3dOpen").setAttribute("href", HAS_L3D);
       DI = CFG.date_inputs || null;
       renderConfigText();
       $("mockBanner").hidden = !CFG.mock_mode;
