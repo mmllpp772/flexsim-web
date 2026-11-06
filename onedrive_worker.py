@@ -342,7 +342,7 @@ class Worker:
 
         series: list[dict[str, Any]] = []  # 執行中的指標變化，給網頁畫小折線圖
         control_file = self.control_dir / f"{job_id}.json"
-        st = {"mode": base["mode"], "paused": False, "last": None}  # last = 最新的進度快照
+        st = {"mode": base["mode"], "paused": False, "last": None, "snapshot": None}  # last = 最新的進度；snapshot = 暫停時的完整指標
 
         def add_point(model_time: float, metrics: dict[str, Any]) -> None:
             dt = model_datetime(self.cfg, params, model_time)
@@ -353,6 +353,8 @@ class Worker:
         def publish() -> None:
             """把目前狀態寫給網頁。快轉模式回報進度百分比和日期，但不回報即時指標。"""
             data = {**base, "mode": st["mode"], "status": "running", "started_at": started, "paused": st["paused"]}
+            if st["paused"] and st["snapshot"]:
+                data["snapshot"] = st["snapshot"]  # 網頁的「指標呈現」可以先看暫停當下的結果
             snap = st["last"]
             if snap:
                 fraction, model_time, metrics = snap
@@ -374,8 +376,17 @@ class Worker:
                     publish()
             return action == "pause"
 
+        def on_snapshot(snap: dict[str, Any]) -> None:
+            dt = model_datetime(self.cfg, params, snap.get("model_time") or 0)
+            snap["snapshot_date"] = dt.strftime("%Y-%m-%d %H:%M") if dt else None
+            snap["snapshot_at"] = now_iso()
+            st["snapshot"] = snap
+            log.info("Job %s: pause snapshot at %s", job_id, snap["snapshot_date"])
+
         def on_pause(paused: bool) -> None:
             st["paused"] = paused
+            if not paused:
+                st["snapshot"] = None
             log.info("Job %s %s", job_id, "paused" if paused else "resumed")
             publish()  # 狀態改變就馬上寫，不等 10 秒
 
@@ -393,7 +404,7 @@ class Worker:
             result = self.runner.run(params, length, should_cancel=should_cancel, on_progress=on_progress,
                                      want_pause=want_pause, on_pause=on_pause, plans=plans, shifts=shifts,
                                      ct=ct, ct_defaults=self.ct_defaults, param_tables=ptab,
-                                     ct_dist=ct_dist, dist_defaults=self.dist_defaults)
+                                     ct_dist=ct_dist, dist_defaults=self.dist_defaults, on_snapshot=on_snapshot)
             base["mode"] = st["mode"]
             if series and result.get("model_time") is not None:
                 add_point(result["model_time"], result["metrics"])

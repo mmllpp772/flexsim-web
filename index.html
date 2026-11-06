@@ -1138,7 +1138,7 @@
       pauseTip: "Freeze the run where it is. Press Run or Fast forward to continue.",
       paused: "Paused", pausedMsg: "Paused at {date}. Press Run or Fast forward to continue.", pausedMsgNoDate: "Paused. Press Run or Fast forward to continue.",
       pausedSub: "FlexSim waits here without using CPU. It stops automatically after {n} minutes.",
-      pausing: "Pausing", pausingMsg: "Sending the pause request.", resuming: "Resuming", resumingMsg: "Sending the request to continue.",
+      pausing: "Pausing", pausingMsg: "Sending the pause request. FlexSim first writes the results so far (up to a minute).", viewSnap: "See results so far", resuming: "Resuming", resumingMsg: "Sending the request to continue.",
       switching: "Switching", toFast: "Switching to fast forward.", toRun: "Switching to normal run with progress.",
       syncSub: "It takes effect once OneDrive syncs.", pPaused: "Paused",
       resetTip: "Clear the run status and results view. Your inputs stay as they are.",
@@ -1214,6 +1214,7 @@
       crOld: "This run was made by an older version of the simulator program, which doesn't record carriers. Update runner.py and onedrive_worker.py on the simulator PC, restart onedrive_worker.py and run again.",
       crFailed: "FlexSim didn't write the carrier data for this run. On the simulator PC, open {f} (and script.txt in the same folder) to see where it stopped.",
       crDef: "Utilization = carriers in use ÷ initial quantity (Carrier inputs). Recorded at the end of every simulated day; the peak is the busiest moment sampled during the day. Carriers whose average is above the baseline are flagged and shaded in the table; a peak near 100% means work waited for carriers.",
+      snapTag: "[Paused, simulated to {d}]", snapMeta: "Paused: these are the results up to {d}. They update when the run finishes.",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1311,7 +1312,7 @@
       pauseTip: "讓模擬停在目前的位置，按「執行」或「快轉」繼續。",
       paused: "已暫停", pausedMsg: "停在 {date}。按「執行」或「快轉」繼續。", pausedMsgNoDate: "已暫停。按「執行」或「快轉」繼續。",
       pausedSub: "FlexSim 停在這裡等待，不佔用 CPU；暫停超過 {n} 分鐘會自動停止。",
-      pausing: "暫停中", pausingMsg: "正在送出暫停要求。", resuming: "繼續中", resumingMsg: "正在送出繼續要求。",
+      pausing: "暫停中", pausingMsg: "正在送出暫停要求。FlexSim 會先把目前為止的指標寫出來（最多約 1 分鐘）。", viewSnap: "查看目前為止的指標", resuming: "繼續中", resumingMsg: "正在送出繼續要求。",
       switching: "切換中", toFast: "切換成快轉。", toRun: "切換成一般執行，顯示進度。",
       syncSub: "OneDrive 同步後生效。", pPaused: "已暫停",
       resetTip: "清除執行狀態和畫面上的結果，你設定的參數會保留。",
@@ -1387,6 +1388,7 @@
       crOld: "這次模擬是用舊版的模擬程式跑的，舊版不會記錄載具。請在模擬電腦換上新版 runner.py、onedrive_worker.py，重新啟動 onedrive_worker.py 後再跑一次。",
       crFailed: "這次 FlexSim 沒有寫出載具資料。請在模擬電腦打開 {f}（同一個資料夾還有 script.txt）看停在哪裡。",
       crDef: "使用率 = 使用中的數量 ÷ 初始數量（在「載具（Carrier）」輸入）。每個模擬日結束時記一次；尖峰是當天取樣到最忙的時刻。平均高於基準的載具會標示出來，表格裡也會上色；尖峰接近 100% 代表有時候在等載具。",
+      snapTag: "【暫停中，模擬到 {d}】", snapMeta: "暫停中：以下是模擬到 {d} 為止的結果，跑完後會換成完整結果。",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -2439,6 +2441,9 @@
 
   function renderJob(job) {
     shownJob = job; stateMode = "job";
+    // keep the run list current, so a paused run's snapshot shows up on the Metrics tab right away
+    const hi = history.findIndex(h => h.id === job.id);
+    if (hi >= 0) history[hi] = job; else if (job.id) history.unshift(job);
     updateTimer(job);
     const p = periodOf(job.parameters);
     switch (job.status) {
@@ -2465,6 +2470,10 @@
         if (job.paused) {
           setState("wait", t("paused"), at0 ? t("pausedMsg", { date: dayFmt(at0) }) : t("pausedMsgNoDate"),
             t("pausedSub", { n: (CFG && CFG.max_pause_minutes) || 60 }), false);
+          if (job.snapshot) {  // FlexSim wrote what it had before pausing: offer it on the Metrics tab
+            $("state").insertAdjacentHTML("beforeend", `<button type="button" class="goto" data-run="${esc(job.id)}">${esc(t("viewSnap"))}</button>`);
+            $("state").querySelector(".goto").onclick = (e) => { outRunId = e.currentTarget.dataset.run; showTab("output"); };
+          }
           drawTimeline(p?.start, p?.end, at0, "run");
           if (job.mode !== "fast" && job.id === activeId) showLive(job);
           break;
@@ -2797,7 +2806,9 @@
   });
 
   // ---------- output page ----------
-  const doneRuns = () => history.filter(h => h.status === "done");
+  // finished runs, plus a paused run's snapshot (what FlexSim had when the user pressed pause)
+  const doneRuns = () => history.filter(h => h.status === "done" || (h.status === "running" && h.paused && h.snapshot))
+    .map(h => h.status === "done" ? h : { ...h, ...h.snapshot, _snap: true });
   const tableDefs = () => CFG.tables || [];
 
   function numericCols(tb, def) {
@@ -2859,7 +2870,8 @@
     let job = null;
     if (has) {
       if (!runs.find(r => r.id === outRunId)) outRunId = runs[0].id;
-      $("runSel").innerHTML = runs.map(r => `<option value="${esc(r.id)}">${esc(runName(r))}, ${esc(periodLabel(r.parameters))}</option>`).join("");
+      const snapTag = (r) => r._snap ? t("snapTag", { d: r.snapshot_date ? dayFmt(new Date(r.snapshot_date.slice(0, 10) + "T00:00:00"), false) : "?" }) + " " : "";
+      $("runSel").innerHTML = runs.map(r => `<option value="${esc(r.id)}">${esc(snapTag(r) + runName(r))}, ${esc(periodLabel(r.parameters))}</option>`).join("");
       $("runSel").value = outRunId;
       $("runSel").disabled = false;
       $("reportBtn").disabled = false;
@@ -2867,8 +2879,8 @@
       selectedId = job.id;
       const bits = [periodLabel(job.parameters)];
       if (job.submitted_by) bits.push(t("runBy", { who: job.submitted_by }).replace(/^[,，]\s*/, ""));
-      if (job.wall_seconds) bits.push(t("tookRun", { s: fmt(job.wall_seconds, 0) }));
-      $("outMeta").textContent = bits.join(LANG === "zh" ? "，" : ", ");
+      if (job.wall_seconds && !job._snap) bits.push(t("tookRun", { s: fmt(job.wall_seconds, 0) }));
+      $("outMeta").textContent = (job._snap ? t("snapMeta", { d: job.snapshot_date || "?" }) + " " : "") + bits.join(LANG === "zh" ? "，" : ", ");
     } else {
       $("runSel").innerHTML = `<option>${esc(t("noRunOpt"))}</option>`;
       $("runSel").disabled = true;
