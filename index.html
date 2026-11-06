@@ -364,7 +364,9 @@
   .tiles.sd-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   /* 3D layout tab: the plant page fills the window below the tabs */
   .l3d-page { padding-bottom: 24px; }
-  .cr-base { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); margin-right: 8px; }
+  .cr-bases { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+  .cr-base { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+  .cr-base span:first-child { font-weight: 600; color: var(--ink); min-width: 72px; }
   .cr-base input { width: 64px; padding: 6px 8px; text-align: right; }
   .chart .ref line { stroke: var(--err); stroke-width: 1.5; stroke-dasharray: 6 4; }
   .chart .ref text { fill: var(--err); font-size: 12px; font-weight: 600; }
@@ -986,10 +988,11 @@
         <div data-ocat="cr" hidden>
           <section class="panel view-head">
             <h2 data-i18n="crTitle"></h2>
-            <div class="util-segs">
-              <label class="cr-base"><span data-i18n="crBase"></span><input type="number" id="crBase" min="1" max="100" step="1" inputmode="numeric"><span>%</span></label>
-              <div class="seg" id="crGranSeg" role="group" data-i18n-aria="granAria"></div>
-            </div>
+            <div class="util-segs"><div class="seg" id="crGranSeg" role="group" data-i18n-aria="granAria"></div></div>
+          </section>
+          <section class="panel cr-base-panel">
+            <div class="panel-head"><h2 data-i18n="crBaseTitle"></h2><p class="hint tight" data-i18n="crBaseHint"></p></div>
+            <div class="cr-bases" id="crBases"></div>
           </section>
           <p class="panel empty-panel" id="crEmpty" hidden></p>
           <section class="panel">
@@ -1205,7 +1208,7 @@
       ovSub: "Key numbers", tkSub: "Plan pace vs CT", utilSub: "Time in each state", rwSub: "Repair rate by station",
       l3dOpen: "Open in a new tab",
       crTitle: "Carrier utilization", crSub: "In use vs available", crByCarrier: "By carrier", crHint: "Pick a carrier to see it over time.",
-      crAvg: "average", crPeak: "Peak {v}", crQty: "{u} of {q} in use", crFull: "Peak near full", crRoom: "Spare carriers", crBase: "Baseline", crOver: "Above {b}% baseline", crUnder: "Within {b}% baseline", crBaseLine: "Baseline {b}%",
+      crAvg: "average", crPeak: "Peak {v}", crQty: "{u} of {q} in use", crFull: "Peak near full", crRoom: "Spare carriers", crBaseTitle: "Baselines by stage", crBaseHint: "Average utilization above a stage's baseline is flagged. Saved in this browser.", crOver: "Above {b}% baseline", crUnder: "Within {b}% baseline", crBaseLine: "Baseline {b}%",
       crChart: "{s} utilization", crAvgLg: "Average", crPeakLg: "Peak", crTable: "Average utilization by carrier",
       crNone: "This run has no carrier data.",
       crOld: "This run was made by an older version of the simulator program, which doesn't record carriers. Update runner.py and onedrive_worker.py on the simulator PC, restart onedrive_worker.py and run again.",
@@ -1378,7 +1381,7 @@
       ovSub: "主要指標", tkSub: "計畫節奏與 CT", utilSub: "各狀態的時間比例", rwSub: "各站維修率",
       l3dOpen: "在新分頁開啟",
       crTitle: "Carrier 使用率", crSub: "使用中 ÷ 初始數量", crByCarrier: "各載具", crHint: "點選載具看它每天的變化。",
-      crAvg: "平均", crPeak: "尖峰 {v}", crQty: "平均 {u}／{q} 個使用中", crFull: "尖峰接近滿載", crRoom: "數量足夠", crBase: "基準", crOver: "高於基準 {b}%", crUnder: "在基準 {b}% 以內", crBaseLine: "基準 {b}%",
+      crAvg: "平均", crPeak: "尖峰 {v}", crQty: "平均 {u}／{q} 個使用中", crFull: "尖峰接近滿載", crRoom: "數量足夠", crBaseTitle: "各段製程的基準", crBaseHint: "平均使用率高於該段基準就會標示出來。設定存在這台電腦的瀏覽器。", crOver: "高於基準 {b}%", crUnder: "在基準 {b}% 以內", crBaseLine: "基準 {b}%",
       crChart: "{s} 使用率", crAvgLg: "平均", crPeakLg: "尖峰", crTable: "各載具平均使用率",
       crNone: "這次模擬沒有載具資料。",
       crOld: "這次模擬是用舊版的模擬程式跑的，舊版不會記錄載具。請在模擬電腦換上新版 runner.py、onedrive_worker.py，重新啟動 onedrive_worker.py 後再跑一次。",
@@ -3412,10 +3415,20 @@
   // ---------- carrier utilization ----------
   // job.carrier: { dates, rows: [[stage, carrier]], used: [[per day]], init, peak } — one entry per carrier row of the model's table
   let crSel = +(load("simCrSel") || 0), crView = null;
-  // baseline: utilization the team considers "busy enough"; carriers above it are flagged (saved per browser)
-  let crBase = Math.min(100, Math.max(1, +(load("simCrBase") || 70) || 70));
-  $("crBase").value = crBase;
-  $("crBase").addEventListener("change", (e) => { const v = Math.round(+e.target.value); if (v >= 1 && v <= 100) { crBase = v; store("simCrBase", String(v)); } e.target.value = crBase; renderOutput(); });
+  // baselines per stage (SMT-DIP, DIP-L1, …): utilization the team considers "busy enough"; carriers above it are flagged (saved per browser)
+  let crBases = {};
+  try { crBases = JSON.parse(load("simCrBases") || "{}") || {}; } catch (e) { crBases = {}; }
+  const crStage = (r) => r?.[0] || "";
+  const crBaseOf = (r) => { const v = +crBases[crStage(r)]; return v >= 1 && v <= 100 ? v : 70; };
+  function renderCrBases(rows) {
+    const stages = [...new Set(rows.map(crStage))];
+    $("crBases").innerHTML = stages.map(st => `<label class="cr-base"><span>${esc(st)}</span><input type="number" min="1" max="100" step="1" inputmode="numeric" data-st="${esc(st)}" value="${crBaseOf([st])}"><span>%</span></label>`).join("");
+    $("crBases").querySelectorAll("input").forEach(inp => inp.addEventListener("change", () => {
+      const v = Math.round(+inp.value);
+      if (v >= 1 && v <= 100) { crBases[inp.dataset.st] = v; store("simCrBases", JSON.stringify(crBases)); }
+      renderOutput();
+    }));
+  }
   const crName = (r) => r.filter(Boolean).join(" ");
   function crDays(job) {
     const C = job?.carrier; if (!C?.dates?.length || !C.rows?.length) return null;
@@ -3439,8 +3452,9 @@
     $("crEmpty").textContent = !job ? "" : !("carrier" in job) ? t("crOld") : job.carrier_note ? t("crFailed", { f: job.carrier_note.replace(/^\w+:\s*/, "") }) : t("crNone");
     const rows = C?.rows || [], all = items || [];
     if (crSel >= rows.length) crSel = 0;
+    renderCrBases(rows);
     $("crTiles").innerHTML = rows.map((r, i) => {
-      const v = crOf(C, all, i), b = crBase / 100, over = v.avg != null && v.avg > b, full = v.peak != null && v.peak >= 0.95;
+      const crBase = crBaseOf(r), v = crOf(C, all, i), b = crBase / 100, over = v.avg != null && v.avg > b, full = v.peak != null && v.peak >= 0.95;
       const tag = v.avg == null ? "" : over ? ["bad", "!", t("crOver", { b: crBase })] : full ? ["bad", "!", t("crFull")] : ["ok", "✓", t("crUnder", { b: crBase })];
       return `<button type="button" class="tile" data-i="${i}" aria-pressed="${i === crSel}"><span class="nm">${esc(crName(r))}</span>
         <span class="o2">${pct(v.avg)}<small> ${esc(t("crAvg"))}</small></span>
@@ -3454,13 +3468,13 @@
       const pn = periodName(g, n), v = crOf(C, g.days, crSel);
       return { label: pn.label, vals: [v.avg == null ? null : v.avg * 100, v.peak == null ? null : v.peak * 100],
         tip: `${esc(pn.row)}${pn.range ? "  " + esc(pn.range) : ""}<br>${esc(t("crAvgLg"))} <b>${pct(v.avg)}</b><br>${esc(t("crPeakLg"))} <b>${pct(v.peak)}</b>` };
-    }), [{ cls: "b2" }, { cls: "b1" }], (v) => fmt(v, 0) + "%", { v: crBase, label: t("crBaseLine", { b: crBase }) });
+    }), [{ cls: "b2" }, { cls: "b1" }], (v) => fmt(v, 0) + "%", { v: crBaseOf(rows[crSel]), label: t("crBaseLine", { b: crBaseOf(rows[crSel]) }) });
     else $("crChart").innerHTML = `<p class="empty">${esc(t("noData"))}</p>`;
     $("crTableTitle").textContent = t("crTable") + unitTxt();
     const out = groups.map((g, n) => ({ pn: periodName(g, n), vals: rows.map((_, i) => crOf(C, g.days, i)) }));
     $("crTable").innerHTML = `<thead><tr><th class="k">${esc(t("colPeriod"))}</th>${outGran === "day" ? "" : `<th class="k">${esc(t("colDates"))}</th>`}` +
       rows.map(r => `<th>${esc(crName(r))}</th>`).join("") + "</tr></thead><tbody>" + (out.length ? out.map(r =>
-      `<tr><td class="k">${esc(r.pn.row)}</td>${outGran === "day" ? "" : `<td class="k">${esc(r.pn.range)}</td>`}${r.vals.map(v => `<td class="${v.avg != null && v.avg > crBase / 100 ? "cr-over" : ""}" title="${esc(t("crPeak", { v: pct(v.peak) }))}">${pct(v.avg)}</td>`).join("")}</tr>`).join("")
+      `<tr><td class="k">${esc(r.pn.row)}</td>${outGran === "day" ? "" : `<td class="k">${esc(r.pn.range)}</td>`}${r.vals.map((v, i) => `<td class="${v.avg != null && v.avg > crBaseOf(rows[i]) / 100 ? "cr-over" : ""}" title="${esc(t("crPeak", { v: pct(v.peak) }))}">${pct(v.avg)}</td>`).join("")}</tr>`).join("")
       : `<tr><td class="k empty" colspan="${rows.length + 2}">${esc(t("noData"))}</td></tr>`) + "</tbody>";
     crView = { rows, out };
   }
