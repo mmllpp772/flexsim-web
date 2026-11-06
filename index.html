@@ -976,6 +976,36 @@
           <p class="hint" data-i18n="tkDef" style="margin:4px 4px 0"></p>
         </div>
 
+        <div data-ocat="cr" hidden>
+          <section class="panel view-head">
+            <h2 data-i18n="crTitle"></h2>
+            <div class="util-segs"><div class="seg" id="crGranSeg" role="group" data-i18n-aria="granAria"></div></div>
+          </section>
+          <p class="panel empty-panel" id="crEmpty" hidden></p>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 data-i18n="crByCarrier"></h2>
+              <p class="hint tight" data-i18n="crHint"></p>
+            </div>
+            <div id="crTiles" class="tiles"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="crChartTitle"></h2>
+              <div class="legend"><span class="lg-o2"></span><span data-i18n="crAvgLg"></span><span class="lg-o1"></span><span data-i18n="crPeakLg"></span></div>
+            </div>
+            <div class="chart" id="crChart"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2 id="crTableTitle"></h2>
+              <button class="link" id="crCsvBtn" type="button" data-i18n="tableCsv"></button>
+            </div>
+            <div class="table-wrap"><table id="crTable" class="daily oee"></table></div>
+          </section>
+          <p class="hint" data-i18n="crDef" style="margin:4px 4px 0"></p>
+        </div>
+
         <div data-ocat="util" hidden>
           <section class="panel view-head">
             <h2 data-i18n="catUtil"></h2>
@@ -1164,6 +1194,11 @@
       grpPlanning: "Plan", grpProcess: "Process settings", grpSummary: "Summary", grpProduction: "Production", grpEfficiency: "Efficiency", grpQuality: "Quality",
       ovSub: "Key numbers", tkSub: "Plan pace vs CT", utilSub: "Time in each state", rwSub: "Repair rate by station",
       l3dOpen: "Open in a new tab",
+      crTitle: "Carrier utilization", crSub: "In use vs available", crByCarrier: "By carrier", crHint: "Pick a carrier to see it over time.",
+      crAvg: "average", crPeak: "Peak {v}", crQty: "{u} of {q} in use", crFull: "Peak near full", crRoom: "Spare carriers",
+      crChart: "{s} utilization", crAvgLg: "Average", crPeakLg: "Peak", crTable: "Average utilization by carrier",
+      crNone: "This run has no carrier data. Runs made before this page was added don't record it.",
+      crDef: "Utilization = carriers in use ÷ initial quantity (Carrier inputs). Recorded at the end of every simulated day; the peak is the busiest moment sampled during the day. A peak near 100% means work waited for carriers.",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
       oee2Def: "Effective time ÷ planned production time (shift 1 + shift 2 hours on work days; rest days count as 0).",
@@ -1330,6 +1365,11 @@
       grpPlanning: "計畫", grpProcess: "製程參數", grpSummary: "摘要", grpProduction: "生產", grpEfficiency: "效率", grpQuality: "品質",
       ovSub: "主要指標", tkSub: "計畫節奏與 CT", utilSub: "各狀態的時間比例", rwSub: "各站維修率",
       l3dOpen: "在新分頁開啟",
+      crTitle: "Carrier 使用率", crSub: "使用中 ÷ 初始數量", crByCarrier: "各載具", crHint: "點選載具看它每天的變化。",
+      crAvg: "平均", crPeak: "尖峰 {v}", crQty: "平均 {u}／{q} 個使用中", crFull: "尖峰接近滿載", crRoom: "數量足夠",
+      crChart: "{s} 使用率", crAvgLg: "平均", crPeakLg: "尖峰", crTable: "各載具平均使用率",
+      crNone: "這次模擬沒有載具資料（加上這頁之前跑的模擬不會記錄）。",
+      crDef: "使用率 = 使用中的數量 ÷ 初始數量（在「載具（Carrier）」輸入）。每個模擬日結束時記一次；尖峰是當天取樣到最忙的時刻。尖峰接近 100% 代表有時候在等載具。",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
       oee2Def: "有效時間 ÷ 計畫生產時間（工作日的班別一 + 班別二時數，休息日不算）。",
@@ -1960,7 +2000,12 @@
   // rows the page shows for a table: the config's "rows" list (named, column 1 only), otherwise every row
   function ptRows(g, tn) {
     const tb = g.defaults?.[tn]; if (!tb) return [];
-    const spec = g.rows?.[tn];
+    const spec = g.rows?.[tn], edit = g.edit?.[tn];
+    if (edit) {  // every row; named columns are editable, label columns name the row
+      const idx = (names) => (names || []).map(n => tb.columns.indexOf(n)).filter(i => i >= 0);
+      const lc = idx(edit.label_cols), ec = idx(edit.cols);
+      return tb.rows.map(r => ({ r, labels: lc.map(i => r.cells[i] ?? ""), label: lc.map(i => r.cells[i] ?? "").join(" / ") || r.name, cols: ec }));
+    }
     if (!spec) return tb.rows.map(r => ({ r, label: r.name, cols: r.cells.map((_, i) => i) }));
     return spec.map(sp => { const r = tb.rows.find(x => x.name === sp.row); return r && { r, label: L(sp, "label"), cols: [0] }; }).filter(Boolean);
   }
@@ -1995,16 +2040,18 @@
     const box = $("pt_" + gname);
     const tables = Object.entries(g.defaults || {});
     box.innerHTML = tables.map(([tn, tb]) => {
-      const named = !!g.rows?.[tn], rows = ptRows(g, tn);
-      const allCols = tb.columns.map((c, i) => /^col\s*\d+$/i.test(String(c)) ? t("ptCol", { n: i + 1 }) : c);
-      const heads = named ? [t("ptValue")] : allCols;
+      const named = !!g.rows?.[tn], edit = g.edit?.[tn], rows = ptRows(g, tn);
+      const colName = (c) => g.col_labels?.[c] ? L(g.col_labels[c], "label") : c;
+      const allCols = tb.columns.map((c, i) => /^col\s*\d+$/i.test(String(c)) ? t("ptCol", { n: i + 1 }) : colName(c));
+      const heads = named ? [t("ptValue")] : edit ? (rows[0]?.cols || []).map(i => colName(tb.columns[i])) : allCols;
+      const labelHeads = edit ? (edit.label_cols || []).map(colName) : [t("ptItem")];
       const title = g.table_labels?.[tn] ? L(g.table_labels[tn], "label") : tn;
-      return `<h3 class="ct-h">${esc(title)}</h3><div class="table-wrap"><table class="ct-table pt-table"><thead><tr><th class="l">${esc(t("ptItem"))}</th>${heads.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
-        rows.map(({ r, label, cols }) => `<tr><td class="l">${esc(label)}</td>${cols.map(ci => {
+      return `<h3 class="ct-h">${esc(title)}</h3><div class="table-wrap"><table class="ct-table pt-table"><thead><tr>${labelHeads.map(h => `<th class="l">${esc(h)}</th>`).join("")}${heads.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
+        rows.map(({ r, label, labels, cols }) => `<tr>${(labels || [label]).map(x => `<td class="l">${esc(x)}</td>`).join("")}${cols.map((ci, k) => {
           const d = r.cells[ci];
           if (typeof d !== "number") return `<td class="txt" title="${esc(d || "")}">${esc(d || "")}</td>`;
           const key = `${r.row},${ci + 1}`, cur = PTS[gname]?.[tn]?.[key], v = cur ?? d, ch = cur != null && cur !== d;
-          return `<td><input type="number" step="any" data-t="${esc(tn)}" data-k="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(label)} ${esc(heads[named ? 0 : ci])}">${ch ? `<span class="was">${esc(t("ctWas", { v: nf(d) }))}</span>` : ""}</td>`;
+          return `<td><input type="number" step="any" data-t="${esc(tn)}" data-k="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(label)} ${esc(heads[named ? 0 : edit ? k : ci])}">${ch ? `<span class="was">${esc(t("ctWas", { v: nf(d) }))}</span>` : ""}</td>`;
         }).join("")}</tr>`).join("") + "</tbody></table></div>";
     }).join("") || `<p class="empty">${esc(t("noData"))}</p>`;
     box.querySelectorAll("input[data-k]").forEach(inp => inp.addEventListener("change", () => {
@@ -2703,12 +2750,14 @@
       ...(CFG.oee ? [{ k: "oee", label: "OEE", sub: "OEE1, OEE2", grp: g2, icon: "oee" }] : []),
       ...(CFG.takt ? [{ k: "tk", label: "Takt Time", sub: t("tkSub"), grp: g2, icon: "tk" }] : []),
       ...(CFG.utilization ? [{ k: "util", label: t("catUtil"), sub: t("utilSub"), grp: g2, icon: "util" }] : []),
+      ...(CFG.carrier ? [{ k: "cr", label: t("crTitle"), sub: t("crSub"), grp: g2 }] : []),
       ...(CFG.rework ? [{ k: "rw", label: "Rework", sub: t("rwSub"), grp: g3, icon: "rw" }] : [])];
     if (!cats.find(c => c.k === OUT_CAT)) OUT_CAT = "overview";
     $("outNav").innerHTML = navHtml(cats, OUT_CAT);
     $("outNav").querySelectorAll("button").forEach(b => b.onclick = () => { OUT_CAT = b.dataset.k; store("simOutCat", OUT_CAT); renderOutput(); });
     document.querySelector('[data-ocat="overview"]').hidden = OUT_CAT !== "overview";
-    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="view"]').hidden = ["overview", "util", "oee", "rw", "tk", "sd", "cr"].includes(OUT_CAT);
+    document.querySelector('[data-ocat="cr"]').hidden = OUT_CAT !== "cr";
     document.querySelector('[data-ocat="sd"]').hidden = OUT_CAT !== "sd";
     document.querySelector('[data-ocat="rw"]').hidden = OUT_CAT !== "rw";
     document.querySelector('[data-ocat="tk"]').hidden = OUT_CAT !== "tk";
@@ -2774,6 +2823,8 @@
       renderSod(job);
     } else if (OUT_CAT === "rw") {
       renderRework(job);
+    } else if (OUT_CAT === "cr") {
+      renderCarrier(job);
     } else if (OUT_CAT === "tk") {
       renderTakt(job);
     } else {
@@ -3292,6 +3343,61 @@
     if (!job || !tkView || !tkView.rowsOut.length) return;
     const head = [t("colPeriod"), ...(outGran === "day" ? [] : [t("colDates")]), t("tkDemandCol"), ...tkView.stations.map(n => n + " Takt (s)")];
     downloadCsv(`Takt_${tkProd}_${outGran}`, job, head, tkView.rowsOut.map(r => [r.pn.row, ...(outGran === "day" ? [] : [r.pn.range]), r.dem, ...r.cells]));
+  });
+  // ---------- carrier utilization ----------
+  // job.carrier: { dates, rows: [[stage, carrier]], used: [[per day]], init, peak } — one entry per carrier row of the model's table
+  let crSel = +(load("simCrSel") || 0), crView = null;
+  const crName = (r) => r.filter(Boolean).join(" ");
+  function crDays(job) {
+    const C = job?.carrier; if (!C?.dates?.length || !C.rows?.length) return null;
+    return C.dates.map((iso, k) => ({ d: new Date(iso + "T00:00:00"), iso, k })).filter(x => inPeriod(job, x.iso));
+  }
+  function crOf(C, items, i) {  // average end-of-day utilization and the highest peak, for carrier row i
+    let su = 0, n = 0, pk = null, pkDay = null, used = 0, init = 0;
+    for (const x of items) {
+      const q = C.init[i][x.k]; if (!(q > 0)) continue;
+      const u = C.used[i][x.k] / q, p = Math.max(C.peak[i][x.k], C.used[i][x.k]) / q;
+      su += u; n++; used += C.used[i][x.k]; init += q;
+      if (pk == null || p > pk) { pk = p; pkDay = x.iso; }
+    }
+    return { avg: n ? su / n : null, peak: pk, peakDay: pkDay, used: n ? used / n : null, init: n ? init / n : null };
+  }
+  function renderCarrier(job) {
+    granPills($("crGranSeg"));
+    const C = job?.carrier, items = job ? crDays(job) : null;
+    $("crEmpty").hidden = !(job && !items); $("crEmpty").textContent = t("crNone");
+    const rows = C?.rows || [], all = items || [];
+    if (crSel >= rows.length) crSel = 0;
+    $("crTiles").innerHTML = rows.map((r, i) => {
+      const v = crOf(C, all, i), hot = v.peak != null && v.peak >= 0.95;
+      return `<button type="button" class="tile" data-i="${i}" aria-pressed="${i === crSel}"><span class="nm">${esc(crName(r))}</span>
+        <span class="o2">${pct(v.avg)}<small> ${esc(t("crAvg"))}</small></span>
+        <span class="o1">${esc(t("crPeak", { v: pct(v.peak) }))}${v.init != null ? ` · ${esc(t("crQty", { u: fmt(v.used, 0), q: fmt(v.init, 0) }))}` : ""}</span>
+        ${v.peak == null ? "" : `<span class="tk-st ${hot ? "bad" : "ok"}">${hot ? "!" : "✓"} ${esc(t(hot ? "crFull" : "crRoom"))}</span>`}</button>`;
+    }).join("") || `<p class="empty">${esc(t("noData"))}</p>`;
+    $("crTiles").querySelectorAll(".tile").forEach(b => b.onclick = () => { crSel = +b.dataset.i; store("simCrSel", String(crSel)); renderOutput(); });
+    const groups = groupByGran(all);
+    $("crChartTitle").textContent = t("crChart", { s: rows[crSel] ? crName(rows[crSel]) : "" }) + unitTxt();
+    if (C && rows.length) groupChart($("crChart"), groups.map((g, n) => {
+      const pn = periodName(g, n), v = crOf(C, g.days, crSel);
+      return { label: pn.label, vals: [v.avg == null ? null : v.avg * 100, v.peak == null ? null : v.peak * 100],
+        tip: `${esc(pn.row)}${pn.range ? "  " + esc(pn.range) : ""}<br>${esc(t("crAvgLg"))} <b>${pct(v.avg)}</b><br>${esc(t("crPeakLg"))} <b>${pct(v.peak)}</b>` };
+    }), [{ cls: "b2" }, { cls: "b1" }], (v) => fmt(v, 0) + "%");
+    else $("crChart").innerHTML = `<p class="empty">${esc(t("noData"))}</p>`;
+    $("crTableTitle").textContent = t("crTable") + unitTxt();
+    const out = groups.map((g, n) => ({ pn: periodName(g, n), vals: rows.map((_, i) => crOf(C, g.days, i)) }));
+    $("crTable").innerHTML = `<thead><tr><th class="k">${esc(t("colPeriod"))}</th>${outGran === "day" ? "" : `<th class="k">${esc(t("colDates"))}</th>`}` +
+      rows.map(r => `<th>${esc(crName(r))}</th>`).join("") + "</tr></thead><tbody>" + (out.length ? out.map(r =>
+      `<tr><td class="k">${esc(r.pn.row)}</td>${outGran === "day" ? "" : `<td class="k">${esc(r.pn.range)}</td>`}${r.vals.map(v => `<td title="${esc(t("crPeak", { v: pct(v.peak) }))}">${pct(v.avg)}</td>`).join("")}</tr>`).join("")
+      : `<tr><td class="k empty" colspan="${rows.length + 2}">${esc(t("noData"))}</td></tr>`) + "</tbody>";
+    crView = { rows, out };
+  }
+  $("crCsvBtn").addEventListener("click", () => {
+    const job = doneRuns().find(r => r.id === outRunId);
+    if (!job || !crView || !crView.out.length) return;
+    const head = [t("colPeriod"), ...(outGran === "day" ? [] : [t("colDates")]), ...crView.rows.flatMap(r => [crName(r) + " " + t("crAvgLg"), crName(r) + " " + t("crPeakLg")])];
+    const p = (v) => v == null ? "" : (v * 100).toFixed(1) + "%";
+    downloadCsv(`Carrier_${outGran}`, job, head, crView.out.map(r => [r.pn.row, ...(outGran === "day" ? [] : [r.pn.range]), ...r.vals.flatMap(v => [p(v.avg), p(v.peak)])]));
   });
   function downloadCsv(prefix, job, head, rows) {
     const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;

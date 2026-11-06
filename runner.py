@@ -82,6 +82,8 @@ def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
         out["sod"] = {k: v for k, v in cfg["sod"].items() if not k.startswith("_")}
     if cfg.get("takt"):
         out["takt"] = {k: v for k, v in cfg["takt"].items() if not k.startswith("_")}
+    if cfg.get("carrier"):
+        out["carrier"] = {k: v for k, v in cfg["carrier"].items() if not k.startswith("_") and k != "table"}
     sh = cfg.get("shifts")
     if sh:
         out["shifts"] = {"products": [{k: v for k, v in p.items() if k in ("name", "label", "label_zh")} for p in sh["products"]],
@@ -496,12 +498,106 @@ def parse_bottleneck(cfg: dict[str, Any], params: dict[str, float], path: Path) 
     return out
 
 
+# ---------------------------------------------------------------------------
+# 載具（Carrier）使用量：每天結束記一次「使用中數量」和「初始數量」，另外每隔幾步取樣當天的尖峰
+# config: "carrier": {"table": ..., "used_col": "UsedQty", "init_col": "InitialQty", "label_cols": [...]}
+# ---------------------------------------------------------------------------
+
+def carrier_lines(cfg: dict[str, Any], params: dict[str, float]) -> tuple[list[str], list[str]]:
+    c = cfg.get("carrier")
+    if not c:
+        return [], []
+    used, init = _fs_str(c.get("used_col", "UsedQty")), _fs_str(c.get("init_col", "InitialQty"))
+    every = int(c.get("peak_sample_steps", 50))
+    decl = [f"Table wct = Table({_fs_str(c['table'])});",
+            "Array wc_peak = []; Array wc_lines = []; int wc_n = 0; int wc_r; double wc_u; double wc_i; string wc_s;",
+            f"double wc_next = {first_day_end(cfg, params)!r};",
+            "for (wc_r = 1; wc_r <= wct.numRows; wc_r++) wc_peak.push(0);"]
+    body = [
+        "    wc_n++;",
+        f"    if (wc_n % {every} == 0) {{  // sample the busiest moment of the day",
+        f"        for (wc_r = 1; wc_r <= wct.numRows; wc_r++) {{ wc_u = wct[wc_r][{used}].as(double); if (wc_u > wc_peak[wc_r].as(double)) wc_peak[wc_r] = wc_u; }}",
+        "    }",
+        "    while (Model.time >= wc_next) {  // a simulated day ended: used and initial quantity, and the day's peak",
+        '        wc_s = "";',
+        "        for (wc_r = 1; wc_r <= wct.numRows; wc_r++) {",
+        f"            wc_u = wct[wc_r][{used}].as(double); wc_i = wct[wc_r][{init}].as(double);",
+        "            if (wc_u > wc_peak[wc_r].as(double)) wc_peak[wc_r] = wc_u;",
+        '            wc_s = wc_s + numtostring(wc_u, 0, 3) + "," + numtostring(wc_i, 0, 3) + "," + numtostring(wc_peak[wc_r].as(double), 0, 3) + ";";',
+        "            wc_peak[wc_r] = wc_u;",
+        "        }",
+        "        wc_lines.push(wc_s);",
+        "        wc_next += wr_gap;",
+        "    }",
+    ]
+    return decl, body
+
+
+def carrier_write_lines(cfg: dict[str, Any], path: Path) -> list[str]:
+    labels = cfg["carrier"].get("label_cols", ["Stage", "ParentCarrier"])
+    lab = ' + "|" + '.join(f"wct[wc_r][{_fs_str(col)}].as(string)" for col in labels)
+    return [f'fileopen({_fs_str(str(path))}, "w");',
+            f'for (wc_r = 1; wc_r <= wct.numRows; wc_r++) {{ fpt("@row\t" + {lab}); fpr(); }}',
+            'for (wc_r = 1; wc_r <= wc_lines.length; wc_r++) { fpt("@d\t" + wc_lines[wc_r].as(string)); fpr(); }',
+            'fpt("@done"); fpr();', "fileclose();"]
+
+
+def _day_dates(cfg: dict[str, Any], params: dict[str, float], days: int) -> list[str]:
+    unit = float((cfg.get("stop") or {}).get("time_unit_seconds", 1))
+    start = model_start_for(cfg, params) or datetime(2000, 1, 1)
+    first = first_day_end(cfg, params)
+    return [((start + timedelta(seconds=first * unit + k * 86400)) - timedelta(seconds=1)).date().isoformat() for k in range(days)]
+
+
+def parse_carrier(cfg: dict[str, Any], params: dict[str, float], path: Path) -> dict[str, Any] | None:
+    """{"dates": [...], "rows": [[標籤...], ...], "used": [[每天]...], "init": [...], "peak": [...]}（每列一個載具）"""
+    rows: list[list[str]] = []
+    days: list[list[list[float]]] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("@row\t"):
+            rows.append(line[5:].split("|"))
+        elif line.startswith("@d\t"):
+            day = []
+            for cell in line[3:].split(";"):
+                if cell.strip():
+                    try:
+                        day.append([float(x) for x in cell.split(",")])
+                    except ValueError:
+                        day.append([0.0, 0.0, 0.0])
+            days.append(day)
+    if not rows or not days:
+        return None
+    n = len(rows)
+    pick = lambda k: [[(d[r][k] if r < len(d) else 0.0) for d in days] for r in range(n)]  # noqa: E731
+    return {"dates": _day_dates(cfg, params, len(days)), "rows": rows, "used": pick(0), "init": pick(1), "peak": pick(2)}
+
+
+def mock_carrier(cfg: dict[str, Any], params: dict[str, float]) -> dict[str, Any] | None:
+    if not cfg.get("carrier"):
+        return None
+    rnd = random.Random(11)
+    rows = [["SMT-DIP", "Pallet"], ["SMT-DIP", "Tray"], ["DIP-L1", "Cart"], ["DIP-L1", "Tray"], ["L1-L2", "Cart"],
+            ["L1-L2", "Tray"], ["L2-POD", "Cart"], ["L4-Packing", "Cart"]]
+    start = model_start_for(cfg, params) or datetime(2026, 1, 1)
+    days = max(1, int(round(stop_time(cfg, params, None) * float((cfg.get("stop") or {}).get("time_unit_seconds", 1)) / 86400)))
+    init = [40, 300, 20, 400, 20, 500, 30, 25]
+    used, peak = [], []
+    for q in init:
+        lvl = rnd.uniform(.35, .95)
+        u = [min(q, max(0, round(q * (lvl + rnd.uniform(-.12, .1)) * min(1, (k + 1) / 4)))) for k in range(days)]
+        used.append(u)
+        peak.append([min(q, x + round(q * rnd.uniform(.02, .15))) for x in u])
+    dates = [(start + timedelta(days=k)).date().isoformat() for k in range(days)]
+    return {"dates": dates, "rows": rows, "used": used, "init": [[q] * days for q in init], "peak": peak}
+
+
 def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float, result_path: Path,
                  progress_path: Path | None, tables_path: Path | None = None, plans: dict[str, Any] | None = None,
                  shifts: dict[str, Any] | None = None, util_path: Path | None = None,
                  ct: dict[str, Any] | None = None, ct_defaults: dict[str, Any] | None = None,
                  bottleneck_path: Path | None = None, param_tables: dict[str, Any] | None = None,
-                 ct_dist: dict[str, int] | None = None, dist_defaults: dict[str, Any] | None = None) -> str:
+                 ct_dist: dict[str, int] | None = None, dist_defaults: dict[str, Any] | None = None,
+                 carrier_path: Path | None = None) -> str:
     lines = ["// Generated by flexsim-web. Do not edit."]
     for p in cfg["parameters"]:
         value = params[p["name"]]
@@ -539,6 +635,8 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
     ]
     wb_decl, wb_body = bottleneck_lines(cfg, params)
     lines += wb_decl
+    wc_decl, wc_body = carrier_lines(cfg, params) if carrier_path else ([], [])
+    lines += wc_decl
     live = [m for m in cfg["metrics"] if m.get("live", True)]
 
     def snapshot(indent: str) -> list[str]:
@@ -556,6 +654,7 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
         "while (Model.time < wr_end) {",
         "    step();",
         *wb_body,
+        *wc_body,
     ]
     if progress_path:
         lines += [
@@ -584,6 +683,8 @@ def build_script(cfg: dict[str, Any], params: dict[str, float], end_time: float,
         lines += table_export_lines(cfg["tables"], tables_path)
     if bottleneck_path and wb_decl:
         lines += bottleneck_write_lines(bottleneck_path)
+    if carrier_path and wc_decl:
+        lines += carrier_write_lines(cfg, carrier_path)
     if util_path and util_objects(cfg):  # 放最後：就算這段出錯，結果和表格也已經寫好了
         lines += util_export_lines(cfg, util_path)
     lines += ["cmdexit();"]
@@ -666,11 +767,13 @@ class FlexSimRunner:
         tables = run_dir / "tables.txt"
         util = run_dir / "utilization.txt"
         bneck = run_dir / "bottleneck.txt"
+        carrier = run_dir / "carrier.txt"
         want_bneck = bool(bottleneck_series(self.cfg) or rework_series(self.cfg))
         want_tables = bool(self.cfg.get("tables"))
         want_util = bool(util_objects(self.cfg))
         script.write_text(build_script(self.cfg, params, end_time, result, progress, tables, plans, shifts, util,
-                                       ct, ct_defaults, bneck, param_tables, ct_dist, dist_defaults), encoding="utf-8")
+                                       ct, ct_defaults, bneck, param_tables, ct_dist, dist_defaults,
+                                       carrier if self.cfg.get("carrier") else None), encoding="utf-8")
         results_done_at: float | None = None
         max_pause = float(self.cfg["flexsim"].get("max_pause_minutes", 60)) * 60
 
@@ -775,10 +878,16 @@ class FlexSimRunner:
                 out_bneck = parse_bottleneck(self.cfg, params, bneck)
             else:
                 log.warning("Bottleneck CT was not written completely (see runs/%s/bottleneck.txt)", run_dir.name)
+        out_carrier = None
+        if self.cfg.get("carrier"):
+            if carrier.exists() and "@done" in carrier.read_text(errors="replace"):
+                out_carrier = parse_carrier(self.cfg, params, carrier)
+            else:
+                log.warning("Carrier use was not written completely (see runs/%s/carrier.txt)", run_dir.name)
         self._cleanup()
         metrics = {m["name"]: values.get(m["name"]) for m in self.cfg["metrics"]}
         return {"metrics": metrics, "model_time": values.get("model_time"), "wall_seconds": wall,
-                "tables": out_tables, "utilization": out_util, "bottleneck": out_bneck}
+                "tables": out_tables, "utilization": out_util, "bottleneck": out_bneck, "carrier": out_carrier}
 
     def read_tables(self, names: list[str], timeout: float = 600) -> dict[str, Any]:
         """開一次 FlexSim（不跑模擬），把指定的 Global Table 讀出來。用來取得模型目前的 CT / FPYR。"""
@@ -852,7 +961,8 @@ class MockRunner:
             i += 1
         metrics = {m["name"]: round(random.uniform(10, 1000), 2) for m in self.cfg["metrics"]}
         return {"metrics": metrics, "model_time": end_time, "wall_seconds": 3.0, "tables": mock_tables(self.cfg, params),
-                "utilization": mock_util(self.cfg, end_time), "bottleneck": mock_bottleneck(self.cfg, params)}
+                "utilization": mock_util(self.cfg, end_time), "bottleneck": mock_bottleneck(self.cfg, params),
+                "carrier": mock_carrier(self.cfg, params)}
 
 
 def mock_bottleneck(cfg: dict[str, Any], params: dict[str, float]) -> dict[str, Any] | None:
@@ -881,7 +991,19 @@ def mock_read_tables(cfg: dict[str, Any], names: list[str]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     cf = cfg.get("ct_fpyr") or {}
     settings = {p["setting_table"] for p in cf.get("products", {}).values()}
+    carrier_rows = [("SMT-DIP", "Pallet", "Tray", 10.0), ("SMT-DIP", "Tray", "Item", 6.0), ("DIP-L1", "Cart", "Tray", 30.0),
+                    ("DIP-L1", "Tray", "Item", 2.0), ("L1-L2", "Cart", "Tray", 36.0), ("L1-L2", "Tray", "Item", 2.0),
+                    ("L2-POD", "Cart", "DUT", 20.0), ("L4-Packing", "Cart", "DUT", 20.0)]
     for n in names:
+        if n == "WUS_Carrier_Capacity_Utilization":
+            out[n] = {"columns": ["Model", "Stage", "ParentCarrier", "InitialQty", "UsedQty", "Current Utilization"],
+                      "rows": [{"row": "", "values": ["Bianca/Strata", st, pc, 0.0, 0.0, 0.0]} for st, pc, _, _ in carrier_rows]}
+            continue
+        if n in ("WUS_Carrier_Capacity_Bianca", "WUS_Carrier_Capacity_Strata"):
+            m = "Bianca" if "Bianca" in n else "Strata"
+            out[n] = {"columns": ["Model", "Stage", "ParentCarrier", "ChildCarrier", "Capacity"],
+                      "rows": [{"row": "", "values": [m, st, pc, ch, cap]} for st, pc, ch, cap in carrier_rows]}
+            continue
         if n == "WUS_POD Parameter":
             out[n] = {"columns": ["Col 1", "Col 2"], "rows": [{"row": "UPH", "values": [200.0, 288.0]}, {"row": "轉彎時間", "values": [10.0, 0.0]},
                       {"row": "ASRS對接接駁台", "values": [10.0, 0.0]}, {"row": "ASRS推入燒機架", "values": [15.0, 0.0]},
