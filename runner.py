@@ -881,15 +881,20 @@ class FlexSimRunner:
             else:
                 log.warning("Bottleneck CT was not written completely (see runs/%s/bottleneck.txt)", run_dir.name)
         out_carrier = None
+        carrier_note = None
         if self.cfg.get("carrier"):
             if carrier.exists() and "@done" in carrier.read_text(errors="replace"):
                 out_carrier = parse_carrier(self.cfg, params, carrier)
+                if not out_carrier:
+                    carrier_note = f"empty: runs/{run_dir.name}/carrier.txt"
             else:
+                carrier_note = f"not written: runs/{run_dir.name}/carrier.txt"
                 log.warning("Carrier use was not written completely (see runs/%s/carrier.txt)", run_dir.name)
         self._cleanup()
         metrics = {m["name"]: values.get(m["name"]) for m in self.cfg["metrics"]}
         return {"metrics": metrics, "model_time": values.get("model_time"), "wall_seconds": wall,
-                "tables": out_tables, "utilization": out_util, "bottleneck": out_bneck, "carrier": out_carrier}
+                "tables": out_tables, "utilization": out_util, "bottleneck": out_bneck, "carrier": out_carrier,
+                "carrier_note": carrier_note}
 
     def read_tables(self, names: list[str], timeout: float = 600) -> dict[str, Any]:
         """開一次 FlexSim（不跑模擬），把指定的 Global Table 讀出來。用來取得模型目前的 CT / FPYR。"""

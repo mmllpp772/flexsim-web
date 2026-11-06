@@ -1199,7 +1199,9 @@
       crTitle: "Carrier utilization", crSub: "In use vs available", crByCarrier: "By carrier", crHint: "Pick a carrier to see it over time.",
       crAvg: "average", crPeak: "Peak {v}", crQty: "{u} of {q} in use", crFull: "Peak near full", crRoom: "Spare carriers",
       crChart: "{s} utilization", crAvgLg: "Average", crPeakLg: "Peak", crTable: "Average utilization by carrier",
-      crNone: "This run has no carrier data. Runs made before this page was added don't record it.",
+      crNone: "This run has no carrier data.",
+      crOld: "This run was made by an older version of the simulator program, which doesn't record carriers. Update runner.py and onedrive_worker.py on the simulator PC, restart onedrive_worker.py and run again.",
+      crFailed: "FlexSim didn't write the carrier data for this run. On the simulator PC, open {f} (and script.txt in the same folder) to see where it stopped.",
       crDef: "Utilization = carriers in use ÷ initial quantity (Carrier inputs). Recorded at the end of every simulated day; the peak is the busiest moment sampled during the day. A peak near 100% means work waited for carriers.",
       oeeByStation: "OEE by station", oeePick: "Over the whole period. Click a station to chart it.",
       oee1Def: "Effective time ÷ total time (24 h a day, every day).",
@@ -1370,7 +1372,9 @@
       crTitle: "Carrier 使用率", crSub: "使用中 ÷ 初始數量", crByCarrier: "各載具", crHint: "點選載具看它每天的變化。",
       crAvg: "平均", crPeak: "尖峰 {v}", crQty: "平均 {u}／{q} 個使用中", crFull: "尖峰接近滿載", crRoom: "數量足夠",
       crChart: "{s} 使用率", crAvgLg: "平均", crPeakLg: "尖峰", crTable: "各載具平均使用率",
-      crNone: "這次模擬沒有載具資料（加上這頁之前跑的模擬不會記錄）。",
+      crNone: "這次模擬沒有載具資料。",
+      crOld: "這次模擬是用舊版的模擬程式跑的，舊版不會記錄載具。請在模擬電腦換上新版 runner.py、onedrive_worker.py，重新啟動 onedrive_worker.py 後再跑一次。",
+      crFailed: "這次 FlexSim 沒有寫出載具資料。請在模擬電腦打開 {f}（同一個資料夾還有 script.txt）看停在哪裡。",
       crDef: "使用率 = 使用中的數量 ÷ 初始數量（在「載具（Carrier）」輸入）。每個模擬日結束時記一次；尖峰是當天取樣到最忙的時刻。尖峰接近 100% 代表有時候在等載具。",
       oeeByStation: "各站 OEE", oeePick: "整個期間的結果，點選站別看變化。",
       oee1Def: "有效時間 ÷ 總時間（每天都算 24 小時）。",
@@ -3417,7 +3421,9 @@
   function renderCarrier(job) {
     granPills($("crGranSeg"));
     const C = job?.carrier, items = job ? crDays(job) : null;
-    $("crEmpty").hidden = !(job && !items); $("crEmpty").textContent = t("crNone");
+    // why there is nothing: an older worker didn't record carriers at all; a newer one says what went wrong
+    $("crEmpty").hidden = !(job && !items);
+    $("crEmpty").textContent = !job ? "" : !("carrier" in job) ? t("crOld") : job.carrier_note ? t("crFailed", { f: job.carrier_note.replace(/^\w+:\s*/, "") }) : t("crNone");
     const rows = C?.rows || [], all = items || [];
     if (crSel >= rows.length) crSel = 0;
     $("crTiles").innerHTML = rows.map((r, i) => {
