@@ -187,23 +187,27 @@ class Worker:
         if self.param_defaults and self.cfg.get("param_tables"):
             pub["param_tables"] = [{**{k: v for k, v in g.items() if not k.startswith("_")},
                                     "defaults": self.param_defaults.get(g["name"], {})} for g in self.cfg["param_tables"]]
-        # 3D 佈置圖：config 的 layout3d.file，在程式資料夾或上一層找到就複製到共用資料夾
-        l3d = (self.cfg.get("layout3d") or {}).get("file")
-        if l3d:
-            src = next((d / l3d for d in (BASE_DIR, BASE_DIR.parent) if (d / l3d).is_file()), None)
+        # 3D 頁面：config 的 layout3d.pages（每頁 file + 名稱），在程式資料夾或上一層找到就複製到共用資料夾
+        l3 = self.cfg.get("layout3d") or {}
+        pages = l3.get("pages") or ([{"file": l3["file"]}] if l3.get("file") else [])
+        pub_pages = []
+        for pg in pages:
+            name = Path(pg["file"]).name
+            src = next((d / pg["file"] for d in (BASE_DIR, BASE_DIR.parent) if (d / pg["file"]).is_file()), None)
+            dst = self.share / name
             if src:
-                dst = self.share / Path(l3d).name
                 try:
                     if not dst.exists() or dst.stat().st_size != src.stat().st_size or dst.stat().st_mtime < src.stat().st_mtime:
                         shutil.copyfile(src, dst)
-                        log.info("Published 3D layout %s", dst)
-                    pub["layout3d_file"] = dst.name
+                        log.info("Published 3D page %s", dst)
                 except OSError as e:
-                    log.warning("Could not copy the 3D layout: %s", e)
-            elif (self.share / Path(l3d).name).is_file():
-                pub["layout3d_file"] = Path(l3d).name
-            else:
-                log.warning("3D layout %s not found next to the program", l3d)
+                    log.warning("Could not copy the 3D page %s: %s", name, e)
+            elif not dst.is_file():
+                log.warning("3D page %s not found next to the program", pg["file"])
+            if dst.is_file():
+                pub_pages.append({k: v for k, v in pg.items() if not k.startswith("_")} | {"file": name})
+        if pub_pages:
+            pub["layout3d_pages"] = pub_pages
         write_json_atomic(self.share / "config.json", pub)
         page = BASE_DIR / "index.html"
         target = self.share / "Simulator.html"

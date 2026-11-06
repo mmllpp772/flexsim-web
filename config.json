@@ -899,8 +899,19 @@
   "admin_code": "",
   "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。",
   "layout3d": {
-    "_help": "3D layout page shown under Outputs → 3D layout. Put the file in the program folder or the folder above it; the worker copies it to the shared folder when it starts.",
-    "file": "D1_3D_Layout_v3.html"
+    "_help": "3D pages shown in the 3D layout tab, in this order (a switch appears when there is more than one). Put each file in the program folder or the folder above it; the worker copies it to the shared folder when it starts. label / label_zh are the names on the switch.",
+    "pages": [
+      {
+        "file": "D1_3D_Layout_v3.html",
+        "label": "D1 3D layout",
+        "label_zh": "D1 3D 佈置"
+      },
+      {
+        "file": "US_Plant_Tour.html",
+        "label": "US plant tour",
+        "label_zh": "美國廠漫遊"
+      }
+    ]
   },
   "carrier": {
     "_help": "Carrier use recorded every simulated day: used and initial quantity per row of the table, plus the day's peak (sampled every peak_sample_steps events).",

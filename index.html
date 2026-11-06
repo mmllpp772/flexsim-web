@@ -373,7 +373,8 @@
   td.cr-over { background: var(--err-soft); color: var(--err); font-weight: 600; }
   .pt-prodbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 4px 0 12px; }
   .pt-table th small { font-weight: 500; color: var(--faint); }
-  .l3d-bar { display: flex; justify-content: flex-end; margin: -8px 0 8px; }
+  .l3d-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -8px 0 8px; }
+  .l3d-bar #l3dOpen { margin-left: auto; }
   .l3d-page iframe { display: block; width: 100%; height: 70vh; min-height: 480px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
   .sd-table .sd-fill { color: var(--faint); font-size: 13px; white-space: nowrap; }
   .sd-table tr.is-fill td { color: var(--muted); }
@@ -660,7 +661,7 @@
   </nav>
 
   <main class="l3d-page" id="pageLayout" role="tabpanel" aria-labelledby="tabLayout" hidden>
-    <div class="l3d-bar"><a class="link" id="l3dOpen" target="_blank" rel="noopener" data-i18n="l3dOpen"></a></div>
+    <div class="l3d-bar"><div class="seg" id="l3dSeg" role="group" hidden></div><a class="link" id="l3dOpen" target="_blank" rel="noopener" data-i18n="l3dOpen"></a></div>
     <iframe id="l3dFrame" title="3D layout" data-i18n-title="tabLayout"></iframe>
   </main>
 
@@ -1648,7 +1649,17 @@
   // =====================================================================
   // UI
   // =====================================================================
-  let HAS_L3D = false;
+  let HAS_L3D = false, L3D_PAGES = [];
+  function renderL3dSwitch() {  // switch between 3D pages (only shown when there is more than one)
+    const seg = $("l3dSeg");
+    seg.hidden = L3D_PAGES.length < 2;
+    seg.innerHTML = L3D_PAGES.map(pg => `<button type="button" data-f="${esc(pg.file)}" aria-pressed="${pg.file === HAS_L3D}">${esc(L(pg, "label") || pg.file)}</button>`).join("");
+    seg.querySelectorAll("button").forEach(b => b.onclick = () => {
+      HAS_L3D = b.dataset.f; store("simL3d", HAS_L3D); renderL3dSwitch();
+      if (TAB === "layout") $("l3dFrame").setAttribute("src", HAS_L3D);
+    });
+    if (HAS_L3D) $("l3dOpen").setAttribute("href", HAS_L3D);
+  }
   let T = null, CFG = null, DI = null, history = [], selectedId = null, activeId = null, pollTimer = null;
   let shownJob = null, stateMode = "idle", activeJob = null, pending = null;
   let TAB = "input", outRunId = null, outTable = load("simOutTable"), outStation = load("simOutStation");
@@ -4020,6 +4031,7 @@
     LANG = lang; store("simLang", lang);
     applyStatic();
     if (!CFG) return;
+    renderL3dSwitch();
     const vals = currentFormValues();
     renderConfigText();
     buildForm(vals);
@@ -4089,12 +4101,14 @@
     try {
       T = folderTransport(await connectFolder());
       CFG = await T.getConfig();
-      // 3D layout page next to Simulator.html: the one named in config (layout3d.file), otherwise layout3d.html
-      HAS_L3D = false;
-      for (const f of [CFG.layout3d_file, "layout3d.html"].filter(Boolean)) if (await T.hasFile(f)) { HAS_L3D = f; break; }
+      // 3D pages next to Simulator.html (config layout3d.pages); the tab appears when at least one is there
+      L3D_PAGES = [];
+      const cands = [...(CFG.layout3d_pages || []), ...(CFG.layout3d_file ? [{ file: CFG.layout3d_file }] : []), { file: "layout3d.html" }];
+      for (const pg of cands) if (!L3D_PAGES.some(x => x.file === pg.file) && await T.hasFile(pg.file)) L3D_PAGES.push(pg);
+      if (!L3D_PAGES.some(x => x.file === HAS_L3D)) HAS_L3D = L3D_PAGES.find(x => x.file === load("simL3d"))?.file || L3D_PAGES[0]?.file || false;
       TABS = HAS_L3D ? ALL_TABS.slice() : ALL_TABS.slice(1);
       $("tabLayout").hidden = !HAS_L3D;
-      if (HAS_L3D) $("l3dOpen").setAttribute("href", HAS_L3D);
+      renderL3dSwitch();
       DI = CFG.date_inputs || null;
       renderConfigText();
       $("mockBanner").hidden = !CFG.mock_mode;
