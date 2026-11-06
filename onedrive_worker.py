@@ -183,6 +183,23 @@ class Worker:
         if self.param_defaults and self.cfg.get("param_tables"):
             pub["param_tables"] = [{**{k: v for k, v in g.items() if not k.startswith("_")},
                                     "defaults": self.param_defaults.get(g["name"], {})} for g in self.cfg["param_tables"]]
+        # 3D 佈置圖：config 的 layout3d.file，在程式資料夾或上一層找到就複製到共用資料夾
+        l3d = (self.cfg.get("layout3d") or {}).get("file")
+        if l3d:
+            src = next((d / l3d for d in (BASE_DIR, BASE_DIR.parent) if (d / l3d).is_file()), None)
+            if src:
+                dst = self.share / Path(l3d).name
+                try:
+                    if not dst.exists() or dst.stat().st_size != src.stat().st_size or dst.stat().st_mtime < src.stat().st_mtime:
+                        shutil.copyfile(src, dst)
+                        log.info("Published 3D layout %s", dst)
+                    pub["layout3d_file"] = dst.name
+                except OSError as e:
+                    log.warning("Could not copy the 3D layout: %s", e)
+            elif (self.share / Path(l3d).name).is_file():
+                pub["layout3d_file"] = Path(l3d).name
+            else:
+                log.warning("3D layout %s not found next to the program", l3d)
         write_json_atomic(self.share / "config.json", pub)
         page = BASE_DIR / "index.html"
         target = self.share / "Simulator.html"

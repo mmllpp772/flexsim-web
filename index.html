@@ -363,7 +363,7 @@
   .tile .o2 small { font: 600 13px var(--display); color: var(--muted); }
   .tiles.sd-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .panel.l3d-panel { padding: 0; overflow: hidden; }
-  .l3d-panel iframe { display: block; width: 100%; height: min(78vh, 860px); border: 0; }
+  .l3d-panel iframe { display: block; width: 100%; height: min(82vh, 920px); border: 0; }
   .sd-table .sd-fill { color: var(--faint); font-size: 13px; white-space: nowrap; }
   .sd-table tr.is-fill td { color: var(--muted); }
   .tile.sd { cursor: default; }
@@ -2763,7 +2763,7 @@
       renderUtil(job);
     } else if (OUT_CAT === "l3d") {
       // the 3D page is a separate file next to this one; load it once, in the current language
-      const src = `layout3d.html?lang=${LANG}`;
+      const src = HAS_L3D === "layout3d.html" ? `layout3d.html?lang=${LANG}` : HAS_L3D;
       if ($("l3dFrame").getAttribute("src") !== src) $("l3dFrame").setAttribute("src", src);
       $("l3dOpen").setAttribute("href", src);
     } else if (OUT_CAT === "oee") {
@@ -3883,7 +3883,9 @@
     try {
       T = folderTransport(await connectFolder());
       CFG = await T.getConfig();
-      HAS_L3D = await T.hasFile("layout3d.html");
+      // 3D layout page next to Simulator.html: the one named in config (layout3d.file), otherwise layout3d.html
+      HAS_L3D = false;
+      for (const f of [CFG.layout3d_file, "layout3d.html"].filter(Boolean)) if (await T.hasFile(f)) { HAS_L3D = f; break; }
       DI = CFG.date_inputs || null;
       renderConfigText();
       $("mockBanner").hidden = !CFG.mock_mode;

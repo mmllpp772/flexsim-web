@@ -808,5 +808,9 @@
     }
   ],
   "admin_code": "",
-  "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。"
+  "_admin_code說明": "清除執行紀錄用的管理代碼。留空 = 不允許清除。只存在這台電腦，不會放到共用資料夾，也不要推到公開的 GitHub。",
+  "layout3d": {
+    "_help": "3D layout page shown under Outputs → 3D layout. Put the file in the program folder or the folder above it; the worker copies it to the shared folder when it starts.",
+    "file": "D1_3D_Layout_v3.html"
+  }
 }
