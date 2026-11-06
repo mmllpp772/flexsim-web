@@ -1187,7 +1187,7 @@
       ctStation: "Station", ctCt: "CT (s)", ctTarget: "Target CT (s)", ctImprove: "Weekly improvement (%)",
       ctMachine: "Machine", ctDesc: "Description", ctMct: "CT (s)", ctFpyr: "FPYR (%)", ctWas: "Model {v}",
       ctPerMachine: "Enter each machine's real CT; the model uses these values. You can paste a column from Excel.", ctNoFpyr: "This station has no FPYR in the model.",
-      sumCtNone: "Model values", sumCt: "Changed: {n}",
+      sumCtNone: "Model values", sumCt: "Changed: {n}", sumCtMany: "{n} values changed",
       sdTitle: "Schedule attainment (SOD)", sdSummary: "Plan against good units", sdSummaryHint: "Over the whole period.",
       sdPlan: "Planned", sdGood: "Good units", sdStart: "Started (SMT)", sdStarted: "Started at SMT {n}", sdAtt: "Attainment", sdGap: "Gap",
       sdGapTxt: "Gap {v}", sdYield: "Good unit rate", sdScrap: "Scrap (Bonepile) {n}", sdScrapCol: "Scrap", sdWip: "WIP at the end", sdWipSub: "Started − good − scrap",
@@ -1361,7 +1361,7 @@
       ctStation: "站別", ctCt: "CT（秒）", ctTarget: "目標 CT（秒）", ctImprove: "每週改善（%）",
       ctMachine: "機台", ctDesc: "說明", ctMct: "CT（秒）", ctFpyr: "FPYR（%）", ctWas: "模型 {v}",
       ctPerMachine: "填每台機台真實的 CT，模型就照這些值跑。可以從 Excel 複製一整欄貼上。", ctNoFpyr: "模型裡這一站沒有 FPYR。",
-      sumCtNone: "使用模型值", sumCt: "已調整：{n}",
+      sumCtNone: "使用模型值", sumCt: "已調整：{n}", sumCtMany: "已調整 {n} 項",
       sdTitle: "計畫達成（SOD）", sdSummary: "計畫與良品產出", sdSummaryHint: "整個期間的結果。",
       sdPlan: "計畫量", sdGood: "良品產出", sdStart: "SMT 投入", sdStarted: "SMT 實際投入 {n}", sdAtt: "達成率", sdGap: "差異",
       sdGapTxt: "差異 {v}", sdYield: "良品率", sdScrap: "報廢（Bonepile）{n}", sdScrapCol: "報廢", sdWip: "期末在製（WIP）", sdWipSub: "投入 − 良品 − 報廢",
@@ -2010,8 +2010,10 @@
     if (k === "plan") return PD().products.map(p => `${L(p, "label")} ${fmt(Number(planFor(p.name).target) || 0, 0)}`).join(", ");
     if (k === "shift") return SH().products.map(p => t("sumShift", { p: L(p, "label"), n: shiftFor(p.name).count })).join(", ");
     const list = (a) => a.join(LANG === "zh" ? "、" : ", ");
-    if (k === "ct") { const n = ctChangedStations(); return n.length ? t("sumCt", { n: list(n) }) : t("sumCtNone"); }
-    if (k.startsWith("pt_")) { const n = ptChangedItems(k.slice(3)); return n.length ? t("sumCt", { n: list(n) }) : t("sumCtNone"); }
+    // the menu line stays short: name up to two changed items, otherwise just the count
+    const changed = (n) => !n.length ? t("sumCtNone") : n.length <= 2 && list(n).length <= 24 ? t("sumCt", { n: list(n) }) : t("sumCtMany", { n: n.length });
+    if (k === "ct") return changed(ctChangedStations());
+    if (k.startsWith("pt_")) return changed(ptChangedItems(k.slice(3)));
     return "";
   }
   function renderInNav() {
