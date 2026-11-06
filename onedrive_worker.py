@@ -137,7 +137,8 @@ class Worker:
         model = Path(self.cfg["flexsim"]["model_path"])
         if not self.cfg.get("mock_mode"):
             cached = ctfpyr.load_cached(cache, model)
-            if cached and cached.get("v") == CACHE_VERSION:
+            # 模型沒變、而且要讀的表格清單也沒變（config 加了新的參數表就要重讀）才用存起來的值
+            if cached and cached.get("v") == CACHE_VERSION and cached.get("names") == names:
                 self.param_defaults = cached.get("params")
                 self.dist_defaults = cached.get("dist")
                 return cached["ct"]
@@ -147,12 +148,15 @@ class Worker:
             defaults = ctfpyr.build_defaults(self.cfg, tables)
             self.param_defaults = ctfpyr.build_param_defaults(self.cfg, tables)
             self.dist_defaults = ctfpyr.build_dist_defaults(self.cfg, tables)
+            missing = [n for n in names if n not in tables]
+            if missing:
+                log.warning("These tables were not found in the model: %s", ", ".join(missing))
         except Exception as e:  # 讀不到就不提供 CT/FPYR 輸入，其他功能照常；10 分鐘後再試
             log.warning("Could not read CT/FPYR from the model: %s", e)
             self.ct_failed_at = time.time()
             return None
         if not self.cfg.get("mock_mode"):
-            ctfpyr.save_cached(cache, model, {"v": CACHE_VERSION, "ct": defaults, "params": self.param_defaults,
+            ctfpyr.save_cached(cache, model, {"v": CACHE_VERSION, "names": names, "ct": defaults, "params": self.param_defaults,
                                                  "dist": self.dist_defaults})
         n = sum(len(m) for d in defaults.values() for m in d["machines"].values())
         log.info("CT/FPYR: %d machines read from the model", n)
@@ -166,7 +170,7 @@ class Worker:
             return
         model = Path(self.cfg["flexsim"]["model_path"])
         cached = ctfpyr.load_cached(BASE_DIR / "model_defaults.json", model)
-        if cached is None or cached.get("v") != CACHE_VERSION:
+        if cached is None or cached.get("v") != CACHE_VERSION or cached.get("names") != ctfpyr.tables_to_read(self.cfg):
             self.ct_defaults = self.load_ct_defaults()
             self.publish()
 

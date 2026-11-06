@@ -243,6 +243,7 @@ def table_export_lines(tables: list[dict[str, Any]], path: Path) -> list[str]:
     for i, tb in enumerate(tables, 1):
         v, rr, cc, sv, cv = f"wt{i}", f"wr{i}", f"wc{i}", f"ws{i}", f"wv{i}"
         out += [
+            f'if (objectexists(reftable({_fs_str(tb["table"])}))) {{  // 模型裡沒有這張表就跳過，不要讓整段停掉',
             f'Table {v} = Table({_fs_str(tb["table"])});',
             f'fpt("@table\\t{tb["name"]}"); fpr();',
             f'fpt("@cols");',
@@ -257,6 +258,7 @@ def table_export_lines(tables: list[dict[str, Any]], path: Path) -> list[str]:
             f'        else fpt(numtostring({cv}, 0, 6));',
             '    }',
             '    fpr();',
+            '}',
             '}',
         ]
     out += ['fpt("@done"); fpr();', "fileclose();"]
