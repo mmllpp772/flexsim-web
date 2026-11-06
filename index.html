@@ -364,6 +364,8 @@
   .tiles.sd-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   /* 3D layout tab: the plant page fills the window below the tabs */
   .l3d-page { padding-bottom: 24px; }
+  .pt-prodbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 4px 0 12px; }
+  .pt-table th small { font-weight: 500; color: var(--faint); }
   .l3d-bar { display: flex; justify-content: flex-end; margin: -8px 0 8px; }
   .l3d-page iframe { display: block; width: 100%; height: 70vh; min-height: 480px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
   .sd-table .sd-fill { color: var(--faint); font-size: 13px; white-space: nowrap; }
@@ -1161,7 +1163,7 @@
       ctDistHelp: "Each unit's processing time varies between {lo} and {hi} of the machine's CT.",
       ctDistShared: "Bianca and Strata share this setting.",
       ctBnOnly: "{s} has no machine CT table. Enter its CT here; OEE and takt time use it for this station.",
-      ptItem: "Item", ptValue: "Value", ptMissing: "Not read from the model yet: {t}. Restart onedrive_worker.py on the simulator PC; if it still shows, check that the model has these Global Tables with these names.", ptCol: "Column {n}", ptReset: "Restore model values", ptConfirmReset: "Restore all these values to the model's values?",
+      ptItem: "Item", ptValue: "Value", ptShared: "(both products)", ptSharedNote: "{c} is shared by Bianca and Strata; capacity is per product.", ptMissing: "Not read from the model yet: {t}. Restart onedrive_worker.py on the simulator PC; if it still shows, check that the model has these Global Tables with these names.", ptCol: "Column {n}", ptReset: "Restore model values", ptConfirmReset: "Restore all these values to the model's values?",
       ptHint: "Starting values are read from the FlexSim model. Changed cells are highlighted and only they are sent with the run. Text cells (such as distributions) are shown but can't be changed here.",
       ctFpyrHow: "FPYR can be changed only on test stations (machines that have an FPYR in the model); the others are locked.",
       ctFpyrNone: "This machine has no FPYR in the model.",
@@ -1332,7 +1334,7 @@
       ctDistHelp: "每一件的加工時間會在機台 CT 的 {lo}～{hi} 之間變動。",
       ctDistShared: "Bianca 和 Strata 共用這個設定。",
       ctBnOnly: "{s} 沒有機台 CT 表，在這裡填一個 CT，OEE 和 Takt Time 會用這個值。",
-      ptItem: "項目", ptValue: "數值", ptMissing: "還沒從模型讀到：{t}。請在模擬電腦重新啟動 onedrive_worker.py；如果還是這樣，請確認模型裡有這幾張 Global Table、名稱一模一樣。", ptCol: "第 {n} 欄", ptReset: "全部恢復模型值", ptConfirmReset: "要把這些值全部恢復成模型的值嗎？",
+      ptItem: "項目", ptValue: "數值", ptShared: "（共用）", ptSharedNote: "{c}是 Bianca、Strata 共用的；容量各自設定。", ptMissing: "還沒從模型讀到：{t}。請在模擬電腦重新啟動 onedrive_worker.py；如果還是這樣，請確認模型裡有這幾張 Global Table、名稱一模一樣。", ptCol: "第 {n} 欄", ptReset: "全部恢復模型值", ptConfirmReset: "要把這些值全部恢復成模型的值嗎？",
       ptHint: "預設值是從 FlexSim 模型讀出來的。改過的格子會標示出來，只有改過的值會隨模擬送出。文字格（例如分配公式）只顯示、不能在這裡改。",
       ctFpyrHow: "只有測試站（模型裡本來就有 FPYR 的機台）可以改 FPYR，其他機台鎖住，避免誤填。",
       ctFpyrNone: "模型裡這台機台沒有 FPYR。",
@@ -2004,7 +2006,9 @@
     if (edit) {  // every row; named columns are editable, label columns name the row
       const idx = (names) => (names || []).map(n => tb.columns.indexOf(n)).filter(i => i >= 0);
       const lc = idx(edit.label_cols), ec = idx(edit.cols);
-      return tb.rows.map(r => ({ r, labels: lc.map(i => r.cells[i] ?? ""), label: lc.map(i => r.cells[i] ?? "").join(" / ") || r.name, cols: ec }));
+      const prod = Object.entries(g.merge?.products || {}).find(([, x]) => x === tn)?.[0];
+      const pre = prod ? ctProdLabel(prod) + " " : "";  // names in "changed" lists say which product's capacity
+      return tb.rows.map(r => ({ r, labels: lc.map(i => r.cells[i] ?? ""), label: pre + (lc.map(i => r.cells[i] ?? "").join(" / ") || r.name), cols: ec }));
     }
     if (!spec) return tb.rows.map(r => ({ r, label: r.name, cols: r.cells.map((_, i) => i) }));
     return spec.map(sp => { const r = tb.rows.find(x => x.name === sp.row); return r && { r, label: L(sp, "label"), cols: [0] }; }).filter(Boolean);
@@ -2035,9 +2039,52 @@
     }
     return Object.keys(out).length ? out : null;
   }
+  // one input cell for table tn, row r (defaults row), 0-based column ci
+  function ptCell(gname, tn, r, ci, aria) {
+    const d = r.cells[ci];
+    if (typeof d !== "number") return `<td class="txt">${esc(d ?? "")}</td>`;
+    const key = `${r.row},${ci + 1}`, cur = PTS[gname]?.[tn]?.[key], v = cur ?? d, ch = cur != null && cur !== d;
+    return `<td><input type="number" step="any" data-t="${esc(tn)}" data-k="${key}" value="${esc(v)}" class="${ch ? "changed" : ""}" aria-label="${esc(aria)}">${ch ? `<span class="was">${esc(t("ctWas", { v: nf(d) }))}</span>` : ""}</td>`;
+  }
+  let ptProd = load("simPtProd");
+  // carriers: one table per product — shared initial quantity next to that product's capacity, rows matched by key columns
+  function renderPtMerged(g, box) {
+    const M = g.merge, prods = Object.keys(M.products).filter(p => g.defaults?.[M.products[p]]);
+    if (!prods.includes(ptProd)) ptProd = prods[0];
+    const colName = (c) => g.col_labels?.[c] ? L(g.col_labels[c], "label") : c;
+    const ptb = g.defaults?.[M.products[ptProd]], stb = g.defaults?.[M.shared];
+    if (!ptb) return `<p class="empty">${esc(t("noData"))}</p>`;
+    const pe = g.edit?.[M.products[ptProd]] || {}, se = g.edit?.[M.shared] || {};
+    const ix = (tb, n) => tb ? tb.columns.indexOf(n) : -1;
+    const keyOf = (tb, r) => (M.key_cols || []).map(k => r.cells[ix(tb, k)] ?? "").join("\u0001");
+    const shared = new Map((stb?.rows || []).map(r => [keyOf(stb, r), r]));
+    const labelIdx = (pe.label_cols || []).map(n => ix(ptb, n)).filter(i => i >= 0);
+    const sCols = (se.cols || []).map(n => ix(stb, n)).filter(i => i >= 0), pCols = (pe.cols || []).map(n => ix(ptb, n)).filter(i => i >= 0);
+    const heads = [...(pe.label_cols || []).map(colName), ...(se.cols || []).map(colName), ...(pe.cols || []).map(colName)];
+    const nLabel = labelIdx.length, nShared = sCols.length;
+    const seen = new Set();
+    const body = ptb.rows.map(r => {
+      const lab = labelIdx.map(i => r.cells[i] ?? ""), sr = shared.get(keyOf(ptb, r));
+      // a shared row (initial quantity) is shown once per key, on its first matching line
+      const k = keyOf(ptb, r), first = sr && !seen.has(k); seen.add(k);
+      return `<tr>${lab.map(x => `<td class="l">${esc(x)}</td>`).join("")}` +
+        sCols.map(ci => first ? ptCell(g.name, M.shared, sr, ci, lab.join(" ") + " " + colName(stb.columns[ci])) : `<td class="txt">${sr ? "〃" : ""}</td>`).join("") +
+        pCols.map(ci => ptCell(g.name, M.products[ptProd], r, ci, lab.join(" ") + " " + colName(ptb.columns[ci]))).join("") + "</tr>";
+    }).join("");
+    return `<div class="pt-prodbar"><span class="hint tight">${esc(t("ptSharedNote", { c: (se.cols || []).map(colName).join("、") }))}</span><div class="seg prod" id="ptProdSeg_${esc(g.name)}" role="group" aria-label="${esc(t("product"))}"></div></div>
+      <div class="table-wrap"><table class="ct-table pt-table"><thead><tr>${heads.map((h, i) => `<th class="${i < nLabel ? "l" : ""}">${esc(h)}${i >= nLabel && i < nLabel + nShared ? ` <small>${esc(t("ptShared"))}</small>` : ""}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
+  }
   function renderPt(gname) {
     const g = PTG().find(x => x.name === gname); if (!g) return;
     const box = $("pt_" + gname);
+    if (g.merge) {
+      box.innerHTML = renderPtMerged(g, box) + ((g.tables || []).filter(n => !g.defaults?.[n]).length
+        ? `<p class="hint">${esc(t("ptMissing", { t: (g.tables || []).filter(n => !g.defaults?.[n]).join(", ") }))}</p>` : "");
+      const seg = box.querySelector(".seg.prod");
+      if (seg) prodPills(seg, Object.keys(g.merge.products).filter(p => g.defaults?.[g.merge.products[p]]), ptProd, (p) => { ptProd = p; store("simPtProd", p); renderPt(gname); });
+      ptWire(g, box);
+      return;
+    }
     const tables = Object.entries(g.defaults || {});
     box.innerHTML = tables.map(([tn, tb]) => {
       const named = !!g.rows?.[tn], edit = g.edit?.[tn], rows = ptRows(g, tn);
@@ -2055,6 +2102,10 @@
         }).join("")}</tr>`).join("") + "</tbody></table></div>";
     }).join("") + ((g.tables || []).filter(n => !g.defaults?.[n]).length
       ? `<p class="hint">${esc(t("ptMissing", { t: (g.tables || []).filter(n => !g.defaults?.[n]).join(", ") }))}</p>` : "");
+    ptWire(g, box);
+  }
+  function ptWire(g, box) {
+    const gname = g.name;
     box.querySelectorAll("input[data-k]").forEach(inp => inp.addEventListener("change", () => {
       const tn = inp.dataset.t, key = inp.dataset.k, [r, c] = key.split(",").map(Number);
       const d = g.defaults[tn].rows.find(x => x.row === r).cells[c - 1], v = numIn(inp.value);

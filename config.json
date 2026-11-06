@@ -807,7 +807,7 @@
       }
     },
     {
-      "_help": "Carrier inputs: initial quantity of each carrier (shared by both products) and how many child carriers or units each one holds. edit = which columns can be changed; label_cols = the columns that name each row.",
+      "_help": "Carrier inputs, shown as one table per product (Bianca / Strata switch): initial quantity comes from the shared table, capacity from the product's table; rows are matched by Stage + ParentCarrier. edit = which columns can be changed; label_cols = the columns that name each row.",
       "name": "carrier",
       "label": "Carriers",
       "label_zh": "載具（Carrier）",
@@ -882,6 +882,17 @@
           "label": "Holds",
           "label_zh": "裝載"
         }
+      },
+      "merge": {
+        "shared": "WUS_Carrier_Capacity_Utilization",
+        "products": {
+          "bianca": "WUS_Carrier_Capacity_Bianca",
+          "strata": "WUS_Carrier_Capacity_Strata"
+        },
+        "key_cols": [
+          "Stage",
+          "ParentCarrier"
+        ]
       }
     }
   ],
